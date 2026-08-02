@@ -16,7 +16,6 @@ GRs/
 cache_local/
 logs/
 metadata/
-previous attempts failed/
 translation.log
 *.log
 

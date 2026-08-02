@@ -11,9 +11,9 @@ Open-source pipeline:
 5. Generate an English PDF using Chromium through Playwright.
 6. Resume automatically:
    - existing *_English.pdf outputs are skipped;
-   - failed PDFs get a marker and are skipped on later runs unless
-     RETRY_FAILED is changed to True;
-   - completed OCR and page translations are cached.
+   - failed PDFs can be retried with RUN_MODE="failed_only" or "resume";
+   - completed OCR and page translations are cached;
+   - difficult units are recovered individually and written to a review CSV.
 
 No Google/Gemini API key is used.
 """
@@ -45,13 +45,13 @@ from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
 # ============================================================
 
 INPUT_FOLDER = Path(
-    "GRs/Electronics, Information Technology and Artificial Intelligence Department"
+    "GRs/Environment Department"
 )
 
 # Keep this identical to the Gemini output directory.
 # The script will automatically skip the 50 PDFs already translated there.
 OUTPUT_FOLDER = Path(
-    "translated/Electronics, Information Technology and Artificial Intelligence Department"
+    "translated/Environment Department"
 )
 
 HTML_FOLDER = OUTPUT_FOLDER / "html_local"
@@ -61,6 +61,7 @@ CACHE_ROOT = Path("cache_local")
 OCR_CACHE_FOLDER = CACHE_ROOT / "ocr"
 TRANSLATION_CACHE_FOLDER = CACHE_ROOT / "translations"
 FAILED_FOLDER = CACHE_ROOT / "failed"
+REVIEW_FOLDER = OUTPUT_FOLDER / "review_local"
 
 LOG_FOLDER = Path("logs")
 CSV_LOG = LOG_FOLDER / "local_translation_results.csv"
@@ -73,21 +74,28 @@ for folder in (
     OCR_CACHE_FOLDER,
     TRANSLATION_CACHE_FOLDER,
     FAILED_FOLDER,
+    REVIEW_FOLDER,
     LOG_FOLDER,
 ):
     folder.mkdir(parents=True, exist_ok=True)
 
 # 0 means process every remaining PDF.
 # For the first test, set this to 1.
-MAX_NEW_FILES = 51
+MAX_NEW_FILES = 0
 
 # Existing English PDFs are always skipped unless this is True.
 FORCE_RETRANSLATE = False
 
-# Failed marker files are skipped on future runs unless this is True.
-RETRY_FAILED = False
+# Processing mode:
+# "failed_only" -> retry only PDFs having a failure marker.
+# "resume"      -> skip completed PDFs, retry failed PDFs, then process new PDFs.
+# "new_only"    -> skip completed and previously failed PDFs.
+RUN_MODE = "resume"
 
-# Delete a failed marker automatically after a successful retry.
+# Do not retry the same genuinely broken PDF forever.
+MAX_PDF_FAILURE_ATTEMPTS = 3
+
+# Delete a failed marker automatically after successful or review output.
 REMOVE_FAILED_MARKER_AFTER_SUCCESS = True
 
 # OCR configuration.
@@ -112,9 +120,24 @@ NUM_BEAMS = 4
 GPU_BATCH_SIZE = 4
 CPU_BATCH_SIZE = 2
 
-# Validation.
-MAX_OUTPUT_DEVANAGARI_RATIO = 0.04
-MIN_TRANSLATION_LENGTH_RATIO = 0.10
+# Translation validation and recovery.
+# Short words such as "वाचा" -> "Read" are allowed to produce short English.
+MAX_OUTPUT_DEVANAGARI_RATIO = 0.08
+LONG_SOURCE_VALIDATION_MIN_CHARS = 80
+MIN_LONG_TRANSLATION_LENGTH_RATIO = 0.04
+UNIT_RECOVERY_ATTEMPTS = 2
+
+# When recovery still cannot produce a fully clean translation, create the PDF
+# and a review CSV instead of losing the entire document.
+ALLOW_REVIEW_OUTPUT = True
+
+# A researcher can type a correction into the corrected_english column of a
+# review CSV. The next rebuild imports that correction into the cache.
+APPLY_MANUAL_REVIEW_CORRECTIONS = True
+
+EMPTY_TRANSLATION_PLACEHOLDER = (
+    "[Translation unavailable; check the review report and source PDF.]"
+)
 
 # Table-like OCR blocks are translated line by line to preserve rough structure.
 TABLE_LINE_TRANSLATION = True
@@ -151,6 +174,8 @@ class TranslationUnit:
     source_text: str
     translated_text: str = ""
     unit_type: str = "paragraph"  # paragraph | table_line | literal
+    quality_status: str = "PENDING"  # PENDING | PASS | REVIEW
+    quality_note: str = ""
 
 
 @dataclass
@@ -254,6 +279,10 @@ def translation_cache_path(pdf_path: Path) -> Path:
     return TRANSLATION_CACHE_FOLDER / f"{pdf_path.stem}.json"
 
 
+def review_report_path(pdf_path: Path) -> Path:
+    return REVIEW_FOLDER / f"{pdf_path.stem}_review.csv"
+
+
 def append_csv_log(
     filename: str,
     status: str,
@@ -325,9 +354,9 @@ def preprocess_for_ocr(image: Image.Image) -> Image.Image:
     return grayscale
 
 
-def ocr_page(image: Image.Image) -> str:
+def ocr_page(image: Image.Image, psm: int = OCR_PSM) -> str:
     config = (
-        f"--oem 1 --psm {OCR_PSM} "
+        f"--oem 1 --psm {psm} "
         "-c preserve_interword_spaces=1"
     )
 
@@ -339,22 +368,59 @@ def ocr_page(image: Image.Image) -> str:
     return clean_ocr_text(text)
 
 
-def validate_ocr_page(text: str, page_number: int) -> None:
+def ocr_candidate_score(text: str) -> float:
+    """Prefer substantial OCR containing Marathi, but allow English/code pages."""
     compact = re.sub(r"\s+", "", text)
+    return (
+        len(compact)
+        + 3.0 * devanagari_letter_count(text)
+        + 0.5 * sum(character.isdigit() for character in text)
+    )
+
+
+def ocr_page_with_recovery(
+    image: Image.Image,
+    page_number: int,
+) -> str:
+    """
+    Try several page-segmentation modes and keep the strongest OCR result.
+
+    A page with little Marathi is not automatically an error: some GR pages
+    contain English, reference numbers, URLs, signatures, or blank areas.
+    """
+    candidates: list[tuple[int, str]] = []
+
+    for psm in dict.fromkeys((OCR_PSM, 6, 11)):
+        text = ocr_page(image, psm=psm)
+        candidates.append((psm, text))
+
+    best_psm, best_text = max(
+        candidates,
+        key=lambda item: ocr_candidate_score(item[1]),
+    )
+
+    compact = re.sub(r"\s+", "", best_text)
+    ratio = devanagari_ratio(best_text)
 
     if len(compact) < MIN_OCR_CHARACTERS_PER_PAGE:
-        raise RuntimeError(
-            f"OCR quality check failed on page {page_number}: "
-            f"only {len(compact)} non-space characters were detected."
+        logging.warning(
+            "Page %s has only %s OCR characters; accepting as a sparse/blank page "
+            "(best PSM=%s).",
+            page_number,
+            len(compact),
+            best_psm,
         )
 
-    # Some pages may contain mostly codes/numbers, so this threshold is low.
-    ratio = devanagari_ratio(text)
-    if ratio < MIN_OCR_DEVANAGARI_RATIO and devanagari_letter_count(text) < 10:
-        raise RuntimeError(
-            f"OCR quality check failed on page {page_number}: "
-            f"very little Marathi was detected ({ratio:.1%})."
+    if ratio < MIN_OCR_DEVANAGARI_RATIO:
+        logging.warning(
+            "Page %s has low Marathi OCR ratio %.1f%%; accepting because the "
+            "page may contain English, codes, or a signature page (best PSM=%s).",
+            page_number,
+            ratio * 100,
+            best_psm,
         )
+
+    return best_text
 
 
 def extract_or_load_ocr(pdf_path: Path) -> list[str]:
@@ -390,8 +456,7 @@ def extract_or_load_ocr(pdf_path: Path) -> list[str]:
             print(f"  OCR page {page_number}/{total}")
 
             image = preprocess_for_ocr(render_page(page))
-            text = ocr_page(image)
-            validate_ocr_page(text, page_number)
+            text = ocr_page_with_recovery(image, page_number)
             pages_text.append(text)
 
             # Save after every page so an interruption does not lose prior OCR.
@@ -604,7 +669,14 @@ class LocalTranslator:
 
         return chunks
 
-    def _translate_batch(self, texts: list[str]) -> list[str]:
+    def _translate_batch(
+        self,
+        texts: list[str],
+        *,
+        num_beams: int = NUM_BEAMS,
+        max_new_tokens: int = MAX_NEW_TOKENS,
+        length_penalty: float = 1.0,
+    ) -> list[str]:
         encoded = self.tokenizer(
             texts,
             return_tensors="pt",
@@ -621,11 +693,13 @@ class LocalTranslator:
             generated = self.model.generate(
                 **encoded,
                 forced_bos_token_id=self.target_language_id,
-                max_new_tokens=MAX_NEW_TOKENS,
-                num_beams=NUM_BEAMS,
+                max_new_tokens=max_new_tokens,
+                num_beams=num_beams,
+                length_penalty=length_penalty,
                 do_sample=False,
                 use_cache=True,
                 early_stopping=True,
+                no_repeat_ngram_size=3,
             )
 
         return self.tokenizer.batch_decode(
@@ -687,38 +761,139 @@ class LocalTranslator:
 
         return final_results
 
+    def recovery_candidates(
+        self,
+        source: str,
+        initial_translation: str,
+    ) -> list[str]:
+        """
+        Generate alternative candidates only for a unit that failed validation.
+
+        NLLB is not instruction-tuned, so recovery changes decoding and,
+        when useful, translates smaller sentence pieces rather than adding a
+        natural-language prompt.
+        """
+        candidates: list[str] = []
+
+        if initial_translation.strip():
+            candidates.append(normalize_spaces(initial_translation))
+
+        for attempt in range(UNIT_RECOVERY_ATTEMPTS):
+            beams = 6 + (attempt * 2)
+            penalty = 1.05 + (attempt * 0.05)
+
+            try:
+                candidate = self._translate_batch(
+                    [source],
+                    num_beams=beams,
+                    max_new_tokens=max(MAX_NEW_TOKENS, 640),
+                    length_penalty=penalty,
+                )[0]
+                candidate = normalize_spaces(candidate)
+                if candidate and candidate not in candidates:
+                    candidates.append(candidate)
+            except torch.cuda.OutOfMemoryError:
+                if self.device == "cuda":
+                    torch.cuda.empty_cache()
+                logging.warning(
+                    "CUDA OOM while recovering one translation unit."
+                )
+
+        # A long unit may translate better when split at sentence boundaries.
+        parts = [
+            part.strip()
+            for part in re.split(r"(?<=[।.!?;:])\s+|\n+", source)
+            if part.strip()
+        ]
+
+        if len(parts) > 1:
+            try:
+                translated_parts = self.translate_texts(parts)
+                joined = normalize_spaces(
+                    " ".join(part for part in translated_parts if part.strip())
+                )
+                if joined and joined not in candidates:
+                    candidates.append(joined)
+            except Exception:
+                logging.exception(
+                    "Sentence-level recovery failed for one translation unit."
+                )
+
+        return candidates
+
 
 # ============================================================
 # TRANSLATION VALIDATION AND CACHE
 # ============================================================
 
-def validate_translation(source: str, translated: str) -> None:
+def translation_quality_issue(
+    source: str,
+    translated: str,
+) -> str | None:
+    """
+    Return a quality warning, or None when the translation is acceptable.
+
+    The previous validator required at least eight output characters for every
+    Marathi unit. That incorrectly rejected valid short translations such as
+    "Read", "Total", "Date", or "Office".
+    """
     source_compact = re.sub(r"\s+", "", source)
     translated_compact = re.sub(r"\s+", "", translated)
 
     if devanagari_letter_count(source) < 3:
-        return
+        return None
 
     if not translated_compact:
-        raise RuntimeError("The local model returned an empty translation.")
+        return "The local model returned an empty translation."
 
     ratio = devanagari_ratio(translated)
     if ratio > MAX_OUTPUT_DEVANAGARI_RATIO:
-        raise RuntimeError(
-            "Translation quality check failed: "
-            f"{ratio:.1%} Devanagari remains."
+        return (
+            "Too much untranslated Devanagari remains "
+            f"({ratio:.1%}; allowed {MAX_OUTPUT_DEVANAGARI_RATIO:.1%})."
         )
 
-    minimum_length = max(
-        8,
-        int(len(source_compact) * MIN_TRANSLATION_LENGTH_RATIO),
-    )
-    if len(translated_compact) < minimum_length:
-        raise RuntimeError(
-            "Translation quality check failed: output is unexpectedly short "
-            f"({len(translated_compact)} characters; expected at least "
-            f"{minimum_length})."
+    # Length validation is useful only for substantial source units.
+    # It must not be applied to one-word headings or table cells.
+    if len(source_compact) >= LONG_SOURCE_VALIDATION_MIN_CHARS:
+        minimum_length = max(
+            4,
+            int(
+                len(source_compact)
+                * MIN_LONG_TRANSLATION_LENGTH_RATIO
+            ),
         )
+        if len(translated_compact) < minimum_length:
+            return (
+                "Output is unexpectedly short for a long source unit "
+                f"({len(translated_compact)} characters; expected at least "
+                f"{minimum_length})."
+            )
+
+    return None
+
+
+def translation_candidate_score(
+    source: str,
+    translated: str,
+) -> tuple[int, float, int]:
+    """Lower tuple is better when every candidate still needs review."""
+    issue = translation_quality_issue(source, translated)
+    empty_penalty = 1 if not translated.strip() else 0
+    devanagari_penalty = devanagari_ratio(translated)
+    # Prefer a non-empty, cleaner and then more informative candidate.
+    return (
+        empty_penalty + (1 if issue else 0),
+        devanagari_penalty,
+        -len(re.sub(r"\s+", "", translated)),
+    )
+
+
+def validate_translation(source: str, translated: str) -> None:
+    """Strict wrapper retained for final document validation."""
+    issue = translation_quality_issue(source, translated)
+    if issue:
+        raise RuntimeError(f"Translation quality check failed: {issue}")
 
 
 def load_translation_cache(
@@ -744,9 +919,29 @@ def load_translation_cache(
             if cached_item.get("source_text") != unit.source_text:
                 continue
 
-            unit.translated_text = str(
+            cached_translation = str(
                 cached_item.get("translated_text", "")
             )
+            cached_status = str(
+                cached_item.get("quality_status", "PASS")
+            )
+            cached_note = str(
+                cached_item.get("quality_note", "")
+            )
+
+            issue = translation_quality_issue(
+                unit.source_text,
+                cached_translation,
+            )
+
+            # Reuse clean translations. Review translations are also reusable
+            # because they have already exhausted recovery attempts.
+            if issue is None or cached_status == "REVIEW":
+                unit.translated_text = cached_translation
+                unit.quality_status = (
+                    cached_status if cached_status else "PASS"
+                )
+                unit.quality_note = cached_note or (issue or "")
 
     print(f"  Loaded translation cache: {cache}")
 
@@ -764,6 +959,8 @@ def save_translation_cache(
                 "source_text": unit.source_text,
                 "translated_text": unit.translated_text,
                 "unit_type": unit.unit_type,
+                "quality_status": unit.quality_status,
+                "quality_note": unit.quality_note,
             }
 
     atomic_write_json(
@@ -778,12 +975,82 @@ def save_translation_cache(
     )
 
 
+def choose_recovered_translation(
+    unit: TranslationUnit,
+    translator: LocalTranslator,
+    initial_translation: str,
+) -> tuple[str, str, str]:
+    """
+    Return (translation, status, note).
+
+    PASS means validation succeeded.
+    REVIEW means the best available candidate was kept and written to a review
+    CSV so one difficult unit does not destroy the complete PDF.
+    """
+    candidates = translator.recovery_candidates(
+        unit.source_text,
+        initial_translation,
+    )
+
+    for candidate in candidates:
+        issue = translation_quality_issue(
+            unit.source_text,
+            candidate,
+        )
+        if issue is None:
+            return candidate, "PASS", ""
+
+    non_empty = [candidate for candidate in candidates if candidate.strip()]
+
+    if non_empty:
+        best = min(
+            non_empty,
+            key=lambda candidate: translation_candidate_score(
+                unit.source_text,
+                candidate,
+            ),
+        )
+        issue = translation_quality_issue(unit.source_text, best)
+        note = issue or "Recovery candidate requires manual verification."
+
+        if ALLOW_REVIEW_OUTPUT:
+            return best, "REVIEW", note
+
+        raise RuntimeError(
+            "Translation recovery failed for "
+            f"page {unit.page_number}, unit {unit.unit_number}: {note}"
+        )
+
+    if ALLOW_REVIEW_OUTPUT:
+        return (
+            EMPTY_TRANSLATION_PLACEHOLDER,
+            "REVIEW",
+            "The local model returned no usable translation after recovery.",
+        )
+
+    raise RuntimeError(
+        "Translation recovery returned no text for "
+        f"page {unit.page_number}, unit {unit.unit_number}."
+    )
+
+
 def translate_document(
     pdf_path: Path,
     page_results: list[PageResult],
     translator: LocalTranslator,
 ) -> None:
     load_translation_cache(pdf_path, page_results)
+
+    if APPLY_MANUAL_REVIEW_CORRECTIONS:
+        correction_count = apply_manual_review_corrections(
+            pdf_path,
+            page_results,
+        )
+        if correction_count:
+            save_translation_cache(pdf_path, page_results)
+            print(
+                f"  Applied manual review corrections: {correction_count}"
+            )
 
     pending: list[TranslationUnit] = [
         unit
@@ -799,7 +1066,8 @@ def translate_document(
 
     print(f"  Translation units remaining: {total}")
 
-    # Work in groups, save after each group.
+    # Work in groups, but save every group's valid/review units even when one
+    # item needs recovery.
     group_size = max(1, translator.batch_size * 4)
 
     for start in range(0, total, group_size):
@@ -809,30 +1077,81 @@ def translate_document(
         translated_texts = translator.translate_texts(sources)
 
         for unit, translated in zip(group, translated_texts):
-            validate_translation(unit.source_text, translated)
-            unit.translated_text = translated
+            translated = normalize_spaces(translated)
+            issue = translation_quality_issue(
+                unit.source_text,
+                translated,
+            )
 
+            if issue is None:
+                unit.translated_text = translated
+                unit.quality_status = "PASS"
+                unit.quality_note = ""
+                continue
+
+            print(
+                "  Recovering page "
+                f"{unit.page_number}, unit {unit.unit_number}: {issue}"
+            )
+
+            recovered, status, note = choose_recovered_translation(
+                unit=unit,
+                translator=translator,
+                initial_translation=translated,
+            )
+            unit.translated_text = recovered
+            unit.quality_status = status
+            unit.quality_note = note
+
+        # Atomic cache write after every group provides unit-level resume.
         save_translation_cache(pdf_path, page_results)
 
         finished = min(start + len(group), total)
-        print(f"  Translated units: {finished}/{total}")
+        review_count = sum(
+            unit.quality_status == "REVIEW"
+            for page in page_results
+            for unit in page.units
+        )
+        print(
+            f"  Translated units: {finished}/{total} "
+            f"| review units: {review_count}"
+        )
 
 
 def validate_complete_document(page_results: list[PageResult]) -> None:
+    document_unit_count = 0
+
     for page in page_results:
+        # Blank/sparse pages are allowed. They may be covers or signature pages.
         if not page.units:
-            raise RuntimeError(
-                f"No translation units were created for page {page.page_number}."
-            )
+            continue
 
         for unit in page.units:
+            document_unit_count += 1
+
             if not unit.translated_text.strip():
                 raise RuntimeError(
                     "Incomplete document: "
                     f"page {unit.page_number}, unit {unit.unit_number} "
                     "has no translation."
                 )
-            validate_translation(unit.source_text, unit.translated_text)
+
+            issue = translation_quality_issue(
+                unit.source_text,
+                unit.translated_text,
+            )
+
+            if issue and unit.quality_status != "REVIEW":
+                raise RuntimeError(
+                    "Incomplete recovery state on "
+                    f"page {unit.page_number}, unit {unit.unit_number}: "
+                    f"{issue}"
+                )
+
+    if document_unit_count == 0:
+        raise RuntimeError(
+            "No readable text or translation units were found in the PDF."
+        )
 
 
 # ============================================================
@@ -1011,9 +1330,136 @@ def write_outputs(
     return text_path, html_path, pdf_path_out
 
 
+def read_existing_manual_corrections(
+    pdf_path: Path,
+) -> dict[tuple[int, int], str]:
+    report_path = review_report_path(pdf_path)
+
+    if not report_path.exists():
+        return {}
+
+    corrections: dict[tuple[int, int], str] = {}
+
+    try:
+        with report_path.open(
+            "r",
+            newline="",
+            encoding="utf-8-sig",
+        ) as handle:
+            for row in csv.DictReader(handle):
+                corrected = str(
+                    row.get("corrected_english", "")
+                ).strip()
+                if not corrected:
+                    continue
+
+                key = (
+                    int(row["page"]),
+                    int(row["unit"]),
+                )
+                corrections[key] = corrected
+    except Exception:
+        logging.exception(
+            "Could not read manual corrections from %s",
+            report_path,
+        )
+
+    return corrections
+
+
+def apply_manual_review_corrections(
+    pdf_path: Path,
+    page_results: list[PageResult],
+) -> int:
+    corrections = read_existing_manual_corrections(pdf_path)
+
+    if not corrections:
+        return 0
+
+    applied = 0
+
+    for page in page_results:
+        for unit in page.units:
+            key = (unit.page_number, unit.unit_number)
+            corrected = corrections.get(key)
+
+            if not corrected:
+                continue
+
+            unit.translated_text = corrected
+            unit.quality_status = "PASS"
+            unit.quality_note = "Manually corrected from review CSV."
+            applied += 1
+
+    return applied
+
+
+def write_review_report(
+    pdf_path: Path,
+    page_results: list[PageResult],
+) -> tuple[Path | None, int]:
+    review_units = [
+        unit
+        for page in page_results
+        for unit in page.units
+        if unit.quality_status == "REVIEW"
+    ]
+
+    if not review_units:
+        return None, 0
+
+    report_path = review_report_path(pdf_path)
+    existing_corrections = read_existing_manual_corrections(pdf_path)
+
+    with report_path.open("w", newline="", encoding="utf-8-sig") as handle:
+        writer = csv.writer(handle)
+        writer.writerow(
+            [
+                "source_pdf",
+                "page",
+                "unit",
+                "unit_type",
+                "quality_note",
+                "source_marathi_ocr",
+                "english_candidate",
+                "corrected_english",
+            ]
+        )
+
+        for unit in review_units:
+            writer.writerow(
+                [
+                    pdf_path.name,
+                    unit.page_number,
+                    unit.unit_number,
+                    unit.unit_type,
+                    unit.quality_note,
+                    unit.source_text,
+                    unit.translated_text,
+                    existing_corrections.get(
+                        (unit.page_number, unit.unit_number),
+                        "",
+                    ),
+                ]
+            )
+
+    return report_path, len(review_units)
+
+
 # ============================================================
 # FAILURE/RESUME HANDLING
 # ============================================================
+
+def read_failure_attempts(marker: Path) -> int:
+    if not marker.exists():
+        return 0
+
+    try:
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+        return int(payload.get("attempt_count", 1))
+    except Exception:
+        return 1
+
 
 def write_failed_marker(
     pdf_path: Path,
@@ -1021,12 +1467,14 @@ def write_failed_marker(
     error: Exception,
 ) -> Path:
     marker = failed_marker_path(pdf_path)
+    attempt_count = read_failure_attempts(marker) + 1
 
     atomic_write_json(
         marker,
         {
             "source_pdf": pdf_path.name,
             "pages": pages,
+            "attempt_count": attempt_count,
             "failed_at": time.strftime("%Y-%m-%d %H:%M:%S"),
             "error_type": type(error).__name__,
             "error": str(error),
@@ -1043,8 +1491,25 @@ def should_skip_pdf(pdf_path: Path) -> tuple[bool, str]:
     if output.exists() and not FORCE_RETRANSLATE:
         return True, "English PDF already exists"
 
-    if marker.exists() and not RETRY_FAILED:
+    if RUN_MODE not in {"failed_only", "resume", "new_only"}:
+        raise ValueError(
+            "RUN_MODE must be 'failed_only', 'resume', or 'new_only'."
+        )
+
+    if RUN_MODE == "failed_only" and not marker.exists():
+        return True, "not a previously failed PDF"
+
+    if RUN_MODE == "new_only" and marker.exists():
         return True, "previous failure marker exists"
+
+    if marker.exists():
+        attempts = read_failure_attempts(marker)
+
+        if attempts >= MAX_PDF_FAILURE_ATTEMPTS:
+            return (
+                True,
+                f"failure retry limit reached ({attempts} attempts)",
+            )
 
     return False, ""
 
@@ -1080,6 +1545,10 @@ def process_one_pdf(
             pdf_path,
             page_results,
         )
+        review_path, review_count = write_review_report(
+            pdf_path,
+            page_results,
+        )
 
         marker = failed_marker_path(pdf_path)
         if (
@@ -1089,25 +1558,38 @@ def process_one_pdf(
             marker.unlink()
 
         elapsed = time.perf_counter() - started
+        status = "SUCCESS_REVIEW" if review_count else "SUCCESS"
+        message = (
+            f"{review_count} unit(s) require manual review: {review_path}"
+            if review_count
+            else ""
+        )
 
         append_csv_log(
             filename=pdf_path.name,
-            status="SUCCESS",
+            status=status,
             pages=pages,
             seconds=elapsed,
             device=device,
+            message=message,
         )
         logging.info(
-            "%s | SUCCESS | pages=%s | device=%s | %.2fs",
+            "%s | %s | pages=%s | device=%s | review_units=%s | %.2fs",
             pdf_path.name,
+            status,
             pages,
             device,
+            review_count,
             elapsed,
         )
 
         print(f"Saved text: {text_path}")
         print(f"Saved HTML: {html_path}")
         print(f"Saved PDF : {pdf_output}")
+        if review_path:
+            print(f"Review CSV: {review_path}")
+            print(f"Review units: {review_count}")
+        print(f"Status    : {status}")
         print(f"Time      : {elapsed:.1f} seconds")
         return True
 
@@ -1143,16 +1625,19 @@ def main() -> None:
 
     pending: list[Path] = []
     skipped_existing = 0
-    skipped_failed = 0
+    skipped_by_mode = 0
+    skipped_retry_limit = 0
 
     for pdf_path in pdfs:
         skip, reason = should_skip_pdf(pdf_path)
 
         if skip:
-            if "failure marker" in reason:
-                skipped_failed += 1
-            else:
+            if reason == "English PDF already exists":
                 skipped_existing += 1
+            elif "retry limit" in reason:
+                skipped_retry_limit += 1
+            else:
+                skipped_by_mode += 1
             continue
 
         pending.append(pdf_path)
@@ -1164,9 +1649,11 @@ def main() -> None:
     print("Local Marathi-to-English PDF Translator")
     print(f"Input folder             : {INPUT_FOLDER}")
     print(f"Output folder            : {OUTPUT_FOLDER}")
+    print(f"Run mode                 : {RUN_MODE}")
     print(f"Total source PDFs        : {len(pdfs)}")
     print(f"Existing outputs skipped : {skipped_existing}")
-    print(f"Failed markers skipped   : {skipped_failed}")
+    print(f"Skipped by run mode      : {skipped_by_mode}")
+    print(f"Retry-limit skipped      : {skipped_retry_limit}")
     print(f"PDFs selected this run   : {len(pending)}")
     print("=" * 72)
 

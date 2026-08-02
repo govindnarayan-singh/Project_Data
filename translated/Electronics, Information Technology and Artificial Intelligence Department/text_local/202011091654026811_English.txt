@@ -1,0 +1,771 @@
+--- Source page 1 ---
+
+Establishment of working arrangements for the use of mahaeoffice system for government purposes (5.0.2).
+
+Maharashtra government
+
+Department of General Administration (MAT)
+
+Governance Circular No.: Matansang-2012/ Prpr.c.253/K.39
+
+Madam Kama Road, Huttama Rajguru Square,
+
+Ministry, Mumbai 400 032
+
+Date: 09th of November, 2020
+
+Reference: 1) Department of General Administration, Information Technology, government decision making
+
+No. Matans - 2020/Prc.35 A/S-1/39, 19th of October, 2020.
+
+The preamble is:
+
+Governments are increasingly using computers in government functions of state governments.
+
+We need to speed up the work, improve efficiency, secure documents and information quickly and quickly.
+
+In order to facilitate the decision-making process, the Ministry is engaged in government work.
+
+Date under the chairmanship of the Chief Minister in line with the effective use of e-Office system
+
+The meeting was concluded on 10th September 2020.
+
+A decision has been taken to use it in accordance with the above-mentioned Governance Decisions.
+
+Orders have been issued for the implementation of e-Office system in the Ministry.
+
+The issue of determining the S.0.P. was under consideration by the Government.
+
+The circular:
+
+It has been decided to make effective use of e-Office system in the Ministry.
+
+For this purpose, NIC's e-Office (URL) is mahaeofficel.maharashtra.gov.in.
+
+Orders have been issued by the Governments in reference to the implementation.
+
+Accordingly, the amount required for the implementation of e-Office system in the Ministry.
+
+Approaches (5.0.2.) have been set out, which include the statement-A (Annexure-1) HATS sie.
+
+Procedure for dismissal of S.0.P. for e-Office system from Marathi
+
+It's being done.
+
+--- Source page 2 ---
+
+Governance Circular No: Matansang-2012/P.R.253/K.39
+
+Requires some technical assistance/training when working in e-Office system
+
+Noodle Officials and E-Office of the Information Technology Department, where applicable
+
+Contact the support team.
+
+The Government Circular on the website of the Government of Maharashtra at www.maharashtr.gov.in
+
+The computer code is 202011091654026811.
+
+The circular is being certified with a digital signature.
+
+By order and names of the Governor of Maharashtra.
+
+Digitally signed by Swati 4 Mhase Patil
+
+°
+
+WwW | Y M h DN: c=IN, o=Government Of Maharasht DIT Department,
+
+postalCode=400032, st=Maharashi
+
+2.5.4.20=9198652167706abf1515cbb7ffd9d0de8f0fl 45686cf64
+
+167€880e92001 565b4,
+
+| riaINumber=6d0daab2ec5c2559c290466c40a15f81b5998842
+
+a | d90fd31c81897af6d807c49; ‘Swati Y Mhase Pat
+
+Date: 2020.11.09 17:00:52 +05'30'
+
+(Swati Mse-Patil, B.P.C.) with Secretary
+
+Mr. Chief Secretary, his personal assistant,
+
+Myatt Election Commission, Mumbai,
+
+The Deputy Chief Secretary (Service), his personal assistant, the Deputy Prime Minister's Personal Assistant to the Chief Secretary of the Department of General Administration,
+
+The Prime Minister's Principal Secretary, his personal assistant,
+
+All other than Chief Secretary/Chief Secretary/Secretary, all Ministries,
+
+The Chief Secretary, Directorate of Information Technology, Self-Assistant, R. Qo,
+
+Director, Directorate of Information Technology, self-assistant, Co-Secretary, self assistant of Directorate,
+
+11. Deputy Secretary, Office of the Chief Secretary, Self-Aid,
+
+12. Ayutthaya, Transportation Aykotaly, Mumbai,
+
+13. Director of AYUKT, Health Services and Campaigns, National Health Campaign, Mumbai,
+
+14. Managing Director, Maharashtra Warehouse Corporation, Pune,
+
+15. Selectivity/C.1.
+
+Page 2 of 2
+
+--- Source page 3 ---
+
+This is a list of countries in the world.
+
+Operational Guidelines for implementation of eOffice
+
+Directorate of Information Technology, (DIT)
+
+Government of Maharashtra
+
+--- Source page 4 ---
+
+2
+
+Table of contents Page
+
+No.
+
+1. Background 4
+
+1.1. About eoffice 4
+
+1.2. Benefit of eoffice 4
+
+2. eOffice Module 4
+
+2.1. eFile Process Flow 5
+
+2.2. eLeave Process Flow 6
+
+2.3 KMS Process Flow
+
+7
+
+2.3.1 Process of Creation My Document in KMS 7
+
+2.3.2 Process to create Folder in Central Document 8
+
+3. E-mail Diarization 8-
+
+10
+
+4. Process of eOffice Login 11
+
+4.1 Parichay(Single Sign Authentication) 11
+
+4.1.1 How to login in Parichay 11
+
+A) For OTP Authentication via. Mobile/Email 12
+
+5. Guide Line For Scanning 13
+
+5.1 Prepare Documents 13
+
+5.2 Important Points to Take Care 14
+
+5.3 Scanning Guidelines 14
+
+5.4 Important Note 15
+
+5.5 How to select files to be scanned 15
+
+--- Source page 5 ---
+
+3
+
+6. Process for eoffice implementation 15
+
+6.1 Overview 15
+
+6.2 Detailed processes 16
+
+6.2.1 Appoint implementation task force 16
+
+6.2.2 Conduct infrastructure gap analysis 16
+
+6.2.3 Coordinate for training sessions on eoffice
+
+16
+
+6.2.4 Complete initial set-up process
+
+16
+
+6.2.5 Implement eoffice
+
+16
+
+6.2.6 Conduct internal review meetings to track implementation 16
+
+7. Acronyms and Abbreviations 17
+
+--- Source page 6 ---
+
+1. Background
+
+As per the Government Resolution published on 19" October 2020 by General
+
+Administration Department (GAD), eoffice will be implemented in order to increase
+
+efficiency, effectiveness and transparency of governmental transactions and processes. GR
+
+document also details out departments shortlisted for implementation of eoffice in first phase
+
+along with the roadmap for implementation.
+
+1.1 About eoffice
+
+eoffice is a digital workplace solution developed by National Informatics Centre (NIC) which
+
+aims to usher in more efficient, effective and transparent inter-government and intra-
+
+government transactions and processes.
+
+1.2 Benefits of eOffice:
+
+Enhance transparency
+
+Increase accountability
+
+Assure data security and data integrity
+
+Promote innovation by releasing staff energy and time from unproductive procedures
+
+Transform the government work culture and ethics
+
+This document details out the guidelines for implementation of eoffice in all the departments/
+
+sub-departments under Government of Maharashtra.
+
+2.eOffice Module:
+
+ang File
+
+>
+
+Manag a ent
+
+Managment
+
+System
+
+System
+
+= सी Knowladg@
+
+iz Managment
+
+Managment
+
+Information
+
+System
+
+System
+
+--- Source page 7 ---
+
+2.1 eFile Process Flow:
+
+= Generate । Generate & Send
+
+putt Fle ot
+
+Open file & start noting, Create draft Edit 05. ‘Approve Orafi issue Orefl, Riterence fo noting, Drafts & Correspondencewithin file.
+
+Process Note
+
+Scan the document - login eOffice portal- File management system- Receipt - Browse & Diarise - Enter metadata - Generate/generate & send - Generate - Put in File - Create Non SFS -Filled pink page details - Continue working - File - Completed -File open -CP side showing - Add green/yellow note - Send file.
+
+--- Source page 8 ---
+
+2.2 eLeave Process Flow:
+
+Choose ष्‌" of Leave
+
+Select “ | from & To
+
+Ck “aval ues LTC Appl
+
+Sond Request 1 Full Address & Phone Number 1 Add Reason’ Remark
+
+Process Note Login eOffice portal - Leave managementsystem- Apply - Choose leavetype - Choose Nature of Leave - Select Date from & To - Add Reason/Remark - Full Address & Phone Number~ Send Request
+
+--- Source page 9 ---
+
+It organizes content in a logical way, and makes it easy to standardize content creation and presentation across an organization. It provides features at each stage of a document's life cycle, from template creation to document authoring, reviewing, publishing, auditing, and ultimately archiving. Objective of KMS: Under Government bodies, large scenario volume of documents of various categories are managed and circulated.
+
+--- Source page 10 ---
+
+8 2.3.2 Process to create Folder in Central Document: | | 2. Click on | 3. Select Central _ वा Knowledge » क Document & Click Fo Kegsin Iso BE) Te > Management » on Folder Under | System | Create Button. | | | | 4. Upload All Desired 5. Other Departments User Can Access that folder or | « Documents For Can Download the Documents. | 3 Other department | Access. | 3. E-mail Diarization Introduction: E-mail diarization features facilitate the eOffice user to fetch the letters or mails directly from the user's NIC mail id to receipt module under e-file. Objective: To receive maximum tapal into e-File application directly in order to save the user’s time. login into NIC email ( Mentioned in extreme Open Desired Email & Click on Move To eFile Button then Ok ( mentioned in Bottom) Go to home and open receipt module & Click on email diarization. Select attachment & fill diarization Details, Continue as normal. Note: To avail this facility user has to open their email IMAP port.
+
+--- Source page 11 ---
+
+I. Login into eOffice through a new interface VVeloomee tease stonm-iry Enter tise rl oar ve >) 1102484 ॥4661488600700313%3920%॥॥ 7 tr Enter Password = { | Stey wigrnec in <> > =P fri c If. = Click on NIC Email Icon QGitere of the week ▷ Always bear in mind that your o ➡️ on-initiative efforts ☺️☺️ ⭐️ ✍️ ♂️ ♀️ ✓ ✔️ ✔️ ✅ ✓️ ✓ ✓ · ✓ • ✓ * ✓ Click on the e-mail services: https://www.ecffice service= File Managecmmt System 758 k/% "> 77 lts. OTP Oo 2 no-rephiiparichaymicin PARICHAY (330 Flatiorm}) OTP oo 3 evangelist@ntt-netmagic.com NTT-Netmagic Mobile app There is an enhanced se Oo 4 eforms@nic.in Application Registration Number - IMAPPO by Coondinater
+
+--- Source page 12 ---
+
+10
+
+IV.
+
+After clicking on Move To e-File, Go back and click on email diarization under
+
+receipt module.
+
+What is it like to be drunk?
+
+k
+
+Browse & Disrize
+
+Subject
+
+yore EJ
+
+k
+
+Inbox (12)
+
+PARICHEY
+
+(550) Plathorm
+
+Hew=Stonln, Yes This
+
+Email Diarisakion
+
+Gs
+
+has been wu
+
+port Bo
+
+पापी
+
+dad
+
+for f
+
+pdlsted - Open |
+
+ip 205.222.157.765
+
+Crested
+
+i
+
+ful
+
+EFipla
+
+eet Officer Retire! Addional Chair
+
+tir:
+
+Addional Charge / Transfer Shesit
+
+ransier 3!
+
+Sent
+
+ate
+
+Closed
+
+क॑ Gy Me
+
+acknowlsdigement
+
+* Crested
+
+क॑ Sent
+
+Click on desired receipt, Move attachment if
+
+available, Fill
+
+the other mandatory
+
+Details and move next as normal.
+
+UptcadiOndy Pot opts MEP
+
+| ma | |
+
+Leary Detate
+
+—
+
+पक
+
+Official कभ (550 Platlerrri | , 0.
+
++
+
+°
+
+"2 णच
+
+=
+
+oo
+
+-
+
+_—e
+
+fie
+
+~—
+
+te fate
+
+a
+
+4555 9555
+
+—r
+
+tte, es «>
+
+Corer Ore
+
+470 me 715 Bowe
+
+ere Anite tome
+
+rene seat aggre
+
+oo
+
+reer
+
+क 20 “क Lew wee res teres:
+
+7 40
+
+न
+
+Camgory & केक
+
+«अ
+
+355
+
+erent insane ston 9 कॉ ौ09 4. भे
+
+9 met | mpm 0-9 100
+
+1.4 1015-05.
+
+I'm not sure about that.
+
+4. Process of eOffice Login:
+
+4.1 Parichay (Single Sign Authentication)
+
+Introduction: Parichay is developed by NIC and currently this is integrated by eOffice
+
+application. Parichay is Single Sign Authentication (SSO). This manual contains the Step-by-
+
+Step process of understanding how to login to Parichay with different ways of authentication.
+
+For any user logging in for the first time, this is an extremely helpful document. Once you
+
+understand the ways of login, you may refer to Parichay User Manual for understanding the
+
+entire application.
+
+--- Source page 13 ---
+
+11
+
+4.1.1 HOW TO LOGIN TO PARICHAY?
+
+Supported Browsers Internet Explorer/Mozilla Firefox or Chrome
+
+Put this URL:https:/mahaeoffice1.maharashtra.gov.in into url bar(Mahaeoffice site
+
+will redirect into Parichay website for Authentication)
+
+Enter the credential (Username and Password). Username should be in the format of
+
+“userid@domainname” (Example: test@nic.in). You may select ‘Stay signed in’
+
+checkbox to extend the session expiration time to 24 hrs (Default Parichay session
+
+expiration time is 12 hrs). Click ‘Next’.
+
+4 tl
+
+a
+
+National
+
+informatics
+
+Powered by :
+
+SS ==
+
+= Centre
+
+HELP
+
+26x
+
+roves eet
+
+faRICHAY
+
+Single, Simplified, Safe
+
+Welcome. Please sign-in
+
+त्ता User Name 8.0. userid@domain.in
+
+Enier Password
+
+(_] Stay signed in ©
+
+The user will be shown a Two-Step Authentication screen when logged in from non-
+
+remembered Device*. Select a Two-Step Authentication method such as OTP on
+
+Email, OTP on Mobile, Backup Code, Token Authentication, or TAP authentication
+
+to validate your credentials. And click ‘Next’.
+
+--- Source page 14 ---
+
+12
+
+faRICHAY
+
+Single, Simplified, Safe
+
+Two Step Authentication
+
+Select one of the options and Click "Next"
+
+[ | (iy OTP on Email
+
+| [:] OTP on Mobile
+
+ळळ Backup Code
+
+Exe TOKEN Authentication
+
+TAP Authentication
+
+Login as Different user
+
+* Device is being identified by IP, Browser ID, and User-Agent
+
+A) For OTP Authentication via. Mobile/Email
+
+You can select either OTP on mobile or email. Enter 6-digit OTP received on your
+
+mobile/email
+
+--- Source page 15 ---
+
+13
+
+a
+
+| a fl
+
+National
+
+Powered by: ===
+
+= एप —
+
+= Centre
+
+informatics
+
+51»
+
+Ox
+
+re अशे
+
+YA RICHAY
+
+Single, Simplified, Safe
+
+OTP Authentication
+
+OTP Authentication
+
+Sui
+
+ccesstully Sen
+
+0 fegistere
+
+ODNEis
+
+PALA
+
+( | Show OTP
+
+| _ | Don't ask me again on this Device
+
+Resend OTP
+
+Login as Different user
+
+Click on NEXT Button then you can directly enter eOffice Portal
+
+5. Scanning Guideline for external Files:
+
+5.1 Prepare Documents:
+
+Closed or Recorded/Active physical files will be scanned as and when they are moved into an
+
+eFile.
+
+e
+
+Unpin / unstaple documents, if any (The staple pins and other pins that are binding the
+
+document set will be removed at this Step and each set will be examined for the same
+
+at least twice)
+
+Stick Photographs with glue (in case there are any stapled photographs, remove them
+
+and stick them with glue. This needs to be done very neatly
+
+Dusting of the document (Removing any unwanted dust which may affect the quality
+
+of the image, from the documents)
+
+Page Numbering-Each page of the document is numbered on the corner. This helps in
+
+maintaining the count and also in avoiding any misplaced sheets of any document
+
+during the course of file movement etc.
+
+Clip the document set
+
+--- Source page 16 ---
+
+14
+
+5.2 Important Points to Take Care:
+
+e Make sure that the scanned documents are readable.
+
+e Collect the originals from the scanner collate and clip the documents once again. e All the physical records (per connection) shall be bound in a file.
+
+e If DPI (Dots Per Inch) is more, photo is sharp but the size of the file is more.
+
+e If DPIis less, photo is dull but the size of the file is less
+
+5.3 Scanning Guidelines
+
+Scanning Guidelines
+
+Note-Sheet Correspondence/Dak
+
+Printed Paper/Clean
+
+Printed Paper/Clean
+
+Handwritten/P Handwritten/P
+
+oor Visibility oor Visibility
+
+Scanner
+
+Setting:94° dpi-
+
+Scanner
+
+Setting:94° dpi-
+
+Scanner Scanner
+
+Setting:200 dpi- Setting:200 dpi-
+
+B&W B&W Baw B&W
+
+Output Format: Output Format:
+
+Pdf Pdf
+
+Output Format: Output Format:
+
+Pdf Pat
+
+--- Source page 17 ---
+
+15
+
+5.4 Important Note:
+
+e Resolution should be set to 200 Dpi for Handwritten/Poor Visibility and 150 Dpi for Printed
+
+Paper /Clean Paper for both Note sheet and Correspondence/Dak
+
+e Image Should be set to black and white drawing(Not grey scale, Not Color) 5.5 How to select files to be scanned? This section outlines the guidelines to be followed by the assistant who will be responsible for scanning the files that are in processing and for files that are closed. a. Current files — Current files are those which are currently in circulation/ in use. They deal with cases that are open and decisions on the issues being considered in them are yet to be finalized. An active file may contain many documents or a few documents depending on its use.
+
+b. Closed/Recorded files — Files are marked as closed/recorded once all actions are complete on the file and the Section Officer gives his approval for closing the file. Closed files have no outstanding fair communications to be issued and no further action due.
+
+Closed files/Recorded files will be scanned as and when they are referenced. 6. Process for eoffice implementation 6.1 Overview The step by step process to be followed by the departments for implementation of eof office is as follows: Appoint Conduct Coordinate for implementation task fees infrastructuregap
+
+--- Source page 18 ---
+
+16
+
+6.2 Detailed processes
+
+The detailed processes for implementation of effice are as follows:
+
+6.2.1 Appoint implementation task force:
+
+e Every department will have to nominate an implementation task force for eoffice consisting of Nodal Officer and IT support team
+
+e@ The implementation task force will be responsible for end to end implementation of eoffice in their respective department’s right from conducting infrastructure gap analysis to conducting review meetings to track the implementation status. Preferred criteria and detailed roles and responsibilities of each member of implementation task force is defined in Annexure 1
+
+6.2.2 Conduct infrastructure gap analysis
+
+e Implementation task force shall conduct review of existing infrastructure in the department such as number of personal computers, connectivity, scanners, printers, etc. and determine procurement requirements, if any basis the review.
+
+e Apart from these, implementation task force shall also review current status of Employee Master Detail (EMD), Digital Signature Certificate (DSC) and NIC e-mail address for all the employees in the department
+
+e Implementation task force shall coordinate with the concerned teams/ departments for addressing the requirements and ensure that all the hardware and software requirements are fulfilled prior to implementation
+
+6.2.3 Coordinate for training sessions on eoffice e Coordinate with DIT for conducting training sessions on eoffice and its features for all the employees in the department as per defined schedule e Maintain a tracker to ensure all the employees have attended the training session
+
+6.2.4 Complete initial set-up process e Send EMD document filled as per the defined template to DIT e Post verification and data validation, DIT will complete organization set-up and create users as per EMD submitted by the department e Conduct preliminary testing for employee profile, file heads, Organization Unit (OU) and user log-in. Report any discrepancies observed to DIT (support team)
+
+6.2.5 Implement eoffice e Post completion of the initial set-up, department can go-live with eoffice. Users can now create new files on eoffice as well as upload existing scanned physical files as per guidelines e Users can reach out to the departmental support team or DIT support team for any help
+
+6.2.6 Conduct internal review meetings to track implementation e Nodal officers will conduct review meetings with the department on a regular basis to track the implementation of eoffice e In-case of any challenges, nodal officers can reach out to the DIT support team
+
+--- Source page 19 ---
+
+17
+
+7. Acronyms and Abbreviations
+
+Employee Master Details
+
+Digital Signature Certificate CRU Central Registry Unit
+
+File Head
