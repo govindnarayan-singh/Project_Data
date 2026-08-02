@@ -5,3 +5,23 @@ __pycache__/
 .ipynb_checkpoints/
 .env.env
 .env.*
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Input documents and generated data
+GRs/
+cache_local/
+logs/
+metadata/
+previous attempts failed/
+translation.log
+*.log
+
+# Python
+venv/
+.venv/
+__pycache__/
+*.pyc

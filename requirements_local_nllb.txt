@@ -1,0 +1,9 @@
+# Install PyTorch separately first, using the command in the setup steps.
+transformers>=4.51,<5
+accelerate>=1.0
+sentencepiece>=0.2
+safetensors>=0.4
+pymupdf>=1.24
+pytesseract>=0.3.13
+Pillow>=10
+playwright>=1.49
