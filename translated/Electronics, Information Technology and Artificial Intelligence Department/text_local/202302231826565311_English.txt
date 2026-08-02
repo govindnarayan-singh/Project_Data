@@ -1,0 +1,223 @@
+--- Source page 1 ---
+
+Standard procedures for the implementation of e-office...
+
+Maharashtra government
+
+Directorate of Information Technology
+
+Governance Circular No.: Matansam 2022/Pr.pr.62/S-1/39
+
+Ministry, Mumbai - 400 032.
+
+Date: 23.02.2023
+
+Reference: Government Circular Number: Narrow - 2023/PR.02/18 (R.V.K.) dated 02 February,2023.
+
+Circulars
+
+The preamble is:
+
+According to the above Circular of Reference, the State Governments have been instructed to make more use of the computer in governmental operations, to streamline the functioning of the government, to formulate the functioning of the government, to secure documents and information, to obtain documents and information quickly and expeditiously and to facilitate the decision-making process.
+
+According to the Central Circular, the e-office system should be used effectively in all administrative departments of the Ministry as well as regional offices in governmental affairs from 01 April 2023, as well as postal mail (e.g. THR, books, etc.) sent through the administrative departments of the Ministry as well as regional offices under the Circular will not be able to be sent through the e-office.
+
+In accordance with the above, standard procedures for the implementation of e-Office have been developed as follows.
+
+Standard Operating Procedure of the E-Office
+
+When implementing the e-Office system, the processing of e-office must start from the mail coming to the office.
+
+1. Physical Dak, direct mail from the office
+
+2. Electronic Dak
+
+1. Physical Dak:
+
+1. Postal received at the office will be deposited in the Central Registration Unit (CRU) in the Central Registration Room.
+
+--- Source page 2 ---
+
+Government Circular No: Matashanam 2022/Pr.kr.62/S-1/39
+
+Stamp pattern S.P.V, Central Registration Room (CRU) Computer number of Registration Staff Control Officer, Central Registration Room
+
+Postal marks marked by the Control Officer will be taken for scanning at the e-Office.
+
+Each mail will be scanned and its Metadata Entry will be recorded in the computer. After registration in the computer, the computer number receiving the mail will be handed over to the corresponding mail and signed under that number that the corresponding mail has been registered in the e-office.
+
+The computerized mail room is placed in the lower folder, in the CRU.
+
+Since the files are to be submitted only through the e-office and the mail has been scanned, it should not be sent to the mailroom.
+
+All CRU's morning mail should be stored for one year.
+
+With the approval of the postmaster, appropriate action should be taken to destroy this mail. All received mail must be scanned and recorded in the e-office system.
+
+आहे.
+
+Under no circumstances should a physical snack be made.
+
+If it is necessary to prepare a physical snack, no physical snack should be prepared before preparing a snack without the prior permission of the Head of Department/Secretary of Department concerned.
+
+Submitted to the Head of Department/Secretary of the Department of Posts with Confidential records.
+
+Such mail shall be returned to the CRU in accordance with the procedure [81580.] as directed by the Head of Department/Secretary concerned. In the case where the Head of Department/Secretary has suggested physical delivery, physical delivery shall be made. The remaining mail shall be registered in the e-office system.
+
+According to Government Circular dated 2nd February 2023, the Subordinate Offices of the Department will no longer
+
+This is an indication of e-mail AR correspondence without sending physical snacks.
+
+Page 5 of 2
+
+--- Source page 3 ---
+
+Government Circular No: Matashanam 2022/Pr.kr.62/S-1/39
+
+If each department implemented the patch, it would reduce the amount of physical malpractice mail scanning work.
+
+It will be.
+
+2. Electronic Dak:
+
+1,
+
+A separate e-mail ID should be provided for each department's CRU. All e-mails received in the department should be transferred to this e-mail ID.
+
+E-mails received in CRU should not be printed out under any circumstances, CRU mail and e-mails received should be diarised and sent to the corresponding circle.
+
+For Diarisation employees, a list of work allocations to each classroom in the department should be made available to the CRU in HI mode so that they can easily determine which Hanah corresponds to the mail/e-mail received in the CRU.
+
+An attachment in a mail in which the mail transaction is attached by PDE,
+
+The employee/official should check in the CRU which class corresponds to the mail of the head by opening/opening and then complete the Diarisation process.
+
+Every CRUMB e-mail is diarized in an LAA folder.
+
+The folder should be named Diarised merge. After the mail Diarise, it will be immediately dropped into the Diarised e-mail folder so that the remaining Asal sera from the e-mail entered in 73 can be taken to Diarise.
+
+Postal and mail received in the CRU should be registered to keep a weekly receipt. A. Number of Postal / E-mail Balance for Diarise at the beginning of the week 8. Number of E-mail / Postal Received during the week 7. Number of Diarise HSS Postal / E-Mail during the week D. Number of Postal / E-mail Balance Remaining
+
+The Nodal Officer should remove the headstock every week and bring it to the attention of the Head of Department/Secretary at the e-Office every Monday.
+
+1.
+
+2.
+
+Responsibilities of Nodal Officer
+
+Nodal Officer will be responsible for implementing the e-Office system in the department, ensuring that all employees are prepared for e-Office such as e-mail preparation of all employees in the department, Digital Signature, e-Office accounts, training.
+
+Page 3 out of 5
+
+--- Source page 4 ---
+
+Government Circular No: Matashanam 2022/Pr.kr.62/S-1/39
+
+3.
+
+Preparation of scanners, computers, printers, internet connectivity, LAN connectivity and separate e-mail IDs for CRU in CRU.
+
+In order to keep the mail received in the CRU, the folder and all the mail collected throughout the year.
+
+Prepare it properly to keep it neat.
+
+Provide adequate staff to scan incoming mail into CRU in a timely manner,
+
+To prepare an up-to-date list of all classrooms in their training department and inform all employees of CRU.
+
+In the CRU, the scanning of incoming mail / e-mails / Diarisation is done on a daily basis or how
+
+Monitoring, submitting weekly reports to the Secretary, taking appropriate measures to prevent CRUA's suspension from increasing.
+
+Control of the number of physical malfunctions produced in the department, produced from orbit.
+
+Control the number of Physical Disasters occurring, bring the matter to the attention of the Department Principal/Secretary if unnecessary Physical Disasters are being produced from the room.
+
+In order to make the e-office system successful, work on the e-office system in every classroom.
+
+Completion: It is necessary to come to a one-room completion with 100% e-office system work.
+
+Planning what to do.
+
+How many of the total rooms in the department are running on 100% e-office system.
+
+Review and report this information to GAD as well as the Head of Department/Secretary.
+
+Information on the personnel who have been transferred to the Department and the personnel who have been transferred
+
+Keeping the e-Office system up to date.
+
+11. Ensure that PHAR Digital Signature in the Department is updated in a timely manner.
+
+Organizing training for incoming staff.
+
+12. Submitting various reports of the E-Office system to the General Administration Department from time to time.
+
+13. Coordination with e-office cell/help desk for system problems
+
+1.
+
+2.
+
+Following.
+
+Implementation of the E-Office System Implementation of the E-Office System will be commenced in all departments from 1 March 2023.
+
+Action on the ongoing Physical Nasty should be completed immediately, so that
+
+For completion and closure of the proceedings, a period of 3 months from 1 March 2023 is being given to complete the proceedings on the ongoing proceedings. During this period, the proceedings on the ongoing Physical Nasty shall be completed and the related proceedings shall be closed.
+
+Page 5 of 4
+
+--- Source page 5 ---
+
+Government Circular No: Matashanam 2022/Pr.kr.62/S-1/39
+
+It will be the responsibility of the departments to scan the remaining snacks and bring them into the e-Office system so that the ongoing physical snacks can be completed as soon as possible so as not to overload the department with snack scanning.
+
+The Sadhar Jhassan Circular, number 202302231826565311, has been made available on the Government of Maharashtra's website at www.maharashtra.gov.in.
+
+By order and name of the Governor of Maharashtra.
+
+ed by GANESH BABURAO PATIL
+
+GANESH Coane BABURAO PATIL Director of Information Technology, Government of Maharashtra
+
+9469005704
+
+B4, cn=GANESH BABURAO PATIL.
+
+The following:
+
+1. Ma. Principal Secretary to the Governor, Raj Bhavan, Malbar Hill, Mumbai,
+
+2. Ma. Chief Minister, State of Maharashtra, Ministry, Mumbai.
+
+3. Ma. Secretary to Deputy Chief Minister, Ministry, Mumbai.
+
+4. Private Secretary to all M. M. Ministers / M. State Ministers, Ministry, Mumbai.
+
+5. Chairman, Secretary of Maharashtra Legislative Council, Legislative Assembly, Mumbai.
+
+6. Chairman, Secretary of Maharashtra Assembly, Legislative Assembly, Mumbai
+
+7. Ma. Leader of Opposition, Private Secretary to Maharashtra Legislative Council, Legislative Assembly, Mumbai.
+
+8. M. Opposition Leader, Private Secretary of Maharashtra Assembly, Legislative Assembly, Mumbai
+
+9. All M. Assembly/Legislative Council members
+
+10. All Ministries
+
+11. Auditor General (Accounting), Maharashtra 1/2 Mumbai/Nagpur,
+
+12. All departmental agencies
+
+13. All district governors
+
+14. Selection of information technology department
+
+15. Directorate of Information Technology.
+
+Page 5 of 5
