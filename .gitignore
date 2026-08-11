@@ -24,3 +24,36 @@ venv/
 .venv/
 __pycache__/
 *.pyc
+
+# Python virtual environment
+venv/
+.venv/
+
+# Python generated files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Local model/cache files
+.cache_local/
+.cache/
+.cache*/
+
+# Environment/secrets
+.env
+gr_rag/.env
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.temp

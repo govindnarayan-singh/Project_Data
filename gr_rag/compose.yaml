@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    container_name: gr-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: grdb
+      POSTGRES_USER: gr_user
+      POSTGRES_PASSWORD: gr_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - gr_pgdata:/var/lib/postgresql/data
+      - ./sql/init.sql:/docker-entrypoint-initdb.d/001-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gr_user -d grdb"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  gr_pgdata:
