@@ -67,12 +67,95 @@ def devanagari_ratio(text: str) -> float:
     return dev / len(letters)
 
 
+def latin_ratio(text: str) -> float:
+    """Return the share of alphabetic characters that belong to the Latin script."""
+    letters = [c for c in text if c.isalpha()]
+    if not letters:
+        return 0.0
+    latin = sum(unicodedata.name(c, "").startswith("LATIN ") for c in letters)
+    return latin / len(letters)
+
+
 def malformed_devanagari_count(text: str) -> int:
     """Return strong indicators of bad PDF Unicode mapping, not spelling errors."""
     normalized = normalize_marathi_text(text)
     return len(_WORD_INITIAL_MARK_RE.findall(normalized)) + 2 * len(
         _KNOWN_BROKEN_WORD_RE.findall(normalized)
     )
+
+
+_LATIN_WORD_RE = re.compile(r"[A-Za-z]+(?:['’-][A-Za-z]+)*")
+_LATIN_VOWEL_RE = re.compile(r"[AEIOUYaeiouy]")
+_REPEATED_LATIN_RE = re.compile(r"([A-Za-z])\1\1", re.IGNORECASE)
+
+
+def _latin_word_signals(text: str) -> tuple[int, float, float]:
+    """Return token count, single-letter share, and plausible-word share."""
+    words = _LATIN_WORD_RE.findall(text)
+    if not words:
+        return 0, 0.0, 0.0
+
+    single_share = sum(len(word) == 1 for word in words) / len(words)
+    plausible_share = sum(
+        len(word) >= 2
+        and _LATIN_VOWEL_RE.search(word) is not None
+        and _REPEATED_LATIN_RE.search(word) is None
+        for word in words
+    ) / len(words)
+    return len(words), single_share, plausible_share
+
+
+def digital_text_classification(text: str) -> str:
+    """Classify a page's direct text layer using deterministic script signals."""
+    text = normalize_marathi_text(text)
+    alphanumeric_count = sum(c.isalnum() for c in text)
+    if alphanumeric_count < 4:
+        return "EMPTY_OR_IMAGE_ONLY"
+
+    malformed = malformed_devanagari_count(text)
+    if malformed >= 2:
+        return "CORRUPTED_MARATHI"
+
+    dev_ratio = devanagari_ratio(text)
+    lat_ratio = latin_ratio(text)
+    word_count, single_share, plausible_share = _latin_word_signals(text)
+
+    # Bad hidden OCR/ToUnicode layers commonly consist of hundreds of isolated
+    # Latin characters and fragments. Normal English prose and place-name lists
+    # have far fewer one-character tokens and a much higher plausible-word share.
+    suspicious_latin = (
+        lat_ratio >= 0.65
+        and word_count >= 20
+        and (single_share >= 0.35 or plausible_share < 0.45)
+    )
+    if suspicious_latin:
+        return "SUSPICIOUS_GARBLED_LATIN"
+
+    if len(text) < 80:
+        short_latin_valid = (
+            lat_ratio >= 0.50
+            and word_count >= 1
+            and single_share <= 0.25
+            and plausible_share >= 0.60
+        )
+        short_marathi_valid = dev_ratio >= 0.50 and malformed == 0
+        if short_latin_valid or short_marathi_valid:
+            return "VERY_SHORT_VALID"
+        return "UNCERTAIN"
+
+    if dev_ratio >= 0.55:
+        return "GOOD_MARATHI"
+
+    coherent_latin = (
+        lat_ratio >= 0.65
+        and word_count >= 3
+        and single_share <= 0.25
+        and plausible_share >= 0.60
+    )
+    if coherent_latin and dev_ratio < 0.08:
+        return "GOOD_ENGLISH"
+
+    return "UNCERTAIN"
 
 
 def extracted_text_quality(text: str) -> float:
@@ -84,30 +167,35 @@ def extracted_text_quality(text: str) -> float:
     if not text:
         return 0.0
 
+    classification = digital_text_classification(text)
+    if classification == "EMPTY_OR_IMAGE_ONLY":
+        return 0.0
+    if classification == "VERY_SHORT_VALID":
+        return 0.60
+    if classification == "SUSPICIOUS_GARBLED_LATIN":
+        return 0.20
+
     length_score = min(len(text) / 500.0, 1.0)
     dev_score = min(devanagari_ratio(text) / 0.55, 1.0)
+    latin_score = min(latin_ratio(text) / 0.65, 1.0)
     signal_hits = sum(1 for word in MARATHI_SIGNAL_WORDS if word in text)
     signal_score = min(signal_hits / 3.0, 1.0)
 
-    base_score = 0.35 * length_score + 0.45 * dev_score + 0.20 * signal_score
+    language_score = max(dev_score, latin_score)
+    base_score = 0.35 * length_score + 0.45 * language_score + 0.20 * signal_score
     # Cap text with strong structural corruption below the automatic OCR cutoff.
     malformed = malformed_devanagari_count(text)
     if malformed >= 2:
         return min(base_score, 0.45)
+    if classification == "UNCERTAIN":
+        return min(base_score, 0.54)
     return base_score
 
 
 def should_ocr(text: str) -> bool:
-    text = normalize_marathi_text(text)
-    if len(text) < 80:
-        return True
-
-    # A Marathi GR should normally contain meaningful Devanagari. This also catches
-    # many legacy/custom-font PDFs where text extraction returns Latin-like garbage.
-    if devanagari_ratio(text) < 0.08 and not any(w in text for w in MARATHI_SIGNAL_WORDS):
-        return True
-
-    if malformed_devanagari_count(text) >= 2:
-        return True
-
-    return extracted_text_quality(text) < 0.55
+    classification = digital_text_classification(text)
+    return classification not in {
+        "GOOD_MARATHI",
+        "GOOD_ENGLISH",
+        "VERY_SHORT_VALID",
+    }
