@@ -131,6 +131,24 @@ You can also test an English query against the Marathi corpus because BGE-M3 is 
 python -m src.search "government decision about pension benefits" --top-k 8
 ```
 
+## CSV Question Workflow
+
+For a simple client-friendly batch search:
+
+1. Open `data/questions.csv`.
+2. Add questions under the mandatory `question` column.
+3. Run one command:
+
+   ```bash
+   python -m src.run_questions
+   ```
+
+4. Open `outputs/answers.csv` in Microsoft Excel.
+
+`question_id`, `top_k`, and `department` are optional input columns. Missing question IDs are generated automatically, and `top_k` defaults to 5. Both CSV files use UTF-8 with a byte-order mark so Marathi displays correctly when opened directly in Excel on Windows.
+
+The output contains ranked retrieval evidence: source GR/file, GR number and date, department, page range, similarity, and retrieved passage. It does **not** contain LLM-generated final answers. The command performs read-only dense semantic search against the existing PostgreSQL/pgvector database and regenerates `outputs/answers.csv` on every run.
+
 ## 7. Scale gradually
 
 Suggested sequence:
