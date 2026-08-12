@@ -1,0 +1,11 @@
+Django==6.1
+pypdf
+pypdfium2
+Pillow
+sentence-transformers
+transformers
+psycopg[binary]
+pgvector
+python-dotenv
+tqdm
+numpy

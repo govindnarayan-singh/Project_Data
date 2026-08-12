@@ -1,0 +1,43 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Government Administrative Knowledge Search</title>
+  <link rel="stylesheet" href="{% static 'search_ui/search.css' %}">
+</head>
+<body>
+  <header class="masthead"><div class="shell"><span class="eyebrow">Administrative knowledge brain</span><h1>Government Administrative Knowledge Search</h1><p>Semantic retrieval and evidence search across Government Resolution documents.</p></div></header>
+  <main class="shell">
+    <form method="post" class="search-panel" aria-label="Semantic evidence search">
+      {% csrf_token %}
+      <label for="query">Ask a question about an administrative subject</label>
+      <div class="controls">
+        <textarea id="query" name="query" rows="3" maxlength="2000" required placeholder="उदा. शासन निर्णयामध्ये कोणती तरतूद नमूद आहे?">{{ query }}</textarea>
+        <div class="actions"><label for="top_k">Results</label><select id="top_k" name="top_k">{% for option in top_k_options %}<option value="{{ option }}"{% if option == top_k %} selected{% endif %}>{{ option }}</option>{% endfor %}</select><button type="submit">Search evidence</button></div>
+      </div>
+      <p class="notice">This feature retrieves relevant source passages. It does not generate an AI answer.</p>
+    </form>
+    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
+    {% if results %}
+      <section aria-labelledby="results-heading">
+        <div class="results-title"><div><span class="eyebrow">Your query</span><h2 id="results-heading">{{ query }}</h2></div><span>{{ results|length }} evidence passages</span></div>
+        <div class="result-list">
+          {% for result in results %}
+            <article class="result-card">
+              <div class="rank"><span>Rank</span><strong>{{ result.rank }}</strong></div>
+              <div class="result-body">
+                <div class="result-top"><div><span class="department">{{ result.department }}</span><h3>{{ result.subject|default:"Subject not available" }}</h3></div><span class="score">Similarity {{ result.similarity|floatformat:4 }}</span></div>
+                <dl><div><dt>GR number</dt><dd>{{ result.gr_number|default:"Not available" }}</dd></div><div><dt>GR date</dt><dd>{{ result.gr_date|date:"d M Y"|default:"Not available" }}</dd></div><div><dt>Filename</dt><dd>{{ result.file_name }}</dd></div><div><dt>Pages</dt><dd>{{ result.page_start }}{% if result.page_end != result.page_start %}–{{ result.page_end }}{% endif %}</dd></div></dl>
+                <div class="passage"><span>Relevant passage</span><p lang="mr">{{ result.text }}</p></div>
+                <a class="pdf-link" href="{% url 'documents:pdf' result.document_id %}#page={{ result.page_start }}" target="_blank" rel="noopener">View PDF at page {{ result.page_start }} <span aria-hidden="true">↗</span></a>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </section>
+    {% elif request.method == 'POST' and not error %}<p class="empty">No matching evidence was found.</p>{% endif %}
+  </main>
+</body>
+</html>

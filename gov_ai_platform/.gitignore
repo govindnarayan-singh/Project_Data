@@ -1,0 +1,12 @@
+.env
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+data/django.sqlite3
+logs/*
+!logs/.gitkeep
+outputs/*
+!outputs/.gitkeep
+staticfiles/
