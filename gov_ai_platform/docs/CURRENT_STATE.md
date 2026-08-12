@@ -60,3 +60,32 @@ restricting dense search to the verified unchanged original document IDs.
 - There is no knowledge-graph extraction in this phase.
 
 Full evidence is under `outputs/corpus_expansion/expansion_50_v1/`.
+
+## Knowledge Graph diagnostic (2026-08-13)
+
+A read-only deterministic diagnostic scanned all 61 documents and 1,022 stored
+pages. It produced 414 candidate reference mentions across 57 documents and 42
+pattern families. Resolution against current metadata yielded 1 RESOLVED_EXACT,
+0 RESOLVED_STRONG, 1 AMBIGUOUS, 301 NOT_IN_CORPUS, and 111 UNPARSEABLE
+candidates. The 301 NOT_IN_CORPUS candidates form 254 normalized identifier
+groups, which remain an unverified upper bound because some identifier
+boundaries are affected by OCR/parser noise.
+
+The known 12 metadata diagnostics were classified as seven HIGH, four MEDIUM,
+and one LOW KG impact. Review of the authoritative 32 flagged expansion pages
+classified 14 IMPORTANT_BAD and 18 NON_CRITICAL_BAD; none was ignorable.
+
+A 50-candidate Codex diagnostic source-text review measured 96.00% reference
+detection precision, 93.33% reference-type accuracy, 63.33% document-number
+extraction accuracy, and 82.76% date extraction accuracy. Recall was not
+measured. Resolution precision was 100% for a denominator of one and therefore
+does not establish production resolution quality.
+
+The diagnostic recommendation is CONDITIONAL PASS. A provenance-first V1 with
+REFERENCES and ISSUED_BY is evidence-supported after identifier parsing,
+metadata, weak-page, and independent human-validation prerequisites are met.
+The current `gr_relations` placeholder should remain untouched and later be
+replaced through a reviewed migration. No graph rows or schema changes were
+made, and PostgreSQL remained at 61 documents, 1,022 pages, 740 chunks, and 0
+`gr_relations` rows. See `docs/KNOWLEDGE_GRAPH_PLAN.md` and
+`outputs/knowledge_graph_diagnostic/kg_diagnostic_report.md`.
