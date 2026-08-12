@@ -8,6 +8,7 @@ Completed foundations:
 4. Knowledge Graph diagnostic
 5. Candidate-first PostgreSQL Knowledge Graph V1
 6. Deterministic reference parsing/resolution, review artifacts, idempotence, and graph detail UI
+7. Production-oriented administrative portal UI with document, graph, corpus, and evaluation workspaces
 
 Next measured stages:
 

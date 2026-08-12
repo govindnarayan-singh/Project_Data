@@ -1,0 +1,43 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>{% block title %}Government Administrative AI Copilot{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'portal/app.css' %}">
+  <script src="{% static 'portal/app.js' %}" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <div class="app-shell">
+    <aside class="sidebar" id="primary-navigation" aria-label="Primary navigation">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">GA</span><div><strong>Government Administrative</strong><span>AI Copilot</span></div></div>
+      <nav>
+        <a class="nav-link {% if active_section == 'copilot' %}active{% endif %}" href="{% url 'search_ui:search' %}"><span aria-hidden="true">⌕</span><span>Copilot</span></a>
+        <a class="nav-link {% if active_section == 'documents' %}active{% endif %}" href="{% url 'documents:list' %}"><span aria-hidden="true">▤</span><span>Documents</span></a>
+        <a class="nav-link {% if active_section == 'graph' %}active{% endif %}" href="{% url 'knowledge_graph_ui:overview' %}"><span aria-hidden="true">◎</span><span>Knowledge graph</span></a>
+        <a class="nav-link {% if active_section == 'unresolved' %}active{% endif %}" href="{% url 'knowledge_graph_ui:unresolved' %}"><span aria-hidden="true">◇</span><span>Unresolved</span></a>
+      </nav>
+      <p class="nav-label">System</p>
+      <nav>
+        <a class="nav-link {% if active_section == 'corpus' %}active{% endif %}" href="{% url 'system_ui:corpus' %}"><span aria-hidden="true">◫</span><span>Corpus health</span></a>
+        <a class="nav-link {% if active_section == 'evaluation' %}active{% endif %}" href="{% url 'system_ui:evaluation' %}"><span aria-hidden="true">✓</span><span>Evaluation</span></a>
+      </nav>
+      <div class="sidebar-foot"><span class="status-dot" aria-hidden="true"></span><span>Evidence-first workspace</span></div>
+    </aside>
+    <div class="workspace">
+      <header class="topbar">
+        <button class="icon-button nav-toggle" type="button" aria-controls="primary-navigation" aria-expanded="false"><span aria-hidden="true">☰</span><span class="sr-only">Toggle navigation</span></button>
+        <div class="breadcrumb">{% block breadcrumb %}Administrative intelligence{% endblock %}</div>
+        <button class="context-toggle" type="button" aria-controls="context-panel" aria-expanded="true">Context <span aria-hidden="true">◧</span></button>
+      </header>
+      <main id="main-content" class="main-content">{% block content %}{% endblock %}</main>
+    </div>
+    <aside class="context-panel" id="context-panel" aria-label="Context panel">
+      <div class="context-head"><div><span class="eyebrow">Workspace context</span><h2>{% block context_title %}Guidance{% endblock %}</h2></div><button class="icon-button context-close" type="button" aria-controls="context-panel"><span aria-hidden="true">×</span><span class="sr-only">Close context panel</span></button></div>
+      <div class="context-body">{% block context_panel %}<p class="muted">Choose an item to inspect its evidence and metadata.</p>{% endblock %}</div>
+    </aside>
+  </div>
+</body>
+</html>

@@ -94,3 +94,12 @@ The graph uses additive PostgreSQL tables described in
 `docs/KNOWLEDGE_GRAPH_SCHEMA.md`. The old zero-row `gr_relations` table remains
 deprecated and unchanged. Search result cards may link to graph detail, but
 dense retrieval SQL, cosine similarity, Top-K behavior, and BGE-M3 are unchanged.
+
+## Administrative portal
+
+The production-oriented Django surface is a server-rendered, progressively
+enhanced three-panel workspace. Read-only web projections live in
+`knowledge_engine.portal`; views contain no SQL. BGE-M3 remains lazy and is only
+reached through `RetrievalService` after a valid search POST. Document, graph,
+corpus-health, and evaluation GET routes use PostgreSQL projections and fixed
+artifacts only. See `docs/UI_ARCHITECTURE.md`.

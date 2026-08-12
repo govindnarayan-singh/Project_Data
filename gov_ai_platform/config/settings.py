@@ -18,6 +18,8 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "apps.search_ui",
     "apps.documents",
+    "apps.knowledge_graph_ui",
+    "apps.system_ui",
 ]
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",

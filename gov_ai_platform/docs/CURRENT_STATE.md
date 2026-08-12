@@ -119,3 +119,17 @@ exactly.
 unresolved candidates, ISSUED_BY, candidate administrative signals, evidence,
 and PDF links. Graph-aware ranking and retrieval are not implemented. Full
 evidence is under `outputs/knowledge_graph_v1/`.
+
+## Administrative portal UI (2026-08-13)
+
+The Django interface is now a production-oriented Government Administrative AI
+Copilot with shared responsive navigation and a collapsible context panel.
+Workspaces cover evidence search, a paginated document library, tabbed document
+evidence/PDF/relationship review, graph overview, aggregated unresolved targets,
+corpus health, and stored evaluation results.
+
+The portal generates no answer, changes no ranking, and loads BGE-M3 only for a
+valid submitted search. Other pages use bounded read-only PostgreSQL projections
+or fixed artifacts. Verified graph edges and unresolved candidates remain
+visibly distinct, and evidence retains document/page provenance. See
+`docs/UI_ARCHITECTURE.md`.

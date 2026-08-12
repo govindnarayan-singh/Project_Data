@@ -1,89 +1,15 @@
-{% load static %}
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{{ document.file_name }} · Document relationships</title>
-  <link rel="stylesheet" href="{% static 'search_ui/search.css' %}">
-  <link rel="stylesheet" href="{% static 'documents/detail.css' %}">
-</head>
-<body>
-  <header class="masthead detail-head"><div class="shell">
-    <a class="back-link" href="{% url 'search_ui:search' %}">← Evidence search</a>
-    <span class="eyebrow">Administrative document</span>
-    <h1>{{ document.subject|default:document.file_name }}</h1>
-    <p>{{ document.department }}</p>
-  </div></header>
-  <main class="shell detail-main">
-    <section class="metadata-card" aria-labelledby="metadata-title">
-      <h2 id="metadata-title">Document metadata</h2>
-      <dl>
-        <div><dt>Filename</dt><dd>{{ document.file_name }}</dd></div>
-        <div><dt>GR number</dt><dd>{{ document.gr_number|default:"Not available" }}</dd></div>
-        <div><dt>Date</dt><dd>{{ document.gr_date|date:"d M Y"|default:"Not available" }}</dd></div>
-        <div><dt>Department</dt><dd>{{ document.department }}</dd></div>
-        <div><dt>Pages</dt><dd>{{ document.page_count }}</dd></div>
-        <div><dt>Chunks</dt><dd>{{ document.chunk_count }}</dd></div>
-      </dl>
-      <a class="pdf-link" href="{% url 'documents:pdf' document.id %}" target="_blank" rel="noopener">Open source PDF ↗</a>
-    </section>
-
-    <section class="graph-section" aria-labelledby="issued-title">
-      <div class="section-title"><h2 id="issued-title">Issued By</h2><span class="badge verified">Verified relationship</span></div>
-      {% if issued_by %}<p><strong>{{ issued_by.canonical_name }}</strong> · {{ issued_by.validation_status }}</p>{% else %}<p class="empty-state">No ISSUED_BY relation is available.</p>{% endif %}
-    </section>
-
-    <section class="graph-section" aria-labelledby="outgoing-title">
-      <div class="section-title"><h2 id="outgoing-title">Outgoing References</h2><span class="count">{{ outgoing_references|length }}</span></div>
-      {% for item in outgoing_references %}
-        <article class="relation-card">
-          <div><span class="badge verified">Verified relationship</span><span class="kind">{{ item.reference_kind }}</span></div>
-          <h3><a href="{% url 'documents:detail' item.target_document_id %}">{{ item.target_file }}</a></h3>
-          <p class="identifier">{{ item.raw_document_number|default:"Identifier not extracted" }}{% if item.normalized_document_number %}<small>Normalized: {{ item.normalized_document_number }}</small>{% endif %}</p>
-          <blockquote>{{ item.raw_evidence_text }}</blockquote>
-          <p class="provenance">Page {{ item.source_page }} · {{ item.resolution_status }} · {{ item.validation_status }}</p>
-        </article>
-      {% empty %}<p class="empty-state">No validated outgoing REFERENCES edges.</p>{% endfor %}
-    </section>
-
-    <section class="graph-section" aria-labelledby="incoming-title">
-      <div class="section-title"><h2 id="incoming-title">Incoming References</h2><span class="count">{{ incoming_references|length }}</span></div>
-      {% for item in incoming_references %}
-        <article class="relation-card">
-          <span class="badge verified">Verified relationship</span>
-          <h3><a href="{% url 'documents:detail' item.source_document_id %}">{{ item.source_file }}</a></h3>
-          <blockquote>{{ item.raw_evidence_text }}</blockquote>
-          <p class="provenance">Source page {{ item.source_page }} · {{ item.resolution_status }} · {{ item.validation_status }}</p>
-        </article>
-      {% empty %}<p class="empty-state">No validated incoming REFERENCES edges.</p>{% endfor %}
-    </section>
-
-    <section class="graph-section" aria-labelledby="unresolved-title">
-      <div class="section-title"><h2 id="unresolved-title">Unresolved References</h2><span class="count">{{ unresolved_references|length }}</span></div>
-      {% for item in unresolved_references %}
-        <article class="relation-card unresolved">
-          <div><span class="badge unresolved-badge">Unresolved reference</span><span class="kind">{{ item.reference_kind }}</span></div>
-          <h3>Referenced document not currently available in corpus</h3>
-          <p class="identifier">{{ item.raw_document_number|default:"Identifier not extracted" }}{% if item.normalized_document_number %}<small>Normalized: {{ item.normalized_document_number }}</small>{% endif %}</p>
-          <blockquote>{{ item.raw_evidence_text }}</blockquote>
-          <p class="provenance">Page {{ item.source_page }} · {{ item.resolution_status }} · {{ item.validation_status }}</p>
-        </article>
-      {% empty %}<p class="empty-state">No unresolved reference candidates.</p>{% endfor %}
-    </section>
-
-    <section class="graph-section" aria-labelledby="signals-title">
-      <div class="section-title"><h2 id="signals-title">Potential Administrative Relation Signals</h2><span class="count">{{ relation_signals|length }}</span></div>
-      <p class="caution">Signals are candidates only. They are not authoritative legal or administrative relationships.</p>
-      {% for item in relation_signals %}
-        <article class="relation-card signal">
-          <span class="badge candidate">Candidate relationship</span>
-          <h3>{{ item.candidate_relation_type }}</h3>
-          <blockquote>{{ item.raw_evidence_text }}</blockquote>
-          <p class="provenance">Page {{ item.source_page }} · signal “{{ item.relation_signal }}” · {{ item.validation_status }}</p>
-        </article>
-      {% empty %}<p class="empty-state">No potential stronger-relation signals detected.</p>{% endfor %}
-    </section>
-  </main>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}{{ document.file_name }} · Document workspace{% endblock %}
+{% block breadcrumb %}<a href="{% url 'documents:list' %}">Documents</a> / {{ document.file_name }}{% endblock %}
+{% block content %}
+<section class="page-intro compact"><span class="eyebrow">{{ document.department }} · {{ document.document_type|default:"Administrative document" }}</span><h1>{{ document.subject|default:document.file_name }}</h1><p>{{ document.gr_number|default:"GR number unavailable" }} · {{ document.gr_date|date:"d M Y"|default:"Date unavailable" }}</p></section>
+<nav class="tabs" aria-label="Document sections"><a class="tab {% if tab == 'overview' %}active{% endif %}" href="?tab=overview">Overview</a><a class="tab {% if tab == 'evidence' %}active{% endif %}" href="?tab=evidence">Evidence</a><a class="tab {% if tab == 'pdf' %}active{% endif %}" href="?tab=pdf">PDF</a><a class="tab {% if tab == 'relationships' %}active{% endif %}" href="?tab=relationships">Relationships</a><a class="tab {% if tab == 'metadata' %}active{% endif %}" href="?tab=metadata">Metadata</a></nav>
+{% if tab == 'overview' %}<section class="metric-grid"><article class="metric-card"><span>Pages</span><strong>{{ document.page_count }}</strong></article><article class="metric-card"><span>Evidence chunks</span><strong>{{ document.chunk_count }}</strong></article><article class="metric-card"><span>Digital pages</span><strong>{{ document.digital_pages }}</strong></article><article class="metric-card"><span>OCR pages</span><strong>{{ document.ocr_pages }}</strong></article></section><section class="card"><h2>Source overview</h2><p>This workspace exposes stored metadata and evidence. Verify administrative meaning against the original PDF.</p><div class="card-actions"><a class="button primary" href="?tab=evidence">Review evidence</a><a class="button" href="?tab=pdf">View embedded PDF</a></div></section>
+{% elif tab == 'evidence' %}<section class="chunk-list">{% for chunk in chunks.items %}<article class="chunk-card"><div class="chunk-head"><span>Chunk {{ chunk.chunk_index }}</span><span>{{ chunk.token_count }} tokens · pages {{ chunk.page_start }}–{{ chunk.page_end }}</span></div><p class="quote" lang="mr">{{ chunk.text }}</p><a class="text-link" href="{% url 'documents:pdf' document.id %}#page={{ chunk.page_start }}" target="_blank" rel="noopener">Show in PDF at page {{ chunk.page_start }} ↗</a></article>{% empty %}<div class="empty-state">No chunks available.</div>{% endfor %}</section>{% if chunks.pages > 1 %}<nav class="pagination"><span>Page {{ chunks.page }} of {{ chunks.pages }}</span>{% if chunks.page < chunks.pages %}<a class="button" href="?tab=evidence&page={{ chunks.page|add:'1' }}">Next</a>{% endif %}</nav>{% endif %}
+{% elif tab == 'pdf' %}<object class="pdf-frame" data="{% url 'documents:pdf' document.id %}" type="application/pdf"><p>Embedded PDF viewing is unavailable. <a href="{% url 'documents:pdf' document.id %}" target="_blank" rel="noopener">Open the source PDF</a>.</p></object>
+{% elif tab == 'relationships' %}<section class="card"><span class="eyebrow">Issued By</span><h2>{{ issued_by.canonical_name|default:document.department }}</h2><p class="muted">{{ issued_by.validation_status|default:"Department metadata" }}</p></section>
+<div class="card-actions"><a class="button" href="{% url 'documents:pdf' document.id %}" target="_blank" rel="noopener">Open source PDF ↗</a></div><section class="split-section"><div><div class="section-heading"><h2>Outgoing References</h2><span class="badge">{{ outgoing_references|length }} verified</span></div><div class="relation-list">{% for item in outgoing_references %}<article class="relation-card"><span class="badge">Verified relationship</span><h3><a href="{% url 'documents:detail' item.target_document_id %}?tab=relationships">{{ item.target_file }}</a></h3><blockquote>{{ item.raw_evidence_text }}</blockquote><p class="muted">Page {{ item.source_page }} · {{ item.reference_kind }}</p></article>{% empty %}<p class="empty-state">No validated outgoing references.</p>{% endfor %}</div></div><div><div class="section-heading"><h2>Incoming References</h2><span class="badge">{{ incoming_references|length }} verified</span></div><div class="relation-list">{% for item in incoming_references %}<article class="relation-card"><span class="badge">Verified relationship</span><h3><a href="{% url 'documents:detail' item.source_document_id %}?tab=relationships">{{ item.source_file }}</a></h3><blockquote>{{ item.raw_evidence_text }}</blockquote><p class="muted">Source page {{ item.source_page }}</p></article>{% empty %}<p class="empty-state">No validated incoming references.</p>{% endfor %}</div></div></section><section><div class="section-heading"><h2>Unresolved References</h2><span class="badge unresolved">{{ unresolved_references|length }} candidates</span></div><div class="relation-list">{% for item in unresolved_references %}<article class="relation-card"><span class="badge unresolved">Unresolved reference</span><h3>Referenced document not currently available in corpus</h3><p>{{ item.raw_document_number|default:"Identifier unavailable" }}</p><blockquote>{{ item.raw_evidence_text }}</blockquote><p class="muted">Page {{ item.source_page }} · {{ item.resolution_status }}</p></article>{% empty %}<p class="empty-state">No unresolved candidates for this document.</p>{% endfor %}</div></section><section><div class="section-heading"><h2>Potential Administrative Relation Signals</h2><span class="badge unresolved">Candidate relationship</span></div><div class="relation-list">{% for item in relation_signals %}<article class="relation-card"><span class="badge unresolved">Candidate relationship</span><h3>{{ item.candidate_relation_type }}</h3><blockquote>{{ item.raw_evidence_text }}</blockquote><p class="muted">Page {{ item.source_page }} · {{ item.validation_status }}</p></article>{% empty %}<p class="empty-state">No potential stronger-relation signals detected.</p>{% endfor %}</div></section>
+{% else %}<dl class="metadata-grid"><div><dt>Filename</dt><dd>{{ document.file_name }}</dd></div><div><dt>Department</dt><dd>{{ document.department }}</dd></div><div><dt>Document type</dt><dd>{{ document.document_type|default:"Not available" }}</dd></div><div><dt>GR number</dt><dd>{{ document.gr_number|default:"Not available" }}</dd></div><div><dt>GR date</dt><dd>{{ document.gr_date|date:"d M Y"|default:"Not available" }}</dd></div><div><dt>Extraction</dt><dd>{{ document.extraction_method }}</dd></div><div><dt>Ingested</dt><dd>{{ document.created_at|date:"d M Y H:i" }}</dd></div><div><dt>Stored metadata</dt><dd>{{ document.metadata|default:"None" }}</dd></div></dl>{% endif %}
+{% endblock %}
+{% block context_title %}Document source{% endblock %}
+{% block context_panel %}<span class="badge">Stored source</span><h3>{{ document.file_name }}</h3><dl class="fact-list"><div><dt>Department</dt><dd>{{ document.department }}</dd></div><div><dt>Pages</dt><dd>{{ document.page_count }}</dd></div><div><dt>Chunks</dt><dd>{{ document.chunk_count }}</dd></div><div><dt>Extraction</dt><dd>{{ document.extraction_method }}</dd></div></dl><a class="button full" href="{% url 'documents:pdf' document.id %}" target="_blank" rel="noopener">Open source PDF ↗</a><p class="context-note">The source PDF is served only after its stored path is proven to remain inside the configured corpus root.</p>{% endblock %}

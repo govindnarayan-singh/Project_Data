@@ -1,44 +1,47 @@
-{% load static %}
-<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Government Administrative Knowledge Search</title>
-  <link rel="stylesheet" href="{% static 'search_ui/search.css' %}">
-</head>
-<body>
-  <header class="masthead"><div class="shell"><span class="eyebrow">Administrative knowledge brain</span><h1>Government Administrative Knowledge Search</h1><p>Semantic retrieval and evidence search across Government Resolution documents.</p></div></header>
-  <main class="shell">
-    <form method="post" class="search-panel" aria-label="Semantic evidence search">
-      {% csrf_token %}
-      <label for="query">Ask a question about an administrative subject</label>
-      <div class="controls">
-        <textarea id="query" name="query" rows="3" maxlength="2000" required placeholder="उदा. शासन निर्णयामध्ये कोणती तरतूद नमूद आहे?">{{ query }}</textarea>
-        <div class="actions"><label for="top_k">Results</label><select id="top_k" name="top_k">{% for option in top_k_options %}<option value="{{ option }}"{% if option == top_k %} selected{% endif %}>{{ option }}</option>{% endfor %}</select><button type="submit">Search evidence</button></div>
+{% extends "base.html" %}
+{% block title %}Copilot · Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Copilot / Evidence search{% endblock %}
+{% block content %}
+<section class="page-intro compact">
+  <span class="eyebrow">Retrieval workspace</span>
+  <h1>Government Administrative Knowledge Search</h1>
+  <p>Find source-grounded passages across Government Resolution documents. This system retrieves evidence; it does not generate an AI answer.</p>
+</section>
+<form method="post" class="composer" aria-label="Administrative evidence search" data-search-form>
+  {% csrf_token %}
+  <label for="query" class="sr-only">Ask a question</label>
+  <textarea id="query" name="query" rows="3" maxlength="2000" required placeholder="Ask about a policy, provision, department, or Government Resolution…">{{ query }}</textarea>
+  <div class="composer-actions">
+    <div class="field-inline"><label for="department">Department</label><select id="department" name="department"><option value="">All departments</option>{% for item in departments %}<option value="{{ item }}"{% if item == department %} selected{% endif %}>{{ item }}</option>{% endfor %}</select></div>
+    <div class="field-inline"><label for="top_k">Sources</label><select id="top_k" name="top_k">{% for option in top_k_options %}<option value="{{ option }}"{% if option == top_k %} selected{% endif %}>{{ option }}</option>{% endfor %}</select></div>
+    <span class="shortcut">Ctrl / ⌘ + Enter</span><button class="button primary" type="submit"><span class="button-label">Search evidence</span><span class="button-loading">Searching…</span></button>
+  </div>
+</form>
+{% if error %}<div class="alert error" role="alert"><strong>Search unavailable</strong><span>{{ error }}</span></div>{% endif %}
+{% if results %}
+<section class="results-section" aria-labelledby="results-title">
+  <div class="section-heading"><div><span class="eyebrow">{{ results|length }} ranked passages</span><h2 id="results-title">Evidence for “{{ query }}”</h2></div><span class="truth-label">Similarity ranking, not an answer</span></div>
+  <div class="result-list">
+  {% for result in results %}
+    <article class="evidence-card{% if forloop.first %} selected{% endif %}" data-source-card="{{ forloop.counter0 }}">
+      <button class="card-select" type="button" data-source-select="{{ forloop.counter0 }}" aria-label="Show source {{ result.rank }} in context panel"></button>
+      <div class="rank-pill">{{ result.rank }}</div>
+      <div class="evidence-main">
+        <div class="card-kicker"><span class="tag">{{ result.department }}</span><span class="score">{{ result.similarity|floatformat:3 }} similarity</span></div>
+        <h3>{{ result.subject|default:result.file_name }}</h3>
+        <p class="source-line">{{ result.gr_number|default:"GR number unavailable" }} · {{ result.gr_date|date:"d M Y"|default:"Date unavailable" }} · Page {{ result.page_start }}{% if result.page_end != result.page_start %}–{{ result.page_end }}{% endif %}</p>
+        <blockquote lang="mr">{{ result.text|truncatechars:720 }}</blockquote>
+        <div class="card-actions"><a class="text-link" href="{% url 'documents:detail' result.document_id %}?tab=overview">Open document</a><a class="text-link" href="{% url 'documents:pdf' result.document_id %}#page={{ result.page_start }}" target="_blank" rel="noopener">PDF at page {{ result.page_start }} ↗</a><a class="text-link" href="{% url 'documents:detail' result.document_id %}?tab=relationships">Relationships</a></div>
       </div>
-      <p class="notice">This feature retrieves relevant source passages. It does not generate an AI answer.</p>
-    </form>
-    {% if error %}<div class="error" role="alert">{{ error }}</div>{% endif %}
-    {% if results %}
-      <section aria-labelledby="results-heading">
-        <div class="results-title"><div><span class="eyebrow">Your query</span><h2 id="results-heading">{{ query }}</h2></div><span>{{ results|length }} evidence passages</span></div>
-        <div class="result-list">
-          {% for result in results %}
-            <article class="result-card">
-              <div class="rank"><span>Rank</span><strong>{{ result.rank }}</strong></div>
-              <div class="result-body">
-                <div class="result-top"><div><span class="department">{{ result.department }}</span><h3>{{ result.subject|default:"Subject not available" }}</h3></div><span class="score">Similarity {{ result.similarity|floatformat:4 }}</span></div>
-                <dl><div><dt>GR number</dt><dd>{{ result.gr_number|default:"Not available" }}</dd></div><div><dt>GR date</dt><dd>{{ result.gr_date|date:"d M Y"|default:"Not available" }}</dd></div><div><dt>Filename</dt><dd>{{ result.file_name }}</dd></div><div><dt>Pages</dt><dd>{{ result.page_start }}{% if result.page_end != result.page_start %}–{{ result.page_end }}{% endif %}</dd></div></dl>
-                <div class="passage"><span>Relevant passage</span><p lang="mr">{{ result.text }}</p></div>
-                <a class="pdf-link" href="{% url 'documents:pdf' result.document_id %}#page={{ result.page_start }}" target="_blank" rel="noopener">View PDF at page {{ result.page_start }} <span aria-hidden="true">↗</span></a>
-                <a class="pdf-link relationship-link" href="{% url 'documents:detail' result.document_id %}">View document relationships</a>
-              </div>
-            </article>
-          {% endfor %}
-        </div>
-      </section>
-    {% elif request.method == 'POST' and not error %}<p class="empty">No matching evidence was found.</p>{% endif %}
-  </main>
-</body>
-</html>
+    </article>
+  {% endfor %}
+  </div>
+</section>
+{% elif request.method == 'POST' and not error %}<div class="empty-state"><h2>No matching evidence</h2><p>Try broader terms or search all departments.</p></div>
+{% else %}<section class="starter-grid" aria-label="Search guidance"><article><span>01</span><h2>Ask precisely</h2><p>Include a policy subject, benefit, department, date, or GR identifier.</p></article><article><span>02</span><h2>Inspect evidence</h2><p>Open the ranked passage in its document and verify the source PDF.</p></article><article><span>03</span><h2>Trace context</h2><p>Use document relationships to explore verified references and unresolved targets.</p></article></section>{% endif %}
+{% endblock %}
+{% block context_title %}{% if results %}Selected source{% else %}Evidence protocol{% endif %}{% endblock %}
+{% block context_panel %}
+{% if results %}{% for result in results %}<section class="source-context" data-source-context="{{ forloop.counter0 }}"{% if not forloop.first %} hidden{% endif %}><span class="rank-label">Rank {{ result.rank }}</span><h3>{{ result.subject|default:result.file_name }}</h3><dl class="fact-list"><div><dt>Department</dt><dd>{{ result.department }}</dd></div><div><dt>GR number</dt><dd>{{ result.gr_number|default:"Not available" }}</dd></div><div><dt>Date</dt><dd>{{ result.gr_date|date:"d M Y"|default:"Not available" }}</dd></div><div><dt>Filename</dt><dd>{{ result.file_name }}</dd></div><div><dt>Pages</dt><dd>{{ result.page_start }}–{{ result.page_end }}</dd></div><div><dt>Similarity</dt><dd>{{ result.similarity|floatformat:4 }}</dd></div></dl><a class="button full" href="{% url 'documents:pdf' result.document_id %}#page={{ result.page_start }}" target="_blank" rel="noopener">Verify in source PDF</a><p class="context-note">Similarity indicates retrieval proximity. It is not a confidence score or legal conclusion.</p></section>{% endfor %}
+{% else %}<ol class="protocol"><li><strong>Search</strong><span>Semantic BGE-M3 retrieval over stored 1024-dimensional chunk embeddings.</span></li><li><strong>Review</strong><span>Compare multiple ranked passages and metadata.</span></li><li><strong>Verify</strong><span>Open the original PDF at the cited page before relying on a passage.</span></li></ol><div class="context-note"><strong>No synthetic answers</strong><p>The interface intentionally exposes source passages instead of composing claims.</p></div>{% endif %}
+{% endblock %}
