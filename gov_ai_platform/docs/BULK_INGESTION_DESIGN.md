@@ -1,78 +1,95 @@
 # Controlled bulk-ingestion design
 
-This document proposes the next ingestion increment. It has not been run, and
-the current controlled database has not been changed.
+This design is implemented for controlled ingestion. The frozen 10-document
+evaluation corpus was regenerated successfully; no new documents were added.
 
-## Current gaps
+## Interface and manifest
 
-The current CLI discovers a directory recursively (optionally by department),
-has SHA-256 skip behavior, and stores each document transactionally. It does
-not accept an explicit manifest, persist batch progress, isolate per-document
-exceptions, or produce structured per-document outcomes. An unhandled PDF
-error currently terminates the process. Schema initialization is also coupled
-to ingestion startup and should be made an explicit administrative command.
+The production path is manifest-only and never uses directory ordering or
+`--limit`:
 
-## Proposed interface
-
-Use an explicit UTF-8 CSV or JSONL manifest containing one corpus-relative PDF
-path per item. A future command should require the manifest and a stable batch
-identifier, for example:
-
-```text
-python -m cli.ingest_batch --manifest data/batches/finance_50.csv --batch-id finance-50-v1
+```powershell
+python -m cli.batch_ingest MANIFEST.csv --dry-run
+python -m cli.batch_ingest MANIFEST.csv
+python -m cli.batch_ingest MANIFEST.csv --force
+python -m cli.batch_ingest MANIFEST.csv --resume
+python -m cli.batch_ingest MANIFEST.csv --resume --run-id RUN_ID
 ```
 
-Paths must resolve inside `GR_ROOT`, have a `.pdf` suffix, and be unique after
-case-insensitive normalization. Directory-wide discovery should not be the
-default for controlled runs.
+CSV requires `file_path` and `department`; `document_label` and `notes` are
+optional. Paths must resolve inside `GR_ROOT`, have a `.pdf` suffix, exist, and
+be unique after case-insensitive normalization. One invalid row rejects the
+manifest before processing.
+
+Default mode ingests new or changed sources and skips unchanged SHA-256
+identities. `--force` explicitly regenerates unchanged documents. `--resume`
+selects the latest compatible non-dry-run by manifest hash unless a run ID is
+given. Resume and force cannot be combined: resume finishes pending work;
+force starts a separately auditable run.
+
+Dry-run validates the manifest, paths, SHA-256 identities, and planned
+operations. It never extracts, OCRs, embeds, or writes PostgreSQL.
 
 ## Resume and idempotence
 
 - Compute SHA-256 before processing.
-- Skip a SHA already recorded as a successful document unless an explicit,
-  reviewed replacement mode is requested.
-- Keep an append-only JSONL result ledger under `outputs/ingestion/<batch-id>/`.
-- On restart, skip manifest entries whose latest ledger state is `SUCCESS` or
-  `WARNING`; retry `FAILURE` only with an explicit retry option.
-- Write one document in one PostgreSQL transaction. A failed transaction must
-  not affect previous or subsequent documents.
-- Do not call schema creation from the batch runner.
+- Resolve identity by source path or SHA-256; conflicting identities fail.
+- Skip unchanged successful documents unless `--force` is explicit.
+- Checkpoint `results.csv` and `summary.json` atomically after every row under
+  `outputs/bulk_ingestion/<run-id>/`.
+- On resume, retain completed rows whose current source SHA-256 matches and
+  retry unfinished or failed rows.
+- Never call schema creation from the batch runner.
 
-## Per-document isolation
+## Per-document isolation and model lifecycle
 
-Wrap extraction, validation, chunking, embedding, and storage for each PDF in a
-single error boundary. Record the failure, release temporary resources, and
-continue to the next manifest entry. Handle keyboard interruption separately
-so the current ledger entry is flushed and the batch can resume.
+Extraction, metadata validation, chunking, embedding, and persistence have
+separate failure statuses. A document failure is recorded and later manifest
+rows continue. Shared OCR/database availability and BGE-M3 initialization are
+checked once as an infrastructure preflight when processing is required.
+Unchanged skip-only runs do not load OCR/model dependencies.
 
-## Structured result record
+## Transaction strategy
 
-Each manifest entry should produce a JSON object with:
+All expensive work completes before persistence. A single transaction then:
 
-- batch ID, manifest index, relative path, SHA-256
-- start/end timestamps and processing duration
-- page count, digital-page count, OCR-page count
-- raw metadata and GR-number/date/subject validation status and reason
-- chunk count and maximum chunk token count
-- embedding model and observed dimensions
-- `SUCCESS`, `WARNING`, `FAILURE`, or `SKIPPED_EXISTING`
-- stage name, exception class, and concise error message on failure
+1. Locks the matching path/SHA identity row with `FOR UPDATE`.
+2. Preserves its document ID or inserts one new row.
+3. Updates document fields and replaces pages and chunks.
+4. Validates expected counts, contiguous pages, page references, the 700-token
+   limit, and 1,024-dimensional embeddings.
+5. Commits only after every check passes.
 
-Warnings include suspicious/missing metadata and recoverable extraction-quality
-signals. A chunk above the configured maximum or an embedding dimension other
-than 1,024 is a hard failure before database writes.
+PostgreSQL MVCC leaves the previous committed version searchable until commit.
+Any persistence or integrity error rolls back the entire replacement.
 
-## Controlled rollout gate
+## Structured outputs
 
-For the first 50-document run:
+Each run contains:
 
-1. Freeze and review the explicit manifest.
-2. Record database counts and a corpus-file hash inventory.
-3. Run extraction/chunking validation without writes where practical.
-4. Run the batch with per-document transactions and the append-only ledger.
-5. Review every warning/failure and confirm the token invariant.
-6. Record database counts and rerun the frozen retrieval benchmark.
+- `manifest_snapshot.csv`
+- `results.csv`
+- `summary.json`
+- `errors.csv` when failures occur
 
-Persisting metadata-validation fields in PostgreSQL is not part of this design
-phase. If queryable persistence is required, propose and review a schema
-migration before applying it.
+Per-document data includes run/path/SHA identity, operation and status,
+timings, page and OCR counts, raw metadata plus validation results, chunk
+statistics, embedding count/dimension, and error stage/message.
+
+Supported terminal statuses include `SUCCESS`, `SUCCESS_WITH_WARNING`,
+`SKIPPED_UNCHANGED`, `FAILED_EXTRACTION`, `FAILED_METADATA`,
+`FAILED_CHUNKING`, `FAILED_EMBEDDING`, and `FAILED_DATABASE`. Suspicious or
+missing metadata normally produces a warning, not a hard failure.
+
+## Controlled 50-new-document rollout gate
+
+1. Freeze and review an explicit 50-path manifest.
+2. Record database counts and corpus hashes.
+3. Run default and forced dry-plans as appropriate.
+4. Run complete tests.
+5. Execute with per-document transactions and checkpoints.
+6. Review every warning/failure and confirm token/dimension invariants.
+7. Record database counts and rerun the frozen benchmark.
+
+Metadata-validation results remain application-level. Queryable persistence
+requires a separately reviewed schema migration.

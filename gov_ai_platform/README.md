@@ -18,6 +18,17 @@ Search from the CLI with:
 python -m cli.search "मराठी प्रश्न" --top-k 5
 ```
 
+Validate or execute a frozen ingestion manifest with:
+
+```powershell
+python -m cli.batch_ingest data/manifests/controlled_10.csv --dry-run
+python -m cli.batch_ingest MANIFEST.csv
+```
+
+Use `--force` only for an explicit new reprocessing run. Use `--resume` to
+continue the latest compatible run, optionally with `--run-id`. See
+`docs/BULK_INGESTION_DESIGN.md` for transaction and output details.
+
 Run unit tests with:
 
 ```powershell

@@ -42,6 +42,25 @@ text is split deterministically at source-character boundaries using verified
 tokenizer counts. Final chunk emission enforces
 `token_count <= CHUNK_MAX_TOKENS` while retaining page ranges and source text.
 
+## Manifest batch ingestion
+
+Controlled ingestion is an application service in
+`knowledge_engine.pipelines.batch_ingest`; `cli.batch_ingest` is its command
+adapter. The manifest fixes document membership and order. Paths are resolved
+inside `GR_ROOT` and rejected if missing, outside the root, or not PDFs.
+
+For each document, SHA-256 identity is checked before expensive processing.
+Extraction, validation, chunking, and embedding occur before the write
+transaction. That transaction locks the identity row, preserves its document
+ID, updates document fields, replaces pages and chunks, validates page
+continuity, token limits, page references, and embedding dimensions, and only
+then commits. PostgreSQL MVCC keeps the prior searchable state visible until
+commit; an exception rolls back the entire replacement.
+
+BGE-M3 is loaded once during live preflight when at least one manifest row
+requires processing. Results are checkpointed after every row under
+`outputs/bulk_ingestion/<run-id>/` for safe resume.
+
 The PDF endpoint accepts only a numeric database document ID. Its database
 path is resolved against `GR_ROOT`, checked to remain under that root, checked
 for a `.pdf` suffix, and streamed inline. Filesystem paths are not accepted

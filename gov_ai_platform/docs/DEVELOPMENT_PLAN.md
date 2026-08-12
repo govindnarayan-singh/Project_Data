@@ -4,11 +4,12 @@
 2. Fix the chunk-size guarantee — complete for newly generated chunks
 3. Metadata validation and hardening — deterministic validation layer complete;
    broader extraction-quality work remains
-4. Controlled 50-document ingestion
-5. Enlarge the retrieval benchmark
-6. Knowledge graph schema
-7. GR reference extraction
-8. GR relationship extraction
-9. Graph retrieval
-10. Hybrid retrieval and reranking
-11. RAG
+4. Manifest batch runner and controlled corpus regeneration — complete
+5. Controlled 50-new-document ingestion
+6. Enlarge the retrieval benchmark
+7. Knowledge graph schema
+8. GR reference extraction
+9. GR relationship extraction
+10. Graph retrieval
+11. Hybrid retrieval and reranking
+12. RAG

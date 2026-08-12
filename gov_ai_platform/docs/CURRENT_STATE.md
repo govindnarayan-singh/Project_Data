@@ -8,6 +8,7 @@
 - Token-aware chunking
 - Hard maximum-token guarantee for newly generated chunks
 - Deterministic GR-number, GR-date, and subject validation
+- Manifest-based, resumable, transaction-safe batch ingestion
 - BAAI/bge-m3 embeddings with lazy process-local reuse
 - Existing PostgreSQL/pgvector storage and cosine retrieval semantics
 - Dense retrieval evaluation and CLI search
@@ -18,24 +19,29 @@
 
 - Documents: 11
 - Pages: 567
-- Chunks: 347
+- Chunks: 329
 
-The database is the existing controlled corpus and has not been re-ingested.
+The same 10 frozen evaluation documents were regenerated with the hardened
+chunker and BGE-M3 embeddings. The eleventh earlier test document was left
+unchanged. Document IDs were preserved.
 
 ## Frozen benchmark
 
-The 29-question, 10-GR benchmark baseline is:
+The 29-question benchmark after controlled regeneration is:
 
 - Document Recall@1: 100%
-- Page Recall@5: 96.55%
+- Document Recall@3/5/10: 100%
+- Document MRR: 1.0000
+- Page Recall@1: 86.21%
+- Page Recall@3: 100%
+- Page Recall@5: 100%
 - Page Recall@10: 100%
+- Page MRR: 0.9310
 
 ## Known issues and boundaries
 
-- Four historical Finance chunks in the controlled database still exceed the
-  configured 700-token ceiling. The fixed chunker produces 45 chunks with a
-  maximum of 700 for that document in memory, but the stored rows and
-  embeddings were intentionally not replaced in this phase.
+- No stored chunk exceeds 700 tokens. The affected Finance document now has 45
+  stored chunks with a maximum of 700 tokens.
 - Metadata validation results are application-level and are not persisted in
   dedicated PostgreSQL columns. A future persistence change requires a
   reviewed schema migration.
