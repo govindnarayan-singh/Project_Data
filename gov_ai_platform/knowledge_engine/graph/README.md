@@ -1,16 +1,20 @@
-# Knowledge Graph diagnostics
+# Knowledge Graph V1
 
-Production graph extraction remains intentionally out of scope. The isolated
-`diagnostics` package contains deterministic, read-only normalization,
-reference-candidate extraction, and resolution utilities used for the
-61-document corpus study. It is not integrated with ingestion, retrieval, the
-Django application, or PostgreSQL writes.
+This package implements deterministic, provenance-first Knowledge Graph V1.
 
-Corpus evidence supports a small V1 based on a typed
-`AdministrativeDocument`, `Department`, and the relations REFERENCES and
-ISSUED_BY. Stronger semantic relations remain human-confirmed future work.
+- `normalization.py`: raw-preserving identifiers, dates, departments, Acts/Rules
+- `parser.py`: typed reference candidates and candidate relation signals
+- `resolver.py`: exact/strong deterministic identity resolution only
+- `quality.py`: metadata/page override policy without source-data rewrites
+- `repository.py`: additive PostgreSQL persistence and graph queries
+- `pipeline.py`: versioned, idempotent 61-document extraction
+- `service.py`: read-only application boundary used by Django
+- `evaluation.py`: CODEX_SOURCE_REVIEW parser regression metrics
+- `diagnostics/`: retained pre-production diagnostic implementation
 
-The current `gr_relations` table was not changed. The diagnostic recommends a
-candidate-first, provenance-complete replacement through a reviewed migration
-before production rows are created. See `docs/KNOWLEDGE_GRAPH_PLAN.md` and
-`outputs/knowledge_graph_diagnostic/kg_diagnostic_report.md`.
+Only REFERENCES and ISSUED_BY may be created automatically. AMENDS,
+SUPERSEDES, PARTIALLY_SUPERSEDES, CANCELS, CORRECTS, and EXTENDS remain
+candidates until human confirmation. Vector similarity and subject similarity
+are never graph identity or edge evidence.
+
+See `docs/KNOWLEDGE_GRAPH_SCHEMA.md` and `docs/KNOWLEDGE_GRAPH_PLAN.md`.

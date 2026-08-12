@@ -89,3 +89,33 @@ replaced through a reviewed migration. No graph rows or schema changes were
 made, and PostgreSQL remained at 61 documents, 1,022 pages, 740 chunks, and 0
 `gr_relations` rows. See `docs/KNOWLEDGE_GRAPH_PLAN.md` and
 `outputs/knowledge_graph_diagnostic/kg_diagnostic_report.md`.
+
+## Knowledge Graph V1 implementation (2026-08-13)
+
+The additive, candidate-first PostgreSQL schema is operational. The production
+extractor processed exactly 61 documents and 1,022 stored pages, persisting 729
+reference candidates and eight controlled departments. Candidate resolution is
+1 RESOLVED_EXACT, 0 RESOLVED_STRONG, 1 AMBIGUOUS, 368 NOT_IN_CORPUS, 122
+UNPARSEABLE, 4 NEEDS_REVIEW, and 233 SELF_REFERENCE_REJECTED.
+
+One exact candidate is AUTO_VERIFIED and produced one provenance-linked
+REFERENCES edge (`202310111859174404.pdf` to `202212051822141504.pdf`). All 61
+documents have an AUTO_VERIFIED ISSUED_BY edge. Eighteen stronger-relation
+signals remain candidates; none became an authoritative strong relation.
+
+The 100-row CODEX_SOURCE_REVIEW regression set measured 98.95% detection
+precision, 95.92% recall on its labelled examples, 100% reference-kind accuracy,
+98.67% document-number accuracy, and 100% date accuracy. This is an engineering
+regression set, not independent human validation.
+
+An unchanged second run inserted zero candidates, edges, and evidence links;
+counts remained 729 candidates and 62 relations with no duplicates. Corpus
+integrity remains 61 documents, 1,022 pages, 740 chunks/embeddings, no chunks
+over 700 tokens, and 1,024 dimensions. The document identity fingerprint is
+unchanged. The frozen 29-question dense benchmark reproduced all prior metrics
+exactly.
+
+`/documents/<id>/` now displays verified outgoing/incoming references,
+unresolved candidates, ISSUED_BY, candidate administrative signals, evidence,
+and PDF links. Graph-aware ranking and retrieval are not implemented. Full
+evidence is under `outputs/knowledge_graph_v1/`.

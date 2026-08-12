@@ -64,3 +64,57 @@ class PdfEndpointTests(SimpleTestCase):
             for value in ("../secret.pdf", str(root.parent / "secret.pdf")):
                 with self.subTest(value=value), self.assertRaises(UnsafeDocumentPath):
                     resolve_pdf_path(root, value)
+
+
+class FakeGraphService:
+    def get_document_detail(self, document_id):
+        if document_id != 4:
+            return None
+        evidence = "<script>alert('unsafe')</script>"
+        return {
+            "document": {
+                "id": 4, "file_name": "source.pdf", "file_path": "source.pdf",
+                "department": "Finance", "document_type": "Government Resolution",
+                "gr_number": "ABC/2020/1", "gr_date": None, "subject": "Subject",
+                "page_count": 2, "chunk_count": 1,
+            },
+            "issued_by": {"canonical_name": "Finance", "validation_status": "AUTO_VERIFIED"},
+            "outgoing_references": [{
+                "relation_id": 1, "validation_status": "AUTO_VERIFIED", "target_document_id": 5,
+                "target_file": "target.pdf", "source_page": 1, "raw_evidence_text": evidence,
+                "raw_document_number": "XYZ/2020/2", "normalized_document_number": "xyz/2020/2",
+                "resolution_status": "RESOLVED_EXACT", "reference_kind": "GOVERNMENT_RESOLUTION",
+            }],
+            "incoming_references": [{
+                "relation_id": 2, "validation_status": "AUTO_VERIFIED", "source_document_id": 6,
+                "source_file": "incoming.pdf", "source_page": 1, "raw_evidence_text": "incoming evidence",
+                "raw_document_number": "ABC/2020/1", "normalized_document_number": "abc/2020/1",
+                "resolution_status": "RESOLVED_EXACT", "reference_kind": "GOVERNMENT_RESOLUTION",
+            }],
+            "unresolved_references": [{
+                "candidate_id": 3, "source_page": 2, "reference_kind": "ACT",
+                "raw_evidence_text": "Missing Act, 2016", "raw_document_number": "Missing Act, 2016",
+                "normalized_document_number": "MISSING_ACT_2016", "resolution_status": "NOT_IN_CORPUS",
+                "validation_status": "UNRESOLVED",
+            }],
+            "relation_signals": [{
+                "candidate_id": 4, "source_page": 2, "candidate_relation_type": "AMENDS",
+                "relation_signal": "amended", "raw_evidence_text": "potentially amended",
+                "validation_status": "CANDIDATE",
+            }],
+        }
+
+
+class DocumentDetailTests(SimpleTestCase):
+    def test_detail_displays_graph_categories_provenance_pdf_and_escapes_evidence(self):
+        with patch("apps.documents.views.get_graph_service", return_value=FakeGraphService()):
+            response = self.client.get(reverse("documents:detail", args=[4]))
+        self.assertEqual(response.status_code, 200)
+        for text in ("Outgoing References", "Incoming References", "Unresolved References", "Issued By", "Open source PDF", "Referenced document not currently available in corpus", "Candidate relationship"):
+            self.assertContains(response, text)
+        self.assertContains(response, "&lt;script&gt;", html=False)
+        self.assertNotContains(response, "<script>alert")
+
+    def test_unknown_document_detail_id(self):
+        with patch("apps.documents.views.get_graph_service", return_value=FakeGraphService()):
+            self.assertEqual(self.client.get(reverse("documents:detail", args=[999])).status_code, 404)

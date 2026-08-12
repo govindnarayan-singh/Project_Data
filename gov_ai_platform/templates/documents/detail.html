@@ -1,0 +1,89 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ document.file_name }} · Document relationships</title>
+  <link rel="stylesheet" href="{% static 'search_ui/search.css' %}">
+  <link rel="stylesheet" href="{% static 'documents/detail.css' %}">
+</head>
+<body>
+  <header class="masthead detail-head"><div class="shell">
+    <a class="back-link" href="{% url 'search_ui:search' %}">← Evidence search</a>
+    <span class="eyebrow">Administrative document</span>
+    <h1>{{ document.subject|default:document.file_name }}</h1>
+    <p>{{ document.department }}</p>
+  </div></header>
+  <main class="shell detail-main">
+    <section class="metadata-card" aria-labelledby="metadata-title">
+      <h2 id="metadata-title">Document metadata</h2>
+      <dl>
+        <div><dt>Filename</dt><dd>{{ document.file_name }}</dd></div>
+        <div><dt>GR number</dt><dd>{{ document.gr_number|default:"Not available" }}</dd></div>
+        <div><dt>Date</dt><dd>{{ document.gr_date|date:"d M Y"|default:"Not available" }}</dd></div>
+        <div><dt>Department</dt><dd>{{ document.department }}</dd></div>
+        <div><dt>Pages</dt><dd>{{ document.page_count }}</dd></div>
+        <div><dt>Chunks</dt><dd>{{ document.chunk_count }}</dd></div>
+      </dl>
+      <a class="pdf-link" href="{% url 'documents:pdf' document.id %}" target="_blank" rel="noopener">Open source PDF ↗</a>
+    </section>
+
+    <section class="graph-section" aria-labelledby="issued-title">
+      <div class="section-title"><h2 id="issued-title">Issued By</h2><span class="badge verified">Verified relationship</span></div>
+      {% if issued_by %}<p><strong>{{ issued_by.canonical_name }}</strong> · {{ issued_by.validation_status }}</p>{% else %}<p class="empty-state">No ISSUED_BY relation is available.</p>{% endif %}
+    </section>
+
+    <section class="graph-section" aria-labelledby="outgoing-title">
+      <div class="section-title"><h2 id="outgoing-title">Outgoing References</h2><span class="count">{{ outgoing_references|length }}</span></div>
+      {% for item in outgoing_references %}
+        <article class="relation-card">
+          <div><span class="badge verified">Verified relationship</span><span class="kind">{{ item.reference_kind }}</span></div>
+          <h3><a href="{% url 'documents:detail' item.target_document_id %}">{{ item.target_file }}</a></h3>
+          <p class="identifier">{{ item.raw_document_number|default:"Identifier not extracted" }}{% if item.normalized_document_number %}<small>Normalized: {{ item.normalized_document_number }}</small>{% endif %}</p>
+          <blockquote>{{ item.raw_evidence_text }}</blockquote>
+          <p class="provenance">Page {{ item.source_page }} · {{ item.resolution_status }} · {{ item.validation_status }}</p>
+        </article>
+      {% empty %}<p class="empty-state">No validated outgoing REFERENCES edges.</p>{% endfor %}
+    </section>
+
+    <section class="graph-section" aria-labelledby="incoming-title">
+      <div class="section-title"><h2 id="incoming-title">Incoming References</h2><span class="count">{{ incoming_references|length }}</span></div>
+      {% for item in incoming_references %}
+        <article class="relation-card">
+          <span class="badge verified">Verified relationship</span>
+          <h3><a href="{% url 'documents:detail' item.source_document_id %}">{{ item.source_file }}</a></h3>
+          <blockquote>{{ item.raw_evidence_text }}</blockquote>
+          <p class="provenance">Source page {{ item.source_page }} · {{ item.resolution_status }} · {{ item.validation_status }}</p>
+        </article>
+      {% empty %}<p class="empty-state">No validated incoming REFERENCES edges.</p>{% endfor %}
+    </section>
+
+    <section class="graph-section" aria-labelledby="unresolved-title">
+      <div class="section-title"><h2 id="unresolved-title">Unresolved References</h2><span class="count">{{ unresolved_references|length }}</span></div>
+      {% for item in unresolved_references %}
+        <article class="relation-card unresolved">
+          <div><span class="badge unresolved-badge">Unresolved reference</span><span class="kind">{{ item.reference_kind }}</span></div>
+          <h3>Referenced document not currently available in corpus</h3>
+          <p class="identifier">{{ item.raw_document_number|default:"Identifier not extracted" }}{% if item.normalized_document_number %}<small>Normalized: {{ item.normalized_document_number }}</small>{% endif %}</p>
+          <blockquote>{{ item.raw_evidence_text }}</blockquote>
+          <p class="provenance">Page {{ item.source_page }} · {{ item.resolution_status }} · {{ item.validation_status }}</p>
+        </article>
+      {% empty %}<p class="empty-state">No unresolved reference candidates.</p>{% endfor %}
+    </section>
+
+    <section class="graph-section" aria-labelledby="signals-title">
+      <div class="section-title"><h2 id="signals-title">Potential Administrative Relation Signals</h2><span class="count">{{ relation_signals|length }}</span></div>
+      <p class="caution">Signals are candidates only. They are not authoritative legal or administrative relationships.</p>
+      {% for item in relation_signals %}
+        <article class="relation-card signal">
+          <span class="badge candidate">Candidate relationship</span>
+          <h3>{{ item.candidate_relation_type }}</h3>
+          <blockquote>{{ item.raw_evidence_text }}</blockquote>
+          <p class="provenance">Page {{ item.source_page }} · signal “{{ item.relation_signal }}” · {{ item.validation_status }}</p>
+        </article>
+      {% empty %}<p class="empty-state">No potential stronger-relation signals detected.</p>{% endfor %}
+    </section>
+  </main>
+</body>
+</html>

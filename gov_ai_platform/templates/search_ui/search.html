@@ -32,6 +32,7 @@
                 <dl><div><dt>GR number</dt><dd>{{ result.gr_number|default:"Not available" }}</dd></div><div><dt>GR date</dt><dd>{{ result.gr_date|date:"d M Y"|default:"Not available" }}</dd></div><div><dt>Filename</dt><dd>{{ result.file_name }}</dd></div><div><dt>Pages</dt><dd>{{ result.page_start }}{% if result.page_end != result.page_start %}–{{ result.page_end }}{% endif %}</dd></div></dl>
                 <div class="passage"><span>Relevant passage</span><p lang="mr">{{ result.text }}</p></div>
                 <a class="pdf-link" href="{% url 'documents:pdf' result.document_id %}#page={{ result.page_start }}" target="_blank" rel="noopener">View PDF at page {{ result.page_start }} <span aria-hidden="true">↗</span></a>
+                <a class="pdf-link relationship-link" href="{% url 'documents:detail' result.document_id %}">View document relationships</a>
               </div>
             </article>
           {% endfor %}

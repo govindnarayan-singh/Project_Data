@@ -1,0 +1,22 @@
+document_id,file_name,page_number,field,raw_value,review_status,reviewed_value,reason,kg_usage_policy
+19,202403051249430211.pdf,,gr_number,,CONFIRMED_DIAGNOSTIC,,Stored GR number is missing; no independent source correction was supplied.,DO_NOT_RESOLVE_FROM_THIS_FIELD
+27,202112021716324204.pdf,,gr_number,,CONFIRMED_DIAGNOSTIC,,Stored GR number is missing; no independent source correction was supplied.,DO_NOT_RESOLVE_FROM_THIS_FIELD
+34,202101141715058105.pdf,,gr_number,,CONFIRMED_DIAGNOSTIC,,Stored GR number is missing; no independent source correction was supplied.,DO_NOT_RESOLVE_FROM_THIS_FIELD
+43,202206241309473633.pdf,,gr_number,"मांना एकत्रितरित्या “मराठी",CONFIRMED_DIAGNOSTIC,,Stored value contains no numeric identifier component.,DO_NOT_RESOLVE_FROM_THIS_FIELD
+54,202102121449437115.pdf,,gr_number,माने हाताळण्याबाबत,CONFIRMED_DIAGNOSTIC,,Stored value contains no numeric identifier component.,DO_NOT_RESOLVE_FROM_THIS_FIELD
+56,202307071223304115.pdf,,gr_number,माने,CONFIRMED_DIAGNOSTIC,,Stored value is too short and contains no identifier structure.,DO_NOT_RESOLVE_FROM_THIS_FIELD
+64,202407161623388635.pdf,,gr_number,मांच्या अनुदानासंबंधी शासनाचे धोरण.,CONFIRMED_DIAGNOSTIC,,Stored value is narrative text rather than a document identifier.,DO_NOT_RESOLVE_FROM_THIS_FIELD
+16,202111301536272711.pdf,1,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY
+18,202302231826565311.pdf,1,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY
+30,202205181531263205.pdf,2,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing table or annexure text is damaged.,DO_NOT_AUTO_VERIFY
+30,202205181531263205.pdf,5,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing table or annexure text is damaged.,DO_NOT_AUTO_VERIFY
+30,202205181531263205.pdf,9,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing table or annexure text is damaged.,DO_NOT_AUTO_VERIFY
+30,202205181531263205.pdf,20,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing table or annexure text is damaged.,DO_NOT_AUTO_VERIFY
+30,202205181531263205.pdf,22,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing table or annexure text is damaged.,DO_NOT_AUTO_VERIFY
+33,202112151813247705.pdf,28,page_text,,CONFIRMED_DIAGNOSTIC,,Reference date and table text contain material OCR corruption.,DO_NOT_AUTO_VERIFY
+54,202102121449437115.pdf,2,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY
+56,202307071223304115.pdf,3,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY
+60,202311131531275435.pdf,2,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY
+60,202311131531275435.pdf,4,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY
+61,202307281840040935.....pdf,1,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY
+64,202407161623388635.pdf,9,page_text,,CONFIRMED_DIAGNOSTIC,,Reference-bearing OCR text is damaged.,DO_NOT_AUTO_VERIFY

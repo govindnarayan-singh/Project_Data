@@ -1,16 +1,26 @@
 # Development plan
 
-1. Django retrieval UI — complete
-2. Fix the chunk-size guarantee — complete for newly generated chunks
-3. Metadata validation and hardening — deterministic validation layer complete;
-   broader extraction-quality work remains
-4. Manifest batch runner and controlled corpus regeneration — complete
-5. Controlled 50-new-document ingestion — complete with frozen manifest,
-   integrity audit, retrieval regression, and idempotence verification
-6. Enlarge the retrieval benchmark
-7. Knowledge graph schema
-8. GR reference extraction
-9. GR relationship extraction
-10. Graph retrieval
-11. Hybrid retrieval and reranking
-12. RAG
+Completed foundations:
+
+1. Deterministic extraction, metadata validation, token-bounded chunking, and BGE-M3 embeddings
+2. Manifest ingestion and controlled 61-document corpus
+3. Dense retrieval evaluation and Django evidence UI
+4. Knowledge Graph diagnostic
+5. Candidate-first PostgreSQL Knowledge Graph V1
+6. Deterministic reference parsing/resolution, review artifacts, idempotence, and graph detail UI
+
+Next measured stages:
+
+1. Independent human review of the KG sample and review queue
+2. Parser and resolution tuning from human feedback
+3. Graph-guided ingestion of reviewed high-priority missing references
+4. Controlled corpus expansion toward approximately 200 documents
+5. Repeat versioned KG extraction and evaluation
+6. Human-confirmed AMENDS/SUPERSEDES/CANCELS/CORRECTS/EXTENDS relations
+7. Graph-aware retrieval experiment
+8. Hybrid retrieval
+9. Reranking
+10. RAG
+
+Do not begin a later stage without its own baseline, evaluation labels, and
+explicit authorization. Dense retrieval remains unchanged in KG V1.

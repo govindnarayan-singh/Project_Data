@@ -69,3 +69,28 @@ The PDF endpoint accepts only a numeric database document ID. Its database
 path is resolved against `GR_ROOT`, checked to remain under that root, checked
 for a `.pdf` suffix, and streamed inline. Filesystem paths are not accepted
 from the browser.
+
+## Knowledge Graph V1 boundary
+
+Knowledge Graph V1 is a separate deterministic application path:
+
+```text
+Documents + final stored pages
+  → production ReferenceParser
+  → provenance-first candidate store
+  → deterministic resolver + quality overrides
+  → validated REFERENCES / ISSUED_BY relations
+  → read-only GraphService
+  → server-rendered document detail
+```
+
+The parser never resolves; the resolver never uses embeddings or subject
+similarity; and Django never accesses graph SQL directly. Raw evidence and
+normalized values coexist. Unresolved and ambiguous references remain stored
+candidates. Strong administrative relation signals cannot enter the validated
+edge table unless HUMAN_CONFIRMED.
+
+The graph uses additive PostgreSQL tables described in
+`docs/KNOWLEDGE_GRAPH_SCHEMA.md`. The old zero-row `gr_relations` table remains
+deprecated and unchanged. Search result cards may link to graph detail, but
+dense retrieval SQL, cosine similarity, Top-K behavior, and BGE-M3 are unchanged.
