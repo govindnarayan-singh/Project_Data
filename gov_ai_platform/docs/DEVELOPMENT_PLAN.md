@@ -5,7 +5,8 @@
 3. Metadata validation and hardening — deterministic validation layer complete;
    broader extraction-quality work remains
 4. Manifest batch runner and controlled corpus regeneration — complete
-5. Controlled 50-new-document ingestion
+5. Controlled 50-new-document ingestion — complete with frozen manifest,
+   integrity audit, retrieval regression, and idempotence verification
 6. Enlarge the retrieval benchmark
 7. Knowledge graph schema
 8. GR reference extraction

@@ -25,6 +25,10 @@ python -m cli.batch_ingest data/manifests/controlled_10.csv --dry-run
 python -m cli.batch_ingest MANIFEST.csv
 ```
 
+The completed controlled expansion manifest is
+`data/manifests/expansion_50_v1.csv`; its evidence bundle is under
+`outputs/corpus_expansion/expansion_50_v1/`.
+
 Use `--force` only for an explicit new reprocessing run. Use `--resume` to
 continue the latest compatible run, optionally with `--run-id`. See
 `docs/BULK_INGESTION_DESIGN.md` for transaction and output details.

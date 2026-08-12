@@ -216,6 +216,16 @@ class BatchPipelineTests(BatchTestCase):
         self.assertEqual(result.error_stage, "database")
         self.assertIn("rollback", result.error_message)
 
+    def test_stage_elapsed_times_are_recorded_without_changing_pipeline(self):
+        ticks = iter(range(1, 20))
+        result = self.ingestor(clock=lambda: float(next(ticks))).process_entry(
+            self.entry(), run_id="test"
+        )
+        self.assertEqual(result.extraction_elapsed_seconds, 1.0)
+        self.assertEqual(result.embedding_elapsed_seconds, 1.0)
+        self.assertEqual(result.database_elapsed_seconds, 1.0)
+        self.assertEqual(result.elapsed_seconds, 7.0)
+
     def test_dry_run_has_zero_extraction_embedding_and_database_writes(self):
         entry = self.entry()
         storage = FakeStorage()

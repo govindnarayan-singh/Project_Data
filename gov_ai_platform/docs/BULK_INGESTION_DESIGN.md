@@ -93,3 +93,9 @@ missing metadata normally produces a warning, not a hard failure.
 
 Metadata-validation results remain application-level. Queryable persistence
 requires a separately reviewed schema migration.
+
+The `expansion_50_v1.csv` gate completed on 2026-08-12. All 50 frozen new
+documents succeeded, adding 455 pages and 411 chunks. Global integrity after
+the run was 61 documents, 1,022 pages, 740 chunks/embeddings, zero oversized
+chunks, zero wrong-dimension or missing embeddings, and zero duplicate paths or
+SHA-256 values. A repeat run without `--force` skipped all 50 documents.

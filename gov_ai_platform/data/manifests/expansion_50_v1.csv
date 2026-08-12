@@ -1,0 +1,51 @@
+file_path,department,document_label,notes
+"Electronics, Information Technology and Artificial Intelligence Department/202003031509142811.pdf","Electronics, Information Technology and Artificial Intelligence Department",expansion-01,profile: year=2020; pages=2; size_bytes=3300908; sample=marathi-digital; rationale=2020 short
+"Electronics, Information Technology and Artificial Intelligence Department/202111301536272711.pdf","Electronics, Information Technology and Artificial Intelligence Department",expansion-02,profile: year=2021; pages=6; size_bytes=579246; sample=marathi-digital; rationale=2021 medium
+"Electronics, Information Technology and Artificial Intelligence Department/202204011559347911.pdf","Electronics, Information Technology and Artificial Intelligence Department",expansion-03,profile: year=2022; pages=3; size_bytes=749928; sample=marathi-digital; rationale=2022 language coverage
+"Electronics, Information Technology and Artificial Intelligence Department/202302231826565311.pdf","Electronics, Information Technology and Artificial Intelligence Department",expansion-04,profile: year=2023; pages=5; size_bytes=1847521; sample=marathi-digital; rationale=2023 medium
+"Electronics, Information Technology and Artificial Intelligence Department/202403051249430211.pdf","Electronics, Information Technology and Artificial Intelligence Department",expansion-05,profile: year=2024; pages=4; size_bytes=733620; sample=english-mixed-digital; rationale=2024 language mix
+"Electronics, Information Technology and Artificial Intelligence Department/202011091654026811.pdf","Electronics, Information Technology and Artificial Intelligence Department",expansion-06,profile: year=2020; pages=19; size_bytes=3034735; sample=marathi-digital; rationale=department long
+Environment Department/202012221455148704.pdf,Environment Department,expansion-07,profile: year=2020; pages=3; size_bytes=675981; sample=marathi-digital; rationale=2020 short
+Environment Department/202106171721490204.pdf,Environment Department,expansion-08,profile: year=2021; pages=6; size_bytes=2253513; sample=marathi-digital; rationale=2021 medium
+Environment Department/202212051822141504.pdf,Environment Department,expansion-09,profile: year=2022; pages=14; size_bytes=934847; sample=marathi-digital; rationale=2022 long
+Environment Department/202310111859174404.pdf,Environment Department,expansion-10,profile: year=2023; pages=5; size_bytes=1235653; sample=marathi-digital; rationale=2023 medium
+Environment Department/202401021635510804...pdf,Environment Department,expansion-11,profile: year=2024; pages=2; size_bytes=318899; sample=marathi-digital; rationale=2024 short
+Environment Department/202409271748161804.pdf,Environment Department,expansion-12,profile: year=2024; pages=50; size_bytes=981885; sample=marathi-digital; rationale=very long
+Environment Department/202112021716324204.pdf,Environment Department,expansion-13,profile: year=2021; pages=11; size_bytes=1825909; sample=english-mixed-digital; rationale=language mix
+Finance Department/202006051253177205.pdf,Finance Department,expansion-14,profile: year=2020; pages=2; size_bytes=931799; sample=image-heavy; rationale=scanned/image-heavy
+Finance Department/202110071718469205.pdf,Finance Department,expansion-15,profile: year=2021; pages=5; size_bytes=430004; sample=marathi-digital; rationale=2021 medium
+Finance Department/202205181531263205.pdf,Finance Department,expansion-16,profile: year=2022; pages=22; size_bytes=324458; sample=marathi-digital; rationale=2022 long
+Finance Department/202307271529420105.pdf,Finance Department,expansion-17,profile: year=2023; pages=2; size_bytes=169885; sample=marathi-digital; rationale=2023 short
+Finance Department/202402021844052005.pdf,Finance Department,expansion-18,profile: year=2024; pages=5; size_bytes=175626; sample=marathi-digital; rationale=2024 medium
+Finance Department/202112151813247705.pdf,Finance Department,expansion-19,profile: year=2021; pages=47; size_bytes=2872505; sample=marathi-digital; rationale=very long
+Finance Department/202101141715058105.pdf,Finance Department,expansion-20,profile: year=2021; pages=6; size_bytes=1875544; sample=english-mixed-digital; rationale=language mix
+Housing Department/202007291207225609.pdf,Housing Department,expansion-21,profile: year=2020; pages=2; size_bytes=3217009; sample=marathi-digital; rationale=2020 short
+Housing Department/202102221535530209.pdf,Housing Department,expansion-22,profile: year=2021; pages=6; size_bytes=2396947; sample=marathi-digital; rationale=2021 medium
+Housing Department/202205251326055609.pdf,Housing Department,expansion-23,profile: year=2022; pages=4; size_bytes=195653; sample=marathi-digital; rationale=2022 length coverage
+Housing Department/202303031901497509.pdf,Housing Department,expansion-24,profile: year=2023; pages=2; size_bytes=237737; sample=marathi-digital; rationale=2023 short
+Housing Department/202409061713029409.pdf,Housing Department,expansion-25,profile: year=2024; pages=6; size_bytes=439518; sample=marathi-digital; rationale=2024 medium
+Housing Department/202107121625423109.pdf,Housing Department,expansion-26,profile: year=2021; pages=2; size_bytes=3335752; sample=image-heavy; rationale=scanned/image-heavy
+Marathi Language Department/202009291235575833.pdf,Marathi Language Department,expansion-27,profile: year=2020; pages=2; size_bytes=542441; sample=marathi-digital; rationale=2020 short
+Marathi Language Department/202103221835086133.pdf,Marathi Language Department,expansion-28,profile: year=2021; pages=6; size_bytes=669160; sample=marathi-digital; rationale=2021 medium
+Marathi Language Department/202206241309473633.pdf,Marathi Language Department,expansion-29,profile: year=2022; pages=17; size_bytes=435946; sample=marathi-digital; rationale=2022 long
+Marathi Language Department/202302161521353333.pdf,Marathi Language Department,expansion-30,profile: year=2023; pages=2; size_bytes=1313980; sample=marathi-digital; rationale=2023 short
+Marathi Language Department/202409191753295533.pdf,Marathi Language Department,expansion-31,profile: year=2024; pages=6; size_bytes=238532; sample=marathi-digital; rationale=2024 medium
+Marathi Language Department/202403141232424033.pdf,Marathi Language Department,expansion-32,profile: year=2024; pages=12; size_bytes=577397; sample=marathi-digital; rationale=department long
+Minorities Development Department/202004281207017314.pdf,Minorities Development Department,expansion-33,profile: year=2020; pages=2; size_bytes=3242969; sample=marathi-digital; rationale=2020 short
+Minorities Development Department/202102261731576814.pdf,Minorities Development Department,expansion-34,profile: year=2021; pages=6; size_bytes=135124; sample=marathi-digital; rationale=2021 medium
+Minorities Development Department/202207291210552814.pdf,Minorities Development Department,expansion-35,profile: year=2022; pages=20; size_bytes=280803; sample=marathi-digital; rationale=2022 long
+Minorities Development Department/202311091151473014.pdf,Minorities Development Department,expansion-36,profile: year=2023; pages=2; size_bytes=243344; sample=marathi-digital; rationale=2023 short
+Minorities Development Department/202403051825049614....pdf,Minorities Development Department,expansion-37,profile: year=2024; pages=6; size_bytes=531098; sample=marathi-digital; rationale=2024 medium
+Minorities Development Department/202203311132465314.pdf,Minorities Development Department,expansion-38,profile: year=2022; pages=43; size_bytes=363060; sample=marathi-digital; rationale=very long
+Parliamentary Affairs Department/202002151217151915.pdf,Parliamentary Affairs Department,expansion-39,profile: year=2020; pages=2; size_bytes=378448; sample=marathi-digital; rationale=2020 short
+Parliamentary Affairs Department/202102121449437115.pdf,Parliamentary Affairs Department,expansion-40,profile: year=2021; pages=6; size_bytes=607806; sample=marathi-digital; rationale=2021 medium
+Parliamentary Affairs Department/202202211224550715.pdf,Parliamentary Affairs Department,expansion-41,profile: year=2022; pages=3; size_bytes=215631; sample=marathi-digital; rationale=2022 short
+Parliamentary Affairs Department/202307071223304115.pdf,Parliamentary Affairs Department,expansion-42,profile: year=2023; pages=6; size_bytes=254816; sample=marathi-digital; rationale=2023 medium
+Parliamentary Affairs Department/202402271500283915.pdf,Parliamentary Affairs Department,expansion-43,profile: year=2024; pages=2; size_bytes=141967; sample=marathi-digital; rationale=2024 short
+Parliamentary Affairs Department/202211151206140415.pdf,Parliamentary Affairs Department,expansion-44,profile: year=2022; pages=2; size_bytes=119676; sample=image-heavy; rationale=scanned/image-heavy
+Persons with Disabilities Welfare Department/202310231725565835.pdf,Persons with Disabilities Welfare Department,expansion-45,profile: year=2023; pages=2; size_bytes=365539; sample=marathi-digital; rationale=2023 short
+Persons with Disabilities Welfare Department/202311131531275435.pdf,Persons with Disabilities Welfare Department,expansion-46,profile: year=2023; pages=6; size_bytes=169461; sample=marathi-digital; rationale=2023 medium
+Persons with Disabilities Welfare Department/202307281840040935.....pdf,Persons with Disabilities Welfare Department,expansion-47,profile: year=2023; pages=15; size_bytes=1450475; sample=marathi-digital; rationale=2023 long
+Persons with Disabilities Welfare Department/202411261242358035.pdf,Persons with Disabilities Welfare Department,expansion-48,profile: year=2024; pages=3; size_bytes=479006; sample=marathi-digital; rationale=2024 short
+Persons with Disabilities Welfare Department/202406191445523235.pdf,Persons with Disabilities Welfare Department,expansion-49,profile: year=2024; pages=8; size_bytes=184495; sample=marathi-digital; rationale=2024 medium
+Persons with Disabilities Welfare Department/202407161623388635.pdf,Persons with Disabilities Welfare Department,expansion-50,profile: year=2024; pages=35; size_bytes=931768; sample=marathi-digital; rationale=2024 very long

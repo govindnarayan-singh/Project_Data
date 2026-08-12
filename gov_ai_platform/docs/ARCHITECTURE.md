@@ -61,6 +61,10 @@ BGE-M3 is loaded once during live preflight when at least one manifest row
 requires processing. Results are checkpointed after every row under
 `outputs/bulk_ingestion/<run-id>/` for safe resume.
 
+Batch results also record extraction, embedding, database, and whole-document
+elapsed times. This is reporting instrumentation only and does not alter the
+pipeline, model, schema, or transaction boundary.
+
 The PDF endpoint accepts only a numeric database document ID. Its database
 path is resolved against `GR_ROOT`, checked to remain under that root, checked
 for a `.pdf` suffix, and streamed inline. Filesystem paths are not accepted

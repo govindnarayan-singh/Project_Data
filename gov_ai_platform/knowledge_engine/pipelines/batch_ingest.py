@@ -93,6 +93,7 @@ class BatchResult:
     pages_total: int = 0
     pages_digital: int = 0
     pages_ocr: int = 0
+    extraction_elapsed_seconds: float = 0.0
     gr_number: str = ""
     gr_number_validation: str = ""
     gr_number_validation_reason: str = ""
@@ -108,6 +109,8 @@ class BatchResult:
     avg_chunk_tokens: float = 0.0
     embedding_count: int = 0
     embedding_dimension: int = 0
+    embedding_elapsed_seconds: float = 0.0
+    database_elapsed_seconds: float = 0.0
     elapsed_seconds: float = 0.0
     error_stage: str = ""
     error_message: str = ""
@@ -125,7 +128,13 @@ class BatchResult:
             "min_chunk_tokens", "max_chunk_tokens", "embedding_count",
             "embedding_dimension",
         }
-        float_fields = {"avg_chunk_tokens", "elapsed_seconds"}
+        float_fields = {
+            "avg_chunk_tokens",
+            "extraction_elapsed_seconds",
+            "embedding_elapsed_seconds",
+            "database_elapsed_seconds",
+            "elapsed_seconds",
+        }
         values: dict[str, Any] = dict(row)
         for name in integer_fields:
             values[name] = int(values.get(name) or 0)
@@ -327,6 +336,7 @@ class BatchIngestor:
             result.elapsed_seconds = round(self.clock() - started, 6)
             return result
 
+        extraction_started = self.clock()
         try:
             extracted = self.extract_pdf_fn(entry.absolute_path)
             if not extracted.pages:
@@ -338,7 +348,13 @@ class BatchIngestor:
             if not normalized:
                 raise ValueError("Extracted document text is empty")
         except Exception as error:
+            result.extraction_elapsed_seconds = round(
+                self.clock() - extraction_started, 6
+            )
             return self._failure(result, Status.FAILED_EXTRACTION, "extraction", error, started)
+        result.extraction_elapsed_seconds = round(
+            self.clock() - extraction_started, 6
+        )
 
         try:
             metadata = self.extract_metadata_fn(
@@ -378,6 +394,7 @@ class BatchIngestor:
         except Exception as error:
             return self._failure(result, Status.FAILED_CHUNKING, "chunking", error, started)
 
+        embedding_started = self.clock()
         try:
             embeddings = self.embedder.encode(
                 [chunk.text for chunk in chunks], show_progress_bar=False
@@ -396,8 +413,15 @@ class BatchIngestor:
                 )
             result.embedding_dimension = settings.embed_dim
         except Exception as error:
+            result.embedding_elapsed_seconds = round(
+                self.clock() - embedding_started, 6
+            )
             return self._failure(result, Status.FAILED_EMBEDDING, "embedding", error, started)
+        result.embedding_elapsed_seconds = round(
+            self.clock() - embedding_started, 6
+        )
 
+        database_started = self.clock()
         try:
             self.storage.replace_document(
                 sha256=result.sha256,
@@ -416,7 +440,13 @@ class BatchIngestor:
                 embeddings=embeddings,
             )
         except Exception as error:
+            result.database_elapsed_seconds = round(
+                self.clock() - database_started, 6
+            )
             return self._failure(result, Status.FAILED_DATABASE, "database", error, started)
+        result.database_elapsed_seconds = round(
+            self.clock() - database_started, 6
+        )
 
         result.status = (
             Status.SUCCESS_WITH_WARNING.value
