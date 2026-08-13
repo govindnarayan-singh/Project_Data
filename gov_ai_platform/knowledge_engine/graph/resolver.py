@@ -7,6 +7,7 @@ from .models import ReferenceCandidate, Resolution
 from .normalization import normalize_department_alias, normalize_document_number
 from .quality import QualityPolicy
 from .types import ParserStatus, RESOLVER_VERSION, ResolutionStatus, ValidationStatus
+from .validation import KnowledgeGraphValidationPolicy
 
 
 class ReferenceResolver:
@@ -18,10 +19,14 @@ class ReferenceResolver:
         quality_policy: QualityPolicy,
         *,
         auto_verify_enabled: bool,
+        validation_policy: KnowledgeGraphValidationPolicy | None = None,
     ):
         self.documents = [dict(document) for document in documents]
         self.quality_policy = quality_policy
         self.auto_verify_enabled = auto_verify_enabled
+        self.validation_policy = validation_policy or KnowledgeGraphValidationPolicy(
+            reference_gate_passed=auto_verify_enabled
+        )
         self.by_number: dict[str, list[dict[str, Any]]] = defaultdict(list)
         self.blocked_by_number: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for document in self.documents:
@@ -39,15 +44,9 @@ class ReferenceResolver:
             return ValidationStatus.UNRESOLVED
         if status in {ResolutionStatus.SELF_REFERENCE_REJECTED}:
             return ValidationStatus.REJECTED
-        if (
-            self.auto_verify_enabled
-            and status in {ResolutionStatus.RESOLVED_EXACT, ResolutionStatus.RESOLVED_STRONG}
-            and candidate.parser_status == ParserStatus.VALID
-            and not blocked_page
-            and not blocked_target
-        ):
-            return ValidationStatus.AUTO_VERIFIED
-        return ValidationStatus.CANDIDATE
+        return self.validation_policy.reference_validation(
+            candidate, status, blocked_page=blocked_page, blocked_target=blocked_target
+        )
 
     def resolve(self, candidate: ReferenceCandidate) -> Resolution:
         blocked_page = self.quality_policy.page_blocks_auto_verify(candidate.source_document_id, candidate.source_page)
@@ -90,7 +89,14 @@ class ReferenceResolver:
                     f"Unique number match conflicts with stored target date: reference={reference_date}, target={target_date}",
                     1, "LOW", ValidationStatus.CANDIDATE, blocked_by_page_quality=blocked_page,
                 )
-            department_agrees = normalize_department_alias(candidate.source_department) == normalize_department_alias(str(target.get("department") or ""))
+            target_department = normalize_department_alias(str(target.get("department") or ""))
+            if candidate.normalized_department and candidate.normalized_department != target_department:
+                return Resolution(
+                    ResolutionStatus.AMBIGUOUS, None, "", "NUMBER_MATCH_DEPARTMENT_CONFLICT",
+                    "Unique number match conflicts with the explicitly extracted reference department",
+                    1, "LOW", ValidationStatus.CANDIDATE, blocked_by_page_quality=blocked_page,
+                )
+            department_agrees = not candidate.normalized_department or candidate.normalized_department == target_department
             method = "EXACT_NORMALIZED_NUMBER_AND_DATE" if reference_date else "EXACT_NORMALIZED_NUMBER"
             status = ResolutionStatus.RESOLVED_EXACT
             validation = self._validation(candidate, status, blocked_page=blocked_page, blocked_target=False)
@@ -101,11 +107,10 @@ class ReferenceResolver:
             )
         if len(matches) > 1:
             reference_date = candidate.normalized_reference_date.isoformat() if candidate.normalized_reference_date else ""
-            source_department = normalize_department_alias(candidate.source_department)
             narrowed = [
                 row for row in matches
                 if (not reference_date or str(row.get("gr_date") or "") == reference_date)
-                and normalize_department_alias(str(row.get("department") or "")) == source_department
+                and (not candidate.normalized_department or normalize_department_alias(str(row.get("department") or "")) == candidate.normalized_department)
             ]
             if len(narrowed) == 1:
                 target = narrowed[0]

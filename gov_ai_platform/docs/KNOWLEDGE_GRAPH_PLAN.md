@@ -52,10 +52,11 @@ Core relations are:
 - ISSUED_BY: existing controlled corpus department metadata mapped through a
   canonical department/alias table.
 
-AMENDS, SUPERSEDES, PARTIALLY_SUPERSEDES, CANCELS, CORRECTS, and EXTENDS remain
-candidate signals only. The production run stored 18 such candidates (9
+AMENDS, SUPERSEDES, PARTIALLY_SUPERSEDES, CANCELS, CORRECTS, and EXTENDS began
+as candidate signals only. The production run stored 18 such candidates (9
 AMENDS, 5 CORRECTS, 2 SUPERSEDES, 2 EXTENDS) and created no authoritative
-strong relation. Human confirmation is mandatory.
+strong relation. Strict mode requires human confirmation; the later automatic
+development policy below permits AUTO_VERIFIED only behind stronger gates.
 
 ## Provenance and lifecycle
 
@@ -100,3 +101,90 @@ dense ranking is unchanged.
 7. Measure graph-aware retrieval as a separate experiment.
 
 Hybrid retrieval, reranking, RAG, and graph-aware search are not implemented.
+
+## Automatic development review policy
+
+`KG_REVIEW_MODE` is parsed by `KnowledgeGraphValidationPolicy` and accepts only
+`strict` or `auto` (default). `AUTO_VERIFIED` means deterministic machine
+validation and never implies human review. `HUMAN_CONFIRMED` remains reserved
+for an actual human decision.
+
+Both modes retain the existing REFERENCES gates: VALID parser output,
+structurally valid identifier, unique exact/strong resolution, no date
+conflict, no source-page or target-metadata block, self-reference rejection,
+and preserved evidence. Strict mode requires HUMAN_CONFIRMED for strong
+relations. Auto mode may use AUTO_VERIFIED for a strong relation only when an
+approved HIGH_CONFIDENCE_EXPLICIT phrase also links the action to that specific,
+uniquely resolved target. Vectors and subject similarity are forbidden.
+
+The phrase catalogue separates:
+
+- HIGH_CONFIDENCE_EXPLICIT: wording such as “is hereby amended,” “corrigendum
+  to,” “is hereby superseded,” or Marathi equivalents that explicitly perform
+  the action;
+- CONTEXT_DEPENDENT: generic occurrences such as amendment/corrigendum in a
+  title, “extended,” or a relation word without an explicit target link;
+- AMBIGUOUS: no approved phrase family.
+
+All 18 current signals were dry-run. No AMENDS, CORRECTS, SUPERSEDES, EXTENDS,
+CANCELS, or PARTIALLY_SUPERSEDES candidate passed all gates. Applying the policy
+twice inserted zero relations and zero evidence links. No HUMAN_CONFIRMED state
+was created.
+
+## Graph-guided acquisition V1
+
+```text
+NOT_IN_CORPUS candidates
+  → conservative normalized number/kind consolidation
+  → safe local PDF inventory
+  → at-most-two-page digital metadata index (no OCR)
+  → exact deterministic identifier matching
+  → transparent priority score
+  → frozen manifest for future controlled ingestion
+```
+
+The inventory records relative path, folder department, bytes, page count,
+filename date, SHA-256, and ingested state. The resolver accepts identity
+evidence only; semantic similarity is never used. Exact normalized identifiers
+are corroborated where possible with a text date or folder department.
+Conflicts and multiple distinct SHA identities remain AMBIGUOUS.
+
+Priority score weights are additive and visible:
+
+- 100 per distinct citing document;
+- 10 per mention, capped at 25;
+- 120 for a stored strong-relation signal;
+- 80 for a complete identifier (20 otherwise);
+- 30 for a reference date and 20 for department evidence;
+- 3 per unblocked mention, capped at 10;
+- 400 for MATCH_EXACT, 250 for MATCH_STRONG, and 50 for AMBIGUOUS.
+
+The run inventoried all 2,715 PDFs and excluded the 61 ingested identities.
+Because filenames are opaque timestamps, the remaining 2,654 PDFs formed the
+cheap candidate identity index. At most two digital pages were inspected (5,258
+pages total); OCR, chunking, embeddings, and ingestion were not run. Of 233
+consolidated groups, 4 were MATCH_EXACT, 3 MATCH_STRONG, 3 AMBIGUOUS, 212
+NOT_FOUND, and 11 BLOCKED_QUALITY.
+
+The frozen manifest contains seven unique PDFs (four Tier A, three Tier B), not
+the aspirational 100–140. The count was not padded with random documents. It is
+safe but too small to use as the intended expansion batch; acquisition
+resolution should be hardened before controlled ingestion.
+
+## Coverage and resolution metrics
+
+`graph_document_coverage` is unique documents participating in at least one
+document-to-document relation divided by total ingested documents. ISSUED_BY is
+excluded. Current coverage is 2/61 (3.2787%). Department relation coverage is
+reported separately and is 61/61 (100%).
+
+Reference resolution rate is:
+
+```text
+(RESOLVED_EXACT + RESOLVED_STRONG)
+--------------------------------------------------------------
+resolved + AMBIGUOUS + NOT_IN_CORPUS + NEEDS_REVIEW
+```
+
+SELF_REFERENCE_REJECTED is not a target and UNPARSEABLE lacks a defensible
+identity, so both are excluded. The current rate is 1/374 (0.2674%).

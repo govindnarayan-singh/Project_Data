@@ -57,8 +57,10 @@ duplicate evidence candidates on unchanged runs.
 
 Validated edges only. A typed check requires ISSUED_BY to target a department
 and other relations to target a document. REFERENCES and ISSUED_BY may be
-AUTO_VERIFIED; stronger relations must be HUMAN_CONFIRMED. Partial unique
-indexes prevent duplicate document-target or department-target edges.
+AUTO_VERIFIED. Following migration 002, a strong relation may also be
+AUTO_VERIFIED only with a source candidate; otherwise it must be
+HUMAN_CONFIRMED. Partial unique indexes prevent duplicate document-target or
+department-target edges.
 
 Relation evidence links one or more candidate records to an edge and has a
 unique relation/candidate pair. No REFERENCES edge may be treated as valid
@@ -92,8 +94,13 @@ remain ambiguous. AUTO_VERIFIED requires a passed parser engineering gate,
 VALID parser output, a unique exact/strong target, no date conflict, an allowed
 source page, and target metadata allowed for resolution.
 
-Unresolved candidates are first-class rows. Strong relation signals remain
-CANDIDATE and never create edges without a `kg_reviews` HUMAN_CONFIRMED event.
+Unresolved candidates are first-class rows. Migration
+`002_kg_auto_review_policy.sql` changes only the strong-relation validation
+constraint: a strong edge may be `AUTO_VERIFIED` when it has a non-null source
+candidate, or `HUMAN_CONFIRMED` after actual review. Application policy still
+requires explicit wording, unique deterministic identity, passed quality gates,
+and transactionally inserted `kg_relation_evidence`. The current graph has zero
+machine-verified strong edges.
 
 ## Service and security
 

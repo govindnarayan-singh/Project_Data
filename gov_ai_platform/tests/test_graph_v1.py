@@ -20,6 +20,12 @@ from knowledge_engine.graph.quality import QualityPolicy
 from knowledge_engine.graph.resolver import ReferenceResolver
 from knowledge_engine.graph.service import GraphService
 from knowledge_engine.graph.types import ParserStatus, ReferenceKind, ResolutionStatus, ValidationStatus
+from knowledge_engine.graph.validation import (
+    KnowledgeGraphValidationPolicy,
+    ReviewMode,
+    SignalConfidence,
+    classify_relation_signal,
+)
 
 
 def document(document_id=1, number="SOURCE-2024/1", date="2024-01-01", department="Finance"):
@@ -117,9 +123,69 @@ class ResolverPolicyTests(SimpleTestCase):
         assert result.validation_status == ValidationStatus.CANDIDATE
         assert result.blocked_by_page_quality
 
+
+class AutomaticReviewPolicyTests(SimpleTestCase):
+    def candidate(self, **changes):
+        value = {
+            "id": 10, "source_document_id": 1, "resolved_target_document_id": 2,
+            "candidate_relation_type": "AMENDS", "reference_kind": "GOVERNMENT_RESOLUTION",
+            "raw_evidence_text": "Government Resolution No. ABC/2020/1 is hereby amended",
+            "normalized_document_number": "abc/2020/1", "parser_status": "VALID",
+            "resolution_status": "RESOLVED_EXACT", "blocked_by_page_quality": False,
+            "blocked_by_target_metadata": False,
+        }
+        value.update(changes)
+        return value
+
+    def test_review_mode_parsing_and_invalid_mode(self):
+        assert ReviewMode.parse(" strict ") == ReviewMode.STRICT
+        assert ReviewMode.parse("AUTO") == ReviewMode.AUTO
+        with self.assertRaises(ValueError):
+            ReviewMode.parse("unsafe")
+
+    def test_strict_mode_never_machine_promotes_strong_relation(self):
+        decision = KnowledgeGraphValidationPolicy("strict").strong_relation_decision(self.candidate())
+        assert not decision.approved
+        assert decision.validation_status == "CANDIDATE"
+
+    def test_auto_mode_requires_explicit_phrase_and_unique_target(self):
+        policy = KnowledgeGraphValidationPolicy("auto")
+        approved = policy.strong_relation_decision(self.candidate())
+        assert approved.approved
+        assert approved.validation_status == "AUTO_VERIFIED"
+        contextual = policy.strong_relation_decision(self.candidate(raw_evidence_text="Amendment Act 2021"))
+        assert not contextual.approved
+        unresolved = policy.strong_relation_decision(self.candidate(
+            resolution_status="NOT_IN_CORPUS", resolved_target_document_id=None))
+        assert not unresolved.approved
+
+    def test_quality_and_metadata_blocks_are_enforced(self):
+        policy = KnowledgeGraphValidationPolicy("auto")
+        assert not policy.strong_relation_decision(self.candidate(blocked_by_page_quality=True)).approved
+        assert not policy.strong_relation_decision(self.candidate(blocked_by_target_metadata=True)).approved
+        assert not policy.strong_relation_decision(self.candidate(
+            normalized_department="finance", target_department="Housing")).approved
+
+    def test_ambiguous_target_and_self_relation_are_rejected(self):
+        policy = KnowledgeGraphValidationPolicy("auto")
+        assert not policy.strong_relation_decision(self.candidate(
+            resolution_status="AMBIGUOUS", resolved_target_document_id=None)).approved
+        assert not policy.strong_relation_decision(self.candidate(resolved_target_document_id=1)).approved
+
+    def test_phrase_catalogue_separates_explicit_from_contextual(self):
+        explicit = classify_relation_signal("SUPERSEDES", "The order is hereby superseded")
+        assert explicit.confidence == SignalConfidence.HIGH_CONFIDENCE_EXPLICIT
+        contextual = classify_relation_signal("CORRECTS", "Government corrigendum number ABC/2020/1")
+        assert contextual.confidence == SignalConfidence.CONTEXT_DEPENDENT
+
+    def test_dry_run_never_claims_human_confirmation(self):
+        result = KnowledgeGraphValidationPolicy("auto").dry_run([self.candidate()])
+        assert result["approved_by_relation"]["AMENDS"] == 1
+        assert result["human_confirmed_created"] == 0
+
     def test_parser_gate_disables_auto_verify(self):
         candidate = parse("Government Resolution No. ABC/2020/1")[0]
-        result = ReferenceResolver([document(), document(2, "ABC/2020/1", "")], self.empty_policy, auto_verify_enabled=False).resolve(candidate)
+        result = ReferenceResolver([document(), document(2, "ABC/2020/1", "")], policy(), auto_verify_enabled=False).resolve(candidate)
         assert result.validation_status == ValidationStatus.CANDIDATE
 
 

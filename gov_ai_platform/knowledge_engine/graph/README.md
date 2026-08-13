@@ -12,9 +12,16 @@ This package implements deterministic, provenance-first Knowledge Graph V1.
 - `evaluation.py`: CODEX_SOURCE_REVIEW parser regression metrics
 - `diagnostics/`: retained pre-production diagnostic implementation
 
-Only REFERENCES and ISSUED_BY may be created automatically. AMENDS,
-SUPERSEDES, PARTIALLY_SUPERSEDES, CANCELS, CORRECTS, and EXTENDS remain
-candidates until human confirmation. Vector similarity and subject similarity
-are never graph identity or edge evidence.
+`KG_REVIEW_MODE=strict|auto` controls a central validation policy. REFERENCES
+retain their deterministic machine gate in both modes. In strict mode, strong
+relations require actual `HUMAN_CONFIRMED` review. In auto mode, a strong edge
+may be `AUTO_VERIFIED` only when an approved explicit phrase, structurally
+valid target identifier, unique deterministic resolution, quality gates, and
+candidate provenance all pass. No current V1 strong signal passes every gate.
+Vector and subject similarity are never identity or edge evidence.
+
+`knowledge_engine.acquisition` inventories the local PDF corpus, consolidates
+unresolved groups, performs limited digital metadata probes, and produces a
+graph-guided manifest. It never ingests, chunks, embeds, or changes documents.
 
 See `docs/KNOWLEDGE_GRAPH_SCHEMA.md` and `docs/KNOWLEDGE_GRAPH_PLAN.md`.

@@ -10,6 +10,7 @@ from .quality import QualityPolicy
 from .repository import GraphRepository
 from .resolver import ReferenceResolver
 from .types import NORMALIZER_VERSION, PARSER_VERSION, RESOLVER_VERSION, ResolutionStatus
+from .validation import KnowledgeGraphValidationPolicy
 
 
 class KnowledgeGraphPipeline:
@@ -18,10 +19,12 @@ class KnowledgeGraphPipeline:
         repository: GraphRepository | None = None,
         parser: ReferenceParser | None = None,
         quality_policy: QualityPolicy | None = None,
+        validation_policy: KnowledgeGraphValidationPolicy | None = None,
     ):
         self.repository = repository or GraphRepository()
         self.parser = parser or ReferenceParser()
         self.quality_policy = quality_policy or QualityPolicy.from_csv()
+        self.validation_policy = validation_policy or KnowledgeGraphValidationPolicy.from_env()
 
     def run(self, *, auto_verify_enabled: bool, expected_documents: int = 61) -> tuple[GraphRunResult, dict[str, int]]:
         wall_started = time.perf_counter()
@@ -45,7 +48,12 @@ class KnowledgeGraphPipeline:
             parser_seconds = time.perf_counter() - parse_started
 
             resolve_started = time.perf_counter()
-            resolver = ReferenceResolver(documents, self.quality_policy, auto_verify_enabled=auto_verify_enabled)
+            resolver = ReferenceResolver(
+                documents, self.quality_policy, auto_verify_enabled=auto_verify_enabled,
+                validation_policy=KnowledgeGraphValidationPolicy(
+                    self.validation_policy.mode, reference_gate_passed=auto_verify_enabled
+                ),
+            )
             items = [(candidate, resolver.resolve(candidate)) for candidate in candidates]
             resolver_seconds = time.perf_counter() - resolve_started
 
@@ -57,7 +65,7 @@ class KnowledgeGraphPipeline:
             self.repository.finish_run(
                 run_id, status="SUCCESS", documents=len(documents), pages=len(pages),
                 candidates=len(items), resolved=resolved, edges=edge_count,
-                notes=f"auto_verify_enabled={auto_verify_enabled}",
+                notes=f"auto_verify_enabled={auto_verify_enabled};review_mode={self.validation_policy.mode.value}",
             )
         except Exception as error:
             self.repository.finish_run(

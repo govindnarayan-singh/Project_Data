@@ -87,8 +87,9 @@ Documents + final stored pages
 The parser never resolves; the resolver never uses embeddings or subject
 similarity; and Django never accesses graph SQL directly. Raw evidence and
 normalized values coexist. Unresolved and ambiguous references remain stored
-candidates. Strong administrative relation signals cannot enter the validated
-edge table unless HUMAN_CONFIRMED.
+candidates. Strong administrative relations enter the edge table only through
+HUMAN_CONFIRMED in strict mode or the later explicit, uniquely resolved,
+provenance-linked AUTO_VERIFIED development policy.
 
 The graph uses additive PostgreSQL tables described in
 `docs/KNOWLEDGE_GRAPH_SCHEMA.md`. The old zero-row `gr_relations` table remains
@@ -103,3 +104,25 @@ enhanced three-panel workspace. Read-only web projections live in
 reached through `RetrievalService` after a valid search POST. Document, graph,
 corpus-health, and evaluation GET routes use PostgreSQL projections and fixed
 artifacts only. See `docs/UI_ARCHITECTURE.md`.
+
+## Graph review automation and acquisition
+
+`KnowledgeGraphValidationPolicy` is the configurable trust boundary for strict
+versus automatic development review. Machine decisions remain AUTO_VERIFIED;
+only actual review may create HUMAN_CONFIRMED. Strong relations require an
+explicit approved phrase, unique identifier resolution, quality gates, and
+candidate/evidence provenance.
+
+```text
+KG unresolved candidates
+  → Acquisition Resolver
+  → remaining local GR corpus
+  → graph-guided manifest
+  → future controlled ingestion
+```
+
+`knowledge_engine.acquisition` is separate from ingestion. It builds a safe
+SHA-aware inventory, performs limited digital metadata probes, consolidates
+targets, resolves only deterministic identity matches, ranks transparently,
+and freezes a manifest. It never OCRs the full corpus, chunks, embeds, or writes
+document rows.

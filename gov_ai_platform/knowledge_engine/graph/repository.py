@@ -13,6 +13,7 @@ from .normalization import normalize_department_alias
 
 
 MIGRATION_PATH = PROJECT_ROOT / "deployment" / "postgres" / "migrations" / "001_kg_v1.sql"
+AUTO_POLICY_MIGRATION_PATH = PROJECT_ROOT / "deployment" / "postgres" / "migrations" / "002_kg_auto_review_policy.sql"
 
 
 class GraphRepository:
@@ -30,6 +31,55 @@ class GraphRepository:
         with self.connect() as connection:
             with connection.transaction():
                 connection.execute(self.migration_sql())
+
+    def apply_auto_policy_migration(self) -> None:
+        sql = AUTO_POLICY_MIGRATION_PATH.read_text(encoding="utf-8")
+        with self.connect() as connection:
+            with connection.transaction():
+                connection.execute(sql)
+
+    def apply_auto_promotions(self, decisions) -> dict[str, int]:
+        """Persist approved machine relations with candidate provenance only."""
+        approved = [item for item in decisions if item.approved]
+        inserted_relations = 0
+        inserted_evidence = 0
+        with self.connect() as connection:
+            with connection.transaction():
+                for item in approved:
+                    if not all((item.candidate_id, item.source_document_id, item.target_document_id, item.relation_type)):
+                        raise ValueError("An approved promotion is missing relation provenance")
+                    row = connection.execute(
+                        """INSERT INTO kg_relations(
+                               source_document_id,target_document_id,relation_type,
+                               validation_status,created_from_candidate_id)
+                           VALUES (%s,%s,%s,'AUTO_VERIFIED',%s)
+                           ON CONFLICT DO NOTHING RETURNING id""",
+                        (item.source_document_id, item.target_document_id, item.relation_type, item.candidate_id),
+                    ).fetchone()
+                    if row:
+                        relation_id = int(row["id"])
+                        inserted_relations += 1
+                    else:
+                        existing = connection.execute(
+                            """SELECT id FROM kg_relations
+                               WHERE source_document_id=%s AND target_document_id=%s AND relation_type=%s""",
+                            (item.source_document_id, item.target_document_id, item.relation_type),
+                        ).fetchone()
+                        if existing is None:
+                            raise RuntimeError("Promotion conflict did not resolve to an existing relation")
+                        relation_id = int(existing["id"])
+                    evidence = connection.execute(
+                        """INSERT INTO kg_relation_evidence(relation_id,candidate_id)
+                           VALUES (%s,%s) ON CONFLICT DO NOTHING RETURNING id""",
+                        (relation_id, item.candidate_id),
+                    ).fetchone()
+                    inserted_evidence += int(evidence is not None)
+        return {
+            "approved_decisions": len(approved),
+            "inserted_relations": inserted_relations,
+            "inserted_evidence_links": inserted_evidence,
+            "human_confirmed_created": 0,
+        }
 
     def load_corpus(self) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
         with self.connect() as connection:
@@ -283,6 +333,7 @@ class GraphRepository:
         with self.connect() as connection:
             rows = connection.execute(
                 """SELECT c.*,s.file_name AS source_file,s.department AS source_department,t.file_name AS target_file,
+                          t.department AS target_department,
                           p.extraction_method AS source_extraction_method,p.quality_score AS source_quality_score
                      FROM kg_reference_candidates c JOIN documents s ON s.id=c.source_document_id
                      JOIN pages p ON p.document_id=c.source_document_id AND p.page_number=c.source_page

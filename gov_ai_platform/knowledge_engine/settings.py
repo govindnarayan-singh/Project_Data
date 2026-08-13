@@ -31,6 +31,7 @@ class Settings:
     chunk_max_tokens: int = int(os.getenv("CHUNK_MAX_TOKENS", "700"))
     chunk_overlap_tokens: int = int(os.getenv("CHUNK_OVERLAP_TOKENS", "100"))
     embed_batch_size: int = int(os.getenv("EMBED_BATCH_SIZE", "8"))
+    kg_review_mode: str = os.getenv("KG_REVIEW_MODE", "auto")
 
 
 settings = Settings()

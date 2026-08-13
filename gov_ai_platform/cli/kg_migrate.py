@@ -24,6 +24,11 @@ def check_migration(repository: GraphRepository) -> dict[str, object]:
             """SELECT count(*) AS count FROM pg_constraint
                  WHERE conrelid IN ('kg_reference_candidates'::regclass,'kg_relations'::regclass)"""
         ).fetchone()["count"])
+        auto_policy_constraint = connection.execute(
+            """SELECT pg_get_constraintdef(oid) AS definition FROM pg_constraint
+                 WHERE conrelid='kg_relations'::regclass
+                   AND conname='kg_relations_strong_validation_check'"""
+        ).fetchone()
         indexes = int(connection.execute(
             """SELECT count(*) AS count FROM pg_indexes
                  WHERE schemaname='public' AND tablename IN ('kg_reference_candidates','kg_relations')"""
@@ -31,17 +36,24 @@ def check_migration(repository: GraphRepository) -> dict[str, object]:
         connection.rollback()
     if missing:
         raise RuntimeError(f"Migration check missing tables: {missing}")
-    return {"status": "PASS", "rolled_back": True, "tables": sorted(tables), "constraints": constraints, "indexes": indexes}
+    return {"status": "PASS", "rolled_back": True, "tables": sorted(tables), "constraints": constraints,
+            "indexes": indexes, "auto_policy_constraint": bool(auto_policy_constraint)}
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Validate or apply additive KG V1 PostgreSQL migration")
     parser.add_argument("--apply", action="store_true")
+    parser.add_argument("--apply-auto-policy", action="store_true")
     args = parser.parse_args()
     repository = GraphRepository()
+    if args.apply and args.apply_auto_policy:
+        parser.error("choose only one migration apply option")
     if args.apply:
         repository.apply_migration()
         result = {"status": "APPLIED", "migration": "001_kg_v1.sql"}
+    elif args.apply_auto_policy:
+        repository.apply_auto_policy_migration()
+        result = {"status": "APPLIED", "migration": "002_kg_auto_review_policy.sql"}
     else:
         result = check_migration(repository)
     print(json.dumps(result, indent=2))

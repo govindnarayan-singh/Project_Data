@@ -133,3 +133,31 @@ valid submitted search. Other pages use bounded read-only PostgreSQL projections
 or fixed artifacts. Verified graph edges and unresolved candidates remain
 visibly distinct, and evidence retains document/page provenance. See
 `docs/UI_ARCHITECTURE.md`.
+
+## Graph development automation and local acquisition (2026-08-13)
+
+`KG_REVIEW_MODE=strict|auto` is implemented through a central policy. Existing
+REFERENCES validation remains deterministic. Auto mode can represent a safe
+strong relation as AUTO_VERIFIED without falsifying HUMAN_CONFIRMED, while
+strict mode requires actual human confirmation. A backed-up additive constraint
+migration was applied. The 18 current signals produced zero safe promotions;
+two apply passes inserted zero relations and evidence links.
+
+The graph-guided acquisition run inventoried 2,715 PDFs, identified 61 as
+already ingested, and digitally inspected at most two pages of each remaining
+PDF. No OCR or embeddings ran. The 368 NOT_IN_CORPUS mentions consolidated to
+233 number/kind groups. Results were 4 MATCH_EXACT, 3 MATCH_STRONG, 3 AMBIGUOUS,
+212 NOT_FOUND, and 11 BLOCKED_QUALITY.
+
+`data/manifests/graph_guided_expansion_v1.csv` contains seven selected PDFs
+(four Tier A, three Tier B), SHA-256
+`c0673cf3394c0dc107bb10865f4a806733be5f97dce8805bf77a63d1662f8f14`.
+It contains no ingested path, duplicate path, or duplicate SHA. It potentially
+covers seven groups, nine mentions, and seven citing documents, but was not
+ingested. The target count was not forced because only seven identities passed.
+
+The database remains 61 documents, 1,022 pages, 740 chunks/embeddings, 729 KG
+candidates, and 62 relations. Document graph coverage is 2/61; reference
+resolution is 1/374 using the documented target-bearing denominator. The frozen
+29-question retrieval benchmark remains exactly unchanged. Full evidence is in
+`outputs/graph_guided_expansion_v1/`.
