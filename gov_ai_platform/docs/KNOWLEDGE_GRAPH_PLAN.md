@@ -232,3 +232,37 @@ V1 uses an official registry, deterministic queries, and non-search lifecycle
 states. Live query egress was blocked by environment policy, so the next action
 is **B. HARDEN EXTERNAL ACQUISITION** after explicit authorization, not
 graph-aware retrieval.
+
+## External Acquisition V1.1 closure
+
+The frozen 20-target batch has now run with public-network access. Five Act
+targets are externally AUTO_VERIFIED_READY from India Code and remain outside
+the search corpus. Known Availability Closure rises from 7/252 to 12/252.
+Because external files are not `documents`, Reference Mention Closure,
+Referenced Target Closure, Local Availability Closure, and Graph Document
+Coverage do not change, and no document-to-document edge is created.
+
+The five resolved external targets retain any source candidate relation signals
+in their catalogue provenance, but strong edges remain forbidden until the
+target is ingested and normal KG evidence gates pass. The next recommendation
+is **A. INGEST AUTO_VERIFIED EXTERNAL DOCUMENTS** as a separate controlled
+phase; dense retrieval and graph-aware ranking remain out of scope until that
+phase is evaluated.
+## External closure result (2026-08-14)
+
+The complete unresolved-target → official catalogue → ingestion → deterministic resolution loop is now proven for five Acts. After expanding 66→71 documents, the KG has 1,408 candidates, 17 REFERENCES, and 71 ISSUED_BY relations. All five intended external targets became AUTO_VERIFIED REFERENCES targets. New Act text also contributed incoming reference candidates, so denominator growth is intentional: eligible mentions are 1,016 and unique parseable targets are 577.
+
+No strong relation passed every explicit wording, unique identity, page quality, metadata, and external-provenance gate; AMENDS, CORRECTS, SUPERSEDES, EXTENDS, CANCELS, and PARTIALLY_SUPERSEDES remain zero. No HUMAN_CONFIRMED state was fabricated. KG replay inserts zero candidates, evidence links, or relations.
+
+## External archive availability semantics
+
+External Acquisition V2 does not alter graph resolution or edges. `Local
+Original Availability` means an exact target backed by a `LOCAL_ORIGINAL`
+document or `local_document_catalog`. `Local Archived Availability` means an
+exact target has immutable bytes in `GR_ROOT` or `EXTERNAL_DOCUMENT_ROOT`;
+quarantine alone is excluded. `Known Availability` continues to include exact
+externally verified identities. These metrics remain separate.
+
+No V2 identity became archived-ready, so graph closure is unchanged. Backfill
+of the five prior Acts improves permanent local custody without creating a
+relation.

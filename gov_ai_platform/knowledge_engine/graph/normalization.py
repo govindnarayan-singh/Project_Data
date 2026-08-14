@@ -127,8 +127,14 @@ def normalize_legal_reference(value: str, kind: str) -> str:
         known = (
             (r"rights?\s+of\s+persons?\s+with\s+disabilities|दिव्यांग\s+व्यक्?ती\s+हक्क", "RIGHTS_OF_PERSONS_WITH_DISABILITIES_ACT"),
             (r"environment\s*\(protection\)\s*act", "ENVIRONMENT_PROTECTION_ACT"),
+            (r"पर्यावरण\s*\(?संरक्षण\)?\s*अधिनियम", "ENVIRONMENT_PROTECTION_ACT"),
+            (r"air\s*\(?prevention\s+and\s+control\s+of\s+pollution\)?\s*act", "AIR_PREVENTION_AND_CONTROL_OF_POLLUTION_ACT"),
+            (r"हवा\s*\(?प्रदूषण.*प्रतिबंध.*नियंत्रण\)?\s*अधिनियम", "AIR_PREVENTION_AND_CONTROL_OF_POLLUTION_ACT"),
             (r"maharashtra\s+zilla\s+parishads?.*panchayat\s+samiti", "MAHARASHTRA_ZILLA_PARISHADS_AND_PANCHAYAT_SAMITIS_ACT"),
             (r"महाराष्ट्र\s+जिल्हा\s+परिषदा.*पंचायत\s+समित", "MAHARASHTRA_ZILLA_PARISHADS_AND_PANCHAYAT_SAMITIS_ACT"),
+            (r"maharashtra.*urban\s+areas.*protection.*preservation.*trees", "MAHARASHTRA_URBAN_AREAS_PROTECTION_AND_PRESERVATION_OF_TREES_ACT"),
+            (r"maharashtra\s+slum\s+areas.*improvement.*clearance.*redevelopment", "MAHARASHTRA_SLUM_AREAS_IMPROVEMENT_CLEARANCE_AND_REDEVELOPMENT_ACT"),
+            (r"महाराष्ट्र\s+झोपडपट्टी\s+क्षेत्र.*सुधारणा.*पुनर्विकास", "MAHARASHTRA_SLUM_AREAS_IMPROVEMENT_CLEARANCE_AND_REDEVELOPMENT_ACT"),
         )
     else:
         known = (

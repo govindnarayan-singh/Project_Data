@@ -1,8 +1,18 @@
 from __future__ import annotations
 
 import hashlib
+import io
 import re
+from dataclasses import dataclass
 from pathlib import Path
+
+from pypdf import PdfReader
+
+
+@dataclass(frozen=True, slots=True)
+class PdfProbe:
+    page_count: int
+    probe_text: str
 
 
 def safe_filename(identifier: str, suffix: str = ".pdf") -> str:
@@ -10,9 +20,26 @@ def safe_filename(identifier: str, suffix: str = ".pdf") -> str:
     return stem + suffix.casefold()
 
 
-def store_verified_file(root: Path, *, identifier: str, body: bytes) -> tuple[Path, str, bool]:
+def validate_pdf(body: bytes, *, probe_pages: int = 3) -> PdfProbe:
     if not body.startswith(b"%PDF"):
-        raise ValueError("Acquisition storage accepts only verified PDF signatures")
+        raise ValueError("Downloaded payload does not have a PDF signature")
+    try:
+        reader = PdfReader(io.BytesIO(body), strict=False)
+        if reader.is_encrypted:
+            raise ValueError("Encrypted external PDFs are not accepted")
+        page_count = len(reader.pages)
+        if page_count < 1:
+            raise ValueError("External PDF has no pages")
+        text = "\n".join((page.extract_text() or "") for page in reader.pages[:probe_pages])
+    except ValueError:
+        raise
+    except Exception as error:
+        raise ValueError(f"External PDF parsing failed: {error}") from error
+    return PdfProbe(page_count=page_count, probe_text=text)
+
+
+def store_verified_file(root: Path, *, identifier: str, body: bytes) -> tuple[Path, str, bool]:
+    validate_pdf(body)
     resolved_root = root.resolve()
     resolved_root.mkdir(parents=True, exist_ok=True)
     digest = hashlib.sha256(body).hexdigest()
@@ -28,4 +55,4 @@ def store_verified_file(root: Path, *, identifier: str, body: bytes) -> tuple[Pa
     return target, digest, True
 
 
-__all__ = ["safe_filename", "store_verified_file"]
+__all__ = ["PdfProbe", "safe_filename", "store_verified_file", "validate_pdf"]

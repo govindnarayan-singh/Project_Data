@@ -174,6 +174,11 @@ class KnowledgeGraphValidationPolicy:
             return PromotionDecision(**base, approved=False, reason="Source page is blocked by the KG quality policy")
         if bool(_value(candidate, "blocked_by_target_metadata", False)):
             return PromotionDecision(**base, approved=False, reason="Target metadata is blocked by the KG quality policy")
+        if (
+            str(_value(candidate, "target_source_origin", "") or "") == "EXTERNAL_OFFICIAL"
+            and not _value(candidate, "target_external_candidate_id")
+        ):
+            return PromotionDecision(**base, approved=False, reason="External target provenance is incomplete")
         explicit_department = str(_value(candidate, "normalized_department", "") or "")
         target_department = str(_value(candidate, "target_department", "") or "")
         if explicit_department and target_department:

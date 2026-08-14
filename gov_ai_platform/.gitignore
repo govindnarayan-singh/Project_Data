@@ -5,6 +5,8 @@ __pycache__/
 .coverage
 htmlcov/
 data/django.sqlite3
+data/acquisition/cache/
+data/acquisition/quarantine/
 logs/*
 !logs/.gitkeep
 outputs/*

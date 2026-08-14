@@ -23,7 +23,7 @@ class PostgresStorage(PostgresRetrievalRepository):
             return connection.execute("SELECT 1 FROM documents WHERE sha256 = %s LIMIT 1", (sha256,)).fetchone() is not None
 
     def find_document_identity(
-        self, file_path: str, sha256: str
+        self, file_path: str, sha256: str, source_origin: str = "LOCAL_ORIGINAL"
     ) -> dict[str, Any] | None:
         """Find one document by source path or content identity.
 
@@ -34,9 +34,9 @@ class PostgresStorage(PostgresRetrievalRepository):
             rows = connection.execute(
                 """SELECT id, file_path, file_name, sha256
                    FROM documents
-                   WHERE file_path = %s OR sha256 = %s
+                   WHERE (source_origin = %s AND file_path = %s) OR sha256 = %s
                    ORDER BY id""",
-                (file_path, sha256),
+                (source_origin, file_path, sha256),
             ).fetchall()
         if len(rows) > 1:
             raise ValueError(
@@ -61,6 +61,12 @@ class PostgresStorage(PostgresRetrievalRepository):
         pages,
         chunks,
         embeddings,
+        source_origin: str = "LOCAL_ORIGINAL",
+        document_kind: str = "GOVERNMENT_RESOLUTION",
+        canonical_identity: str = "",
+        document_year: int | None = None,
+        external_catalogue_id: int | None = None,
+        original_acquisition_path: str = "",
     ) -> int:
         from psycopg.types.json import Jsonb
 
@@ -87,10 +93,10 @@ class PostgresStorage(PostgresRetrievalRepository):
                 identities = connection.execute(
                     """SELECT id, file_path, sha256
                        FROM documents
-                       WHERE file_path = %s OR sha256 = %s
+                       WHERE (source_origin = %s AND file_path = %s) OR sha256 = %s
                        ORDER BY id
                        FOR UPDATE""",
-                    (file_path, sha256),
+                    (source_origin, file_path, sha256),
                 ).fetchall()
                 if len(identities) > 1:
                     raise ValueError(
@@ -103,6 +109,7 @@ class PostgresStorage(PostgresRetrievalRepository):
                     extracted_metadata.get("document_type"), extracted_metadata.get("gr_number"),
                     extracted_metadata.get("gr_date"), extracted_metadata.get("subject"),
                     extracted_metadata.get("references_text"), raw_text, normalized_text, Jsonb(metadata_json),
+                    source_origin, document_kind, canonical_identity, document_year,
                 )
                 if identities:
                     document_id = int(identities[0]["id"])
@@ -114,7 +121,9 @@ class PostgresStorage(PostgresRetrievalRepository):
                                extraction_method = %s, document_type = %s,
                                gr_number = %s, gr_date = %s, subject = %s,
                                references_text = %s, raw_text = %s,
-                               normalized_text = %s, metadata = %s
+                               normalized_text = %s, metadata = %s,
+                               source_origin = %s, document_kind = %s,
+                               canonical_identity = %s, document_year = %s
                            WHERE id = %s""",
                         (*document_values, document_id),
                     )
@@ -130,8 +139,9 @@ class PostgresStorage(PostgresRetrievalRepository):
                            sha256, file_path, file_name, department, page_count,
                            digital_pages, ocr_pages, extraction_method,
                            document_type, gr_number, gr_date, subject, references_text,
-                           raw_text, normalized_text, metadata
-                       ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                           raw_text, normalized_text, metadata,
+                           source_origin, document_kind, canonical_identity, document_year
+                       ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                        RETURNING id""",
                         document_values,
                     )
@@ -166,6 +176,55 @@ class PostgresStorage(PostgresRetrievalRepository):
                     embedding_dimension=settings.embed_dim,
                     connection=connection,
                 )
+                if source_origin == "EXTERNAL_OFFICIAL":
+                    if not external_catalogue_id or not original_acquisition_path:
+                        raise ValueError("External documents require catalogue provenance")
+                    candidate = connection.execute(
+                        """SELECT id,sha256,acquisition_status,verification_status,
+                                  identity_match_status,discovered_at,downloaded_at,updated_at
+                             FROM external_acquisition_candidates WHERE id=%s FOR UPDATE""",
+                        (external_catalogue_id,),
+                    ).fetchone()
+                    if candidate is None:
+                        raise ValueError("External acquisition catalogue row does not exist")
+                    if str(candidate["sha256"]) != sha256:
+                        raise ValueError("External catalogue SHA does not match document bytes")
+                    if candidate["verification_status"] != "AUTO_VERIFIED" or candidate["identity_match_status"] != "MATCH_EXACT":
+                        raise ValueError("External catalogue row is not deterministically verified")
+                    if candidate["acquisition_status"] not in {"READY_FOR_INGESTION", "INGESTED"}:
+                        raise ValueError("External catalogue row is not ingestion-eligible")
+                    lifecycle = (
+                        ("DISCOVERED", candidate["discovered_at"]),
+                        ("DOWNLOADED", candidate["downloaded_at"]),
+                        ("AUTO_VERIFIED", candidate["updated_at"]),
+                        ("READY_FOR_INGESTION", candidate["updated_at"]),
+                        ("INGESTED", None),
+                    )
+                    for status, recorded_at in lifecycle:
+                        connection.execute(
+                            """INSERT INTO external_acquisition_lifecycle_events(
+                                   external_candidate_id,lifecycle_status,recorded_at,evidence)
+                               VALUES (%s,%s,coalesce(%s,now()),%s)
+                               ON CONFLICT (external_candidate_id,lifecycle_status) DO NOTHING""",
+                            (external_catalogue_id, status, recorded_at,
+                             "retained from verified acquisition record" if status != "INGESTED" else "atomic production ingestion"),
+                        )
+                    connection.execute(
+                        """INSERT INTO external_document_provenance(
+                               document_id,external_candidate_id,original_acquisition_path,acquired_sha256)
+                           VALUES (%s,%s,%s,%s)
+                           ON CONFLICT (document_id) DO UPDATE SET
+                               external_candidate_id=EXCLUDED.external_candidate_id,
+                               original_acquisition_path=EXCLUDED.original_acquisition_path,
+                               acquired_sha256=EXCLUDED.acquired_sha256""",
+                        (document_id, external_catalogue_id, original_acquisition_path, sha256),
+                    )
+                    connection.execute(
+                        """UPDATE external_acquisition_candidates
+                              SET acquisition_status='INGESTED',updated_at=now()
+                            WHERE id=%s""",
+                        (external_catalogue_id,),
+                    )
         return document_id
 
     def validate_document_integrity(

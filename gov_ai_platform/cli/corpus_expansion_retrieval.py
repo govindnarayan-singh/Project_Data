@@ -156,7 +156,12 @@ def run(
     output_dir.mkdir(parents=True, exist_ok=True)
     items = load_dataset(eval_path)
     manifest = _read_csv(manifest_path)
-    baseline_ids = [int(row["document_id"]) for row in _read_csv(baseline_identities_path)]
+    baseline_ids = [
+        int(row.get("document_id") or row.get("id") or 0)
+        for row in _read_csv(baseline_identities_path)
+    ]
+    if not baseline_ids or any(value <= 0 for value in baseline_ids):
+        raise ValueError("Baseline identities require document_id or id values")
     manifest_paths = {str(Path(row["file_path"])) for row in manifest}
     historical = json.loads(historical_baseline_path.read_text(encoding="utf-8"))
     historical_summary = historical.get("summary", historical)

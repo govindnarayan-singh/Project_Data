@@ -4,7 +4,7 @@ from collections import defaultdict
 from typing import Any, Iterable
 
 from .models import ReferenceCandidate, Resolution
-from .normalization import normalize_department_alias, normalize_document_number
+from .normalization import normalize_department_alias, normalize_document_number, normalize_legal_reference
 from .quality import QualityPolicy
 from .types import ParserStatus, RESOLVER_VERSION, ResolutionStatus, ValidationStatus
 from .validation import KnowledgeGraphValidationPolicy
@@ -27,17 +27,23 @@ class ReferenceResolver:
         self.validation_policy = validation_policy or KnowledgeGraphValidationPolicy(
             reference_gate_passed=auto_verify_enabled
         )
-        self.by_number: dict[str, list[dict[str, Any]]] = defaultdict(list)
-        self.blocked_by_number: dict[str, list[dict[str, Any]]] = defaultdict(list)
+        self.by_number: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
+        self.blocked_by_number: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
         for document in self.documents:
-            raw = str(document.get("gr_number") or "")
-            normalized = normalize_document_number(raw)
+            kind = str(document.get("document_kind") or document.get("document_type") or "UNKNOWN").upper()
+            canonical = str(document.get("canonical_identity") or "")
+            raw = canonical or str(document.get("gr_number") or "")
+            if kind in {"ACT", "RULE"}:
+                normalized = canonical or normalize_legal_reference(raw, kind)
+            else:
+                normalized = normalize_document_number(raw)
             if not normalized:
                 continue
+            key = (kind if kind in {"ACT", "RULE"} else "", normalized)
             if quality_policy.field_blocks_resolution(int(document["id"]), "gr_number"):
-                self.blocked_by_number[normalized].append(document)
+                self.blocked_by_number[key].append(document)
             else:
-                self.by_number[normalized].append(document)
+                self.by_number[key].append(document)
 
     def _validation(self, candidate: ReferenceCandidate, status: ResolutionStatus, *, blocked_page: bool, blocked_target: bool) -> ValidationStatus:
         if status in {ResolutionStatus.NOT_IN_CORPUS, ResolutionStatus.UNPARSEABLE}:
@@ -63,7 +69,13 @@ class ReferenceResolver:
                 "No normalized identifier is available", 0, "LOW", ValidationStatus.UNRESOLVED,
                 blocked_by_page_quality=blocked_page,
             )
-        blocked_targets = [row for row in self.blocked_by_number.get(number, []) if int(row["id"]) != candidate.source_document_id]
+        key = (
+            candidate.reference_kind.value
+            if candidate.reference_kind.value in {"ACT", "RULE"}
+            else "",
+            number,
+        )
+        blocked_targets = [row for row in self.blocked_by_number.get(key, []) if int(row["id"]) != candidate.source_document_id]
         if blocked_targets:
             status = ResolutionStatus.NEEDS_REVIEW
             return Resolution(
@@ -72,8 +84,8 @@ class ReferenceResolver:
                 len(blocked_targets), "LOW", ValidationStatus.CANDIDATE,
                 blocked_by_page_quality=blocked_page, blocked_by_target_metadata=True,
             )
-        matches = [row for row in self.by_number.get(number, []) if int(row["id"]) != candidate.source_document_id]
-        if not matches and any(int(row["id"]) == candidate.source_document_id for row in self.by_number.get(number, [])):
+        matches = [row for row in self.by_number.get(key, []) if int(row["id"]) != candidate.source_document_id]
+        if not matches and any(int(row["id"]) == candidate.source_document_id for row in self.by_number.get(key, [])):
             return Resolution(
                 ResolutionStatus.SELF_REFERENCE_REJECTED, None, "", "SOURCE_IDENTIFIER_ONLY",
                 "Normalized identifier only matches the source document", 0, "HIGH",

@@ -216,3 +216,50 @@ External Acquisition V1 selected 20 of 237 eligible unresolved targets. The
 environment blocked live query egress, so all 20 attempts are BLOCKED, no file
 was downloaded or verified, and the external manifest is empty. Evidence is
 under `outputs/kg_brain_phase_v2/`.
+
+## External Acquisition V1.1 live result (2026-08-14)
+
+Public official-source access is now available from the project runtime. The
+frozen 20-target batch was replayed without changing membership. Thirteen
+Maharashtra administrative targets are `BLOCKED_BY_SOURCE` because the official
+GR search CAPTCHA is not bypassed. Seven Act targets were queried through India
+Code; 21 official candidates were discovered.
+
+Five Act targets are AUTO_VERIFIED_READY after official landing-page, PDF,
+parsed-title/year, authority, hash, quarantine, and provenance gates. The
+Rights of Persons with Disabilities Act remains AMBIGUOUS due to original and
+amended official variants, and the generic Amendment Act target is an identity
+mismatch. The five-row manifest SHA-256 is
+`03fbb7f0dd07b28b714cbb7ba938b0544797f74fa3f69f46d99ddeab9fa0424a`.
+Replay inserted zero catalogue rows.
+
+Known Availability Closure is now 12/252 (4.76%), up from 7/252 (2.78%).
+Reference Mention Closure remains 8/392, Referenced Target and Local
+Availability Closure remain 7/252, and Graph Document Coverage remains 12/66.
+The search corpus remains 66 documents, 1,044 pages, and 765 chunks/embeddings;
+the frozen dense benchmark is identical. Evidence is under
+`outputs/external_acquisition_v1_1/`.
+## External ingestion V1 complete (2026-08-14)
+
+The searchable corpus now contains 71 documents, 1,322 pages, and 1,237 chunks/1024-D BGE-M3 embeddings. Five immutable `EXTERNAL_OFFICIAL` Acts (document IDs 70–74) were added from the frozen verified manifest; they account for 278 pages and 472 chunks, with zero OCR pages. Provenance completeness and intended external-target closure are both 5/5.
+
+The deterministic KG now contains 1,408 candidates and 88 relations: 17 REFERENCES and 71 ISSUED_BY, with no strong or HUMAN_CONFIRMED relations. Closure is: reference mentions 22/1,016, referenced targets 12/577, local availability 12/577, known availability 12/577, and graph document coverage 23/71. The larger denominators come from references extracted from the Acts themselves.
+
+The unchanged dense benchmark now has document Recall@1/3/5/10 of 82.76%/96.55%/96.55%/96.55% and MRR 0.8966; page Recall@1/3/5/10 is 68.97%/93.10%/96.55%/96.55% and MRR 0.8190. Q017 is the only changed question and is classified as new semantic/page-level competition. Retrieval was measured, not tuned.
+
+## External Acquisition V2 and local sovereignty (2026-08-14)
+
+`EXTERNAL_DOCUMENT_ROOT` now contains byte-identical permanent copies of all
+five ingested external Acts: 3,174,841 bytes with zero missing files, SHA
+mismatches, duplicate hashes, path collisions, or orphans. Quarantine remains
+evidence storage and is not the authoritative production source.
+
+The exact 30-row plan was frozen at SHA-256
+`8d14c5a80c6cc618cf73f64493f80fac6457ee3bec27aad222b58e7a9d2725a8`
+and executed live. India Code returned 17 official candidates for eight Act
+targets. Two Rights Act target groups remain version-ambiguous, six fragmentary
+Act targets mismatch, and six were not found authoritatively. All 16
+Maharashtra administrative targets remain CAPTCHA-blocked; controls were not
+bypassed. No V2 target reached final AUTO_VERIFIED_READY, so the V2 manifest is
+empty and the search corpus, KG, embeddings, and dense metrics are unchanged.
+Cache replay inserted zero catalogue rows and reproduced the manifest SHA.

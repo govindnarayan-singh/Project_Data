@@ -149,3 +149,26 @@ adapter evidence, priority, and timestamps.
 `INGESTED`, `LOCAL_CATALOGUED`, `EXTERNAL_DISCOVERED`, `EXTERNAL_VERIFIED`, and
 `NOT_FOUND` are distinct. READY_FOR_INGESTION requires an AUTO_VERIFIED acquired
 path and SHA-256; discovery cannot create a fake search document.
+
+V1.1 uses the existing additive migration without a schema change. Discovery
+URL, canonical landing URL, official document URL, redirect chain, source
+adapter/authority, identity evidence, parsed-PDF facts, target high-level
+state, and source-disagreement classification are preserved in the existing
+typed columns plus `raw_source_evidence`. The five READY rows have immutable
+quarantine paths and SHA-256 values; no `documents`, `pages`, `chunks`,
+embeddings, candidates, relations, or evidence links are created by external
+acquisition.
+## External provenance additions (migration 005)
+
+`documents.source_origin` separates `LOCAL_ORIGINAL` from `EXTERNAL_OFFICIAL`; `(source_origin,file_path)` is the safe path identity. `document_kind`, `canonical_identity`, and `document_year` provide minimal generic administrative identity, and an external canonical identity is unique per kind.
+
+`external_document_provenance` is a one-to-one link from an ingested document to one existing acquisition candidate and snapshots only the immutable acquisition path and SHA. `external_acquisition_lifecycle_events` retains append-only acquisition milestones. Strong-relation automatic promotion rejects an external target whose provenance link is absent. Source origin is document metadata/provenance, not a graph relation type.
+
+## External permanent archive additions (migration 006)
+
+The external catalogue additively stores archive root identity, relative path,
+safe local filename, original remote filename, archive status, and timestamp.
+`EXTERNAL_OFFICIAL_ARCHIVED` requires complete AUTO_VERIFIED archive metadata.
+`external_document_provenance` stores permanent archive linkage separately
+from the original quarantine path, and lifecycle evidence includes the archive
+milestone. Archive state alone never implies search ingestion.

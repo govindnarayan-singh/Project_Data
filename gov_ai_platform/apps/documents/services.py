@@ -2,9 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-
-class UnsafeDocumentPath(ValueError):
-    pass
+from knowledge_engine.documents.sources import UnsafeDocumentPath, resolve_document_path
 
 
 def resolve_pdf_path(gr_root: Path, stored_path: str) -> Path:
@@ -19,3 +17,12 @@ def resolve_pdf_path(gr_root: Path, stored_path: str) -> Path:
     if candidate.suffix.lower() != ".pdf":
         raise UnsafeDocumentPath("Document is not a PDF")
     return candidate
+
+
+def resolve_pdf_source(
+    source_origin: str, stored_path: str, *, local_root: Path | None = None
+) -> Path:
+    """Resolve a PDF from its explicit approved source class."""
+    if source_origin == "LOCAL_ORIGINAL" and local_root is not None:
+        return resolve_pdf_path(local_root, stored_path)
+    return resolve_document_path(source_origin, stored_path)

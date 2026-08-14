@@ -4,13 +4,18 @@ CREATE EXTENSION IF NOT EXISTS pg_trgm;
 CREATE TABLE IF NOT EXISTS documents (
     id BIGSERIAL PRIMARY KEY,
     sha256 CHAR(64) UNIQUE NOT NULL,
-    file_path TEXT UNIQUE NOT NULL,
+    file_path TEXT NOT NULL,
     file_name TEXT NOT NULL,
     department TEXT NOT NULL,
     page_count INTEGER NOT NULL,
     digital_pages INTEGER NOT NULL DEFAULT 0,
     ocr_pages INTEGER NOT NULL DEFAULT 0,
     extraction_method TEXT NOT NULL,
+    source_origin TEXT NOT NULL DEFAULT 'LOCAL_ORIGINAL'
+        CHECK (source_origin IN ('LOCAL_ORIGINAL','EXTERNAL_OFFICIAL')),
+    document_kind TEXT NOT NULL DEFAULT 'UNKNOWN',
+    canonical_identity TEXT NOT NULL DEFAULT '',
+    document_year INTEGER CHECK (document_year IS NULL OR document_year BETWEEN 1800 AND 2200),
     document_type TEXT,
     gr_number TEXT,
     gr_date DATE,
@@ -61,6 +66,10 @@ CREATE INDEX IF NOT EXISTS idx_documents_department ON documents(department);
 CREATE INDEX IF NOT EXISTS idx_documents_gr_date ON documents(gr_date);
 CREATE INDEX IF NOT EXISTS idx_documents_gr_number_trgm ON documents USING gin (gr_number gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_documents_subject_trgm ON documents USING gin (subject gin_trgm_ops);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_origin_path ON documents(source_origin,file_path);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_documents_external_canonical_identity
+    ON documents(document_kind,canonical_identity)
+    WHERE source_origin='EXTERNAL_OFFICIAL' AND canonical_identity<>'';
 CREATE INDEX IF NOT EXISTS idx_chunks_document_id ON chunks(document_id);
 CREATE INDEX IF NOT EXISTS idx_chunks_text_trgm ON chunks USING gin (text gin_trgm_ops);
 CREATE INDEX IF NOT EXISTS idx_chunks_embedding_hnsw ON chunks USING hnsw (embedding vector_cosine_ops);

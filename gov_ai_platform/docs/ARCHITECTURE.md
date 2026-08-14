@@ -167,3 +167,47 @@ deterministic. Future authorized downloads go first to
 `data/acquisition/quarantine` and must pass HTTPS/domain, redirect, timeout,
 size, content-type, PDF-signature, filename, hash, and identity gates. See
 `docs/EXTERNAL_ACQUISITION.md`.
+
+External Acquisition V1.1 proves the live legal-document path:
+
+```text
+Frozen unresolved target
+  → document-kind strategy
+  → configured official adapter
+  → minimal public identity query
+  → official result and canonical landing page
+  → official PDF in quarantine
+  → parsed PDF title/year identity probe
+  → AUTO_VERIFIED_READY manifest (not ingestion)
+```
+
+The network boundary also validates DNS-resolved addresses against SSRF,
+applies per-source rate/retry policies, and uses atomic discovery/download
+caches. The live five-file manifest changes only known availability; search
+storage, embeddings, KG edges, and dense retrieval remain unchanged.
+## External official document ingestion V1 (2026-08-14)
+
+Administrative documents now carry an explicit `source_origin`: `LOCAL_ORIGINAL` or `EXTERNAL_OFFICIAL`. The stored `file_path` is relative to the approved root for that origin; it is never sufficient by itself to infer trust or provenance. Backend PDF resolution rejects absolute paths, traversal, unknown origins, and non-PDF paths. Local originals remain under `GR_ROOT`; verified external documents resolve from `EXTERNAL_DOCUMENT_ROOT` and are not copied into `GR_ROOT`.
+
+`documents.document_kind`, `canonical_identity`, and `document_year` support the observed non-GR kinds without forcing GR number/date rules onto Acts. External documents link one-to-one through `external_document_provenance` to the existing acquisition catalogue, while append-only `external_acquisition_lifecycle_events` retains DISCOVERED, DOWNLOADED, AUTO_VERIFIED, READY_FOR_INGESTION, and INGESTED milestones. URLs, authority, adapter, verification, and identity evidence remain queryable from the linked catalogue rather than being duplicated into `documents`.
+
+## Permanent external document archive V2
+
+`GR_ROOT` remains the unchanged 2,715-file Maharashtra collection.
+`EXTERNAL_ACQUISITION_ROOT` is controlled quarantine/evidence storage only.
+`EXTERNAL_DOCUMENT_ROOT` is the persistent immutable archive for verified
+official external documents.
+
+```text
+official source → quarantine → PDF/identity/provenance verification
+  → controlled immutable archive path → AUTO_VERIFIED_READY
+  → later separately authorized ingestion
+```
+
+The source resolver maps only the closed `LOCAL_ORIGINAL` and
+`EXTERNAL_OFFICIAL` classes to configured roots; HTTP callers cannot select a
+filesystem root. Catalogue and document provenance retain quarantine evidence
+separately from archive root identity, relative archive path, original remote
+filename, safe local filename, SHA-256, size, timestamps, authority, adapter,
+and identity state. Kind directories are controlled and archive filenames are
+identity-derived, Windows-safe, collision-resistant, and SHA-suffixed.

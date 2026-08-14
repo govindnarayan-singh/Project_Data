@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from dataclasses import asdict
-from pathlib import Path
 from typing import Any
 
 from psycopg.rows import dict_row
@@ -49,6 +47,15 @@ class ExternalAcquisitionRepository:
             connection.commit()
 
     def upsert(self, run_id: str, reference: ReferenceIdentity, candidate: SourceCandidate) -> tuple[int, bool]:
+        raw_evidence = {
+            **candidate.raw_source_evidence,
+            "target_state": candidate.target_state,
+            "redirect_chain": list(candidate.redirect_chain),
+            "discovered_issuer": candidate.discovered_issuer,
+            "discovered_document_kind": candidate.discovered_document_kind,
+            "page_count": candidate.page_count,
+            "duplicate_status": candidate.duplicate_status,
+        }
         with self.connect() as connection:
             row = connection.execute(
                 """INSERT INTO external_acquisition_candidates(
@@ -56,9 +63,14 @@ class ExternalAcquisitionRepository:
                        reference_date,issuer,discovery_query,discovery_status,source_url,final_url,
                        source_domain,source_authority,download_url,discovered_title,discovered_identifier,
                        discovered_date,identity_match_status,identity_evidence,acquisition_status,
-                       verification_status,source_adapter,raw_source_evidence,priority_tier,priority_score,discovered_at)
+                       verification_status,source_adapter,raw_source_evidence,priority_tier,priority_score,
+                       sha256,local_acquired_path,content_type,file_size,archive_source_root,
+                       archive_relative_path,safe_local_filename,original_remote_filename,archive_status,
+                       archived_at,discovered_at,downloaded_at)
                    VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
-                           CASE WHEN %s='DISCOVERED' THEN now() ELSE NULL END)
+                           %s,%s,%s,%s,%s,%s,%s,%s,%s,%s,
+                           CASE WHEN %s='DISCOVERED' THEN now() ELSE NULL END,
+                           CASE WHEN %s<>'' THEN now() ELSE NULL END)
                    ON CONFLICT (target_key,source_adapter,source_url,discovered_identifier) DO UPDATE SET
                        run_id=EXCLUDED.run_id,discovery_query=EXCLUDED.discovery_query,
                        discovery_status=EXCLUDED.discovery_status,final_url=EXCLUDED.final_url,
@@ -66,7 +78,14 @@ class ExternalAcquisitionRepository:
                        identity_match_status=EXCLUDED.identity_match_status,identity_evidence=EXCLUDED.identity_evidence,
                        acquisition_status=EXCLUDED.acquisition_status,verification_status=EXCLUDED.verification_status,
                        raw_source_evidence=EXCLUDED.raw_source_evidence,priority_tier=EXCLUDED.priority_tier,
-                       priority_score=EXCLUDED.priority_score,updated_at=now()
+                       priority_score=EXCLUDED.priority_score,sha256=EXCLUDED.sha256,
+                       local_acquired_path=EXCLUDED.local_acquired_path,content_type=EXCLUDED.content_type,
+                       file_size=EXCLUDED.file_size,archive_source_root=EXCLUDED.archive_source_root,
+                       archive_relative_path=EXCLUDED.archive_relative_path,
+                       safe_local_filename=EXCLUDED.safe_local_filename,
+                       original_remote_filename=EXCLUDED.original_remote_filename,
+                       archive_status=EXCLUDED.archive_status,archived_at=EXCLUDED.archived_at,
+                       downloaded_at=EXCLUDED.downloaded_at,updated_at=now()
                    RETURNING id,(xmax=0) AS inserted""",
                 (
                     run_id, reference.target_key, reference.reference_kind, reference.raw_identifier,
@@ -76,8 +95,12 @@ class ExternalAcquisitionRepository:
                     candidate.download_url, candidate.discovered_title, candidate.discovered_identifier,
                     candidate.discovered_date, candidate.identity_match_status, Jsonb(candidate.identity_evidence),
                     candidate.acquisition_status, candidate.verification_status, candidate.source_adapter,
-                    Jsonb(candidate.raw_source_evidence), reference.priority_tier, reference.priority_score,
-                    candidate.discovery_status,
+                    Jsonb(raw_evidence), reference.priority_tier, reference.priority_score,
+                    candidate.sha256, candidate.local_acquired_path, candidate.content_type, candidate.file_size,
+                    candidate.archive_source_root, candidate.archive_relative_path,
+                    candidate.safe_local_filename, candidate.original_remote_filename,
+                    candidate.archive_status, candidate.archived_at or None,
+                    candidate.discovery_status, candidate.sha256,
                 ),
             ).fetchone()
             connection.commit()
@@ -109,11 +132,16 @@ class ExternalAcquisitionRepository:
                   (SELECT count(*) FROM external_acquisition_candidates WHERE acquisition_status='READY_FOR_INGESTION'
                      AND (local_acquired_path='' OR sha256='' OR verification_status<>'AUTO_VERIFIED')) invalid_ready_rows,
                   (SELECT count(*) FROM documents d JOIN external_acquisition_candidates e ON d.file_path=e.local_acquired_path
-                     WHERE e.local_acquired_path<>'') already_ingested_external_paths"""
+                     WHERE e.local_acquired_path<>'') already_ingested_external_paths,
+                  (SELECT count(*) FROM external_acquisition_candidates e JOIN documents d ON d.sha256=e.sha256
+                     WHERE e.sha256<>'') duplicate_ingested_sha,
+                  (SELECT count(*) FROM external_acquisition_candidates e JOIN local_document_catalog l ON l.sha256=e.sha256
+                     WHERE e.sha256<>'') duplicate_local_corpus_sha"""
             ).fetchone()
         result = {key: int(value) for key, value in row.items()}
         result["status"] = "PASS" if all(result[key] == 0 for key in (
-            "duplicate_candidates", "non_authoritative_auto_verified", "invalid_ready_rows"
+            "duplicate_candidates", "non_authoritative_auto_verified", "invalid_ready_rows",
+            "already_ingested_external_paths", "duplicate_ingested_sha", "duplicate_local_corpus_sha"
         )) else "FAIL"
         return result
 

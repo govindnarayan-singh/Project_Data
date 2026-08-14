@@ -85,6 +85,7 @@ class GraphRepository:
         with self.connect() as connection:
             documents = [dict(row) for row in connection.execute(
                 """SELECT id,file_name,file_path,department,document_type,gr_number,gr_date,subject,
+                          source_origin,document_kind,canonical_identity,document_year,
                           page_count,digital_pages,ocr_pages,extraction_method
                      FROM documents ORDER BY id"""
             )]
@@ -333,11 +334,13 @@ class GraphRepository:
         with self.connect() as connection:
             rows = connection.execute(
                 """SELECT c.*,s.file_name AS source_file,s.department AS source_department,t.file_name AS target_file,
-                          t.department AS target_department,
+                          t.department AS target_department,t.source_origin AS target_source_origin,
+                          ep.external_candidate_id AS target_external_candidate_id,
                           p.extraction_method AS source_extraction_method,p.quality_score AS source_quality_score
                      FROM kg_reference_candidates c JOIN documents s ON s.id=c.source_document_id
                      JOIN pages p ON p.document_id=c.source_document_id AND p.page_number=c.source_page
-                     LEFT JOIN documents t ON t.id=c.resolved_target_document_id ORDER BY c.id"""
+                     LEFT JOIN documents t ON t.id=c.resolved_target_document_id
+                     LEFT JOIN external_document_provenance ep ON ep.document_id=t.id ORDER BY c.id"""
             ).fetchall()
         return [dict(row) for row in rows]
 

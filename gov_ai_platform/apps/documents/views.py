@@ -8,7 +8,7 @@ from knowledge_engine.portal import PortalRepository
 from knowledge_engine.retrieval.repository import PostgresRetrievalRepository
 from knowledge_engine.settings import settings
 
-from .services import UnsafeDocumentPath, resolve_pdf_path
+from .services import UnsafeDocumentPath, resolve_pdf_source
 
 
 def get_document_repository() -> PostgresRetrievalRepository:
@@ -68,7 +68,11 @@ def document_pdf(request, document_id: int):
     if document is None:
         raise Http404("Document not found")
     try:
-        pdf_path = resolve_pdf_path(settings.gr_root, document["file_path"])
+        pdf_path = resolve_pdf_source(
+            str(document.get("source_origin") or "LOCAL_ORIGINAL"),
+            document["file_path"],
+            local_root=settings.gr_root,
+        )
         handle = pdf_path.open("rb")
     except (UnsafeDocumentPath, FileNotFoundError, OSError) as error:
         raise Http404("PDF not available") from error

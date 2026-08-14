@@ -38,3 +38,15 @@ known-availability, and document-graph coverage metrics. The sibling
 `knowledge_engine.external_acquisition` package owns official-source adapters,
 deterministic queries, identity gates, network/download safety, quarantine, and
 the non-search external catalogue.
+
+External Acquisition V1.1 produced five AUTO_VERIFIED_READY Act files and an
+idempotent external manifest without inserting them into search. Closure uses
+their exact stored KG target keys only for Known Availability Closure; it does
+not treat quarantine/catalogue records as graph documents or create edges.
+External official targets resolve through `documents.document_kind` plus `canonical_identity`; Acts and Rules are not forced into GR number/date semantics. Automatic strong-relation promotion additionally requires complete `external_document_provenance` when its target has `source_origin=EXTERNAL_OFFICIAL`.
+
+Permanent external custody is separate from graph membership. An archived
+catalogue target may increase known/local-archived availability but cannot
+create an edge until separately authorized ingestion produces a real document
+target and ordinary evidence gates pass. Quarantine never counts as permanent
+archive.

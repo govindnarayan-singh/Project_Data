@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import html
-import re
 import urllib.parse
+from dataclasses import replace
 from html.parser import HTMLParser
 from pathlib import Path
 from typing import Protocol
@@ -10,48 +10,81 @@ from typing import Protocol
 from knowledge_engine.settings import settings
 
 from .identity import verify_identity
-from .models import ReferenceIdentity, SourceCandidate, SourceDefinition
-from .network import NetworkSafetyError, SafeHttpClient
-from .queries import generate_queries
+from .models import ReferenceIdentity, SourceCandidate, SourceDefinition, TargetState
+from .network import FetchResult, NetworkSafetyError, SafeHttpClient
+from .queries import assert_public_query, generate_queries
+from .storage import PdfProbe, validate_pdf
 
 
 class ExternalDocumentSource(Protocol):
     definition: SourceDefinition
 
+    def supports(self, reference: ReferenceIdentity) -> bool: ...
+
+    def build_queries(self, reference: ReferenceIdentity) -> list[str]: ...
+
     def search(self, reference: ReferenceIdentity) -> list[SourceCandidate]: ...
+
+    def fetch_candidate_metadata(self, candidate: SourceCandidate) -> SourceCandidate: ...
+
+    def download(self, candidate: SourceCandidate) -> tuple[FetchResult, PdfProbe]: ...
+
+    def verify_authority(self, candidate: SourceCandidate) -> bool: ...
 
 
 class BlockedOfficialSource:
     def __init__(self, definition: SourceDefinition):
         self.definition = definition
 
+    def supports(self, reference: ReferenceIdentity) -> bool:
+        return reference.strategy in self.definition.supported_strategies
+
+    def build_queries(self, reference: ReferenceIdentity) -> list[str]:
+        return generate_queries(reference)
+
     def search(self, reference: ReferenceIdentity) -> list[SourceCandidate]:
-        query = generate_queries(reference)[0] if generate_queries(reference) else reference.normalized_identifier
+        queries = self.build_queries(reference)
+        query = queries[0] if queries else reference.normalized_identifier
         return [
             SourceCandidate(
                 target_key=reference.target_key,
-                source_adapter=self.definition.adapter,
-                source_domain=self.definition.domains[0],
-                source_authority=self.definition.authority.value,
+                source_adapter=self.definition.source_id,
+                source_domain=self.definition.base_host,
+                source_authority=self.definition.authority_class.value,
                 discovery_query=query,
                 discovery_status="BLOCKED",
                 acquisition_status="BLOCKED",
                 verification_status="BLOCKED",
-                raw_source_evidence={"reason": self.definition.block_reason},
+                target_state=TargetState.BLOCKED_BY_SOURCE.value,
+                raw_source_evidence={
+                    "reason": "BLOCKED_BY_SOURCE",
+                    "detail": self.definition.block_reason,
+                },
             )
         ]
+
+    def fetch_candidate_metadata(self, candidate: SourceCandidate) -> SourceCandidate:
+        return candidate
+
+    def download(self, candidate: SourceCandidate) -> tuple[FetchResult, PdfProbe]:
+        raise NetworkSafetyError(self.definition.block_reason)
+
+    def verify_authority(self, candidate: SourceCandidate) -> bool:
+        return candidate.source_authority != "NON_AUTHORITATIVE"
 
 
 class _LinkParser(HTMLParser):
     def __init__(self):
         super().__init__()
-        self.links: list[tuple[str, str]] = []
+        self.links: list[tuple[str, str, dict[str, str]]] = []
         self._href = ""
+        self._attrs: dict[str, str] = {}
         self._text: list[str] = []
 
     def handle_starttag(self, tag, attrs):
         if tag.casefold() == "a":
-            self._href = dict(attrs).get("href", "")
+            self._attrs = {str(key): str(value or "") for key, value in attrs}
+            self._href = self._attrs.get("href", "").strip()
             self._text = []
 
     def handle_data(self, data):
@@ -60,80 +93,199 @@ class _LinkParser(HTMLParser):
 
     def handle_endtag(self, tag):
         if tag.casefold() == "a" and self._href:
-            self.links.append((self._href, " ".join("".join(self._text).split())))
+            self.links.append((self._href, " ".join("".join(self._text).split()), self._attrs))
             self._href = ""
+            self._attrs = {}
             self._text = []
 
 
+def _official_urljoin(base_url: str, href: str) -> str:
+    """Join an official HTML href and encode unsafe display characters."""
+    joined = urllib.parse.urljoin(base_url, html.unescape(href).strip())
+    parts = urllib.parse.urlsplit(joined)
+    query = urllib.parse.urlencode(
+        urllib.parse.parse_qsl(parts.query, keep_blank_values=True),
+        doseq=True,
+    )
+    return urllib.parse.urlunsplit(
+        (parts.scheme, parts.netloc, urllib.parse.quote(urllib.parse.unquote(parts.path), safe="/%"), query, "")
+    )
+
 class IndiaCodeSource:
+    SEARCH_ROOT = "https://www.indiacode.nic.in/handle/123456789/1362/simple-search"
+
     def __init__(self, definition: SourceDefinition, *, cache_dir: Path):
         self.definition = definition
+        policy = definition.rate_policy
         self.client = SafeHttpClient(
             allowed_domains=definition.domains,
+            allowed_schemes=definition.allowed_url_schemes,
             cache_dir=cache_dir,
-            timeout_seconds=settings.external_http_timeout_seconds,
+            timeout_seconds=settings.external_http_timeout_seconds or policy.timeout_seconds,
             max_bytes=settings.external_http_max_bytes,
             max_redirects=settings.external_http_max_redirects,
             retry_count=settings.external_http_retry_count,
-            rate_delay_seconds=settings.external_http_rate_delay_seconds,
+            retry_backoff_seconds=policy.backoff_seconds,
+            rate_delay_seconds=max(settings.external_http_rate_delay_seconds, policy.request_delay_seconds),
             user_agent=settings.external_http_user_agent,
         )
 
+    def supports(self, reference: ReferenceIdentity) -> bool:
+        return reference.strategy in self.definition.supported_strategies
+
+    def build_queries(self, reference: ReferenceIdentity) -> list[str]:
+        queries = generate_queries(reference)
+        for query in queries:
+            assert_public_query(query)
+        return queries
+
     def search(self, reference: ReferenceIdentity) -> list[SourceCandidate]:
-        query = generate_queries(reference)[0]
-        url = (
-            "https://www.indiacode.nic.in/handle/123456789/1362/simple-search?"
-            + urllib.parse.urlencode({"query": query, "searchradio": "all"})
-        )
-        try:
-            fetched = self.client.fetch(url)
-        except NetworkSafetyError as error:
-            return [
-                SourceCandidate(
-                    reference.target_key, self.definition.adapter, self.definition.domains[0],
-                    self.definition.authority.value, query, "NETWORK_FAILED", source_url=url,
-                    acquisition_status="BLOCKED", verification_status="BLOCKED",
-                    raw_source_evidence={"error": str(error)},
-                )
-            ]
-        parser = _LinkParser()
-        parser.feed(fetched.body.decode("utf-8", errors="replace"))
         candidates: list[SourceCandidate] = []
         seen: set[str] = set()
-        for href, title in parser.links:
-            if not title or "/handle/" not in href or "simple-search" in href:
+        network_errors: list[str] = []
+        for query in self.build_queries(reference):
+            url = self.SEARCH_ROOT + "?" + urllib.parse.urlencode({"query": query, "searchradio": "all"})
+            try:
+                fetched = self.client.fetch(url)
+            except NetworkSafetyError as error:
+                network_errors.append(str(error))
                 continue
-            source_url = urllib.parse.urljoin(fetched.final_url, html.unescape(href))
-            if source_url in seen:
-                continue
-            seen.add(source_url)
-            match = verify_identity(reference, discovered_title=title)
-            if match.status == "MISMATCH":
-                continue
-            verified = match.status in {"MATCH_EXACT", "MATCH_STRONG"}
-            candidates.append(
-                SourceCandidate(
-                    reference.target_key, self.definition.adapter, urllib.parse.urlparse(source_url).hostname or "",
-                    self.definition.authority.value, query, "DISCOVERED", source_url=source_url,
-                    final_url=source_url, discovered_title=title, discovered_identifier=match.discovered_identifier,
-                    identity_match_status=match.status, identity_evidence=match.evidence,
-                    acquisition_status="AUTO_VERIFIED" if verified else "AMBIGUOUS",
-                    verification_status="AUTO_VERIFIED" if verified else "UNVERIFIED",
-                    raw_source_evidence={"search_url": url},
+            parser = _LinkParser()
+            parser.feed(fetched.body.decode("utf-8", errors="replace"))
+            for href, title, attrs in parser.links:
+                css_class = attrs.get("class", "").casefold()
+                if not title or not (
+                    "viewselectedactdetailsservlet" in href.casefold()
+                    or "allacts" in css_class
+                ):
+                    continue
+                landing_url = _official_urljoin(fetched.final_url, href)
+                identity_key = title.casefold().strip().rstrip(".")
+                if identity_key in seen:
+                    continue
+                seen.add(identity_key)
+                match = verify_identity(reference, discovered_title=title)
+                candidates.append(
+                    SourceCandidate(
+                        target_key=reference.target_key,
+                        source_adapter=self.definition.source_id,
+                        source_domain=urllib.parse.urlparse(landing_url).hostname or "",
+                        source_authority=self.definition.authority_class.value,
+                        discovery_query=query,
+                        discovery_status="DISCOVERED",
+                        discovery_url=url,
+                        landing_url=landing_url,
+                        redirect_chain=fetched.redirect_chain,
+                        discovered_title=title,
+                        discovered_identifier=match.discovered_identifier,
+                        discovered_document_kind=reference.reference_kind,
+                        identity_match_status=match.status,
+                        identity_evidence=match.evidence,
+                        acquisition_status="DISCOVERED",
+                        target_state=(
+                            TargetState.IDENTITY_MISMATCH.value
+                            if match.status == "MISMATCH"
+                            else TargetState.AMBIGUOUS.value
+                            if match.status == "AMBIGUOUS"
+                            else ""
+                        ),
+                        raw_source_evidence={
+                            "search_url": url,
+                            "search_final_url": fetched.final_url,
+                            "search_from_cache": fetched.from_cache,
+                        },
+                    )
                 )
-            )
-            if len(candidates) >= 5:
-                break
-        if candidates:
-            return candidates
+                if len(candidates) >= 5:
+                    return candidates
+            if candidates:
+                return candidates
+        if network_errors:
+            return [
+                SourceCandidate(
+                    target_key=reference.target_key,
+                    source_adapter=self.definition.source_id,
+                    source_domain=self.definition.base_host,
+                    source_authority=self.definition.authority_class.value,
+                    discovery_query=(self.build_queries(reference) or [reference.normalized_identifier])[0],
+                    discovery_status="NETWORK_FAILED",
+                    acquisition_status="BLOCKED",
+                    verification_status="BLOCKED",
+                    target_state=TargetState.BLOCKED_BY_SOURCE.value,
+                    raw_source_evidence={"reason": "SOURCE_UNAVAILABLE", "errors": network_errors},
+                )
+            ]
         return [
             SourceCandidate(
-                reference.target_key, self.definition.adapter, self.definition.domains[0],
-                self.definition.authority.value, query, "NOT_FOUND", source_url=url,
-                acquisition_status="NOT_FOUND", verification_status="UNVERIFIED",
-                raw_source_evidence={"search_url": url, "candidate_links_examined": len(parser.links)},
+                target_key=reference.target_key,
+                source_adapter=self.definition.source_id,
+                source_domain=self.definition.base_host,
+                source_authority=self.definition.authority_class.value,
+                discovery_query=(self.build_queries(reference) or [reference.normalized_identifier])[0],
+                discovery_status="NOT_FOUND",
+                acquisition_status="NOT_FOUND",
+                target_state=TargetState.NOT_FOUND_AUTHORITATIVE.value,
+                raw_source_evidence={"queries_attempted": self.build_queries(reference)},
             )
         ]
 
+    def fetch_candidate_metadata(self, candidate: SourceCandidate) -> SourceCandidate:
+        if candidate.discovery_status != "DISCOVERED" or not candidate.landing_url:
+            return candidate
+        fetched = self.client.fetch(candidate.landing_url)
+        parser = _LinkParser()
+        parser.feed(fetched.body.decode("utf-8", errors="replace"))
+        bitstreams: list[tuple[int, str, str]] = []
+        for href, title, _ in parser.links:
+            clean_href = html.unescape(href).strip()
+            if "/bitstream/" not in clean_href.casefold() or not clean_href.casefold().endswith(".pdf"):
+                continue
+            url = _official_urljoin(fetched.final_url, clean_href)
+            title_match = int(title.casefold().rstrip(".") == candidate.discovered_title.casefold().rstrip("."))
+            bitstreams.append((title_match, url, title))
+        if not bitstreams:
+            return replace(
+                candidate,
+                landing_url=fetched.final_url,
+                redirect_chain=tuple(dict.fromkeys(candidate.redirect_chain + fetched.redirect_chain)),
+                acquisition_status="DOWNLOAD_FAILED",
+                target_state=TargetState.DOWNLOAD_FAILED.value,
+                raw_source_evidence={
+                    **candidate.raw_source_evidence,
+                    "metadata_error": "No official primary /bitstream/ PDF link found",
+                },
+            )
+        bitstreams.sort(key=lambda row: (-row[0], row[1]))
+        _, document_url, link_title = bitstreams[0]
+        return replace(
+            candidate,
+            landing_url=fetched.final_url,
+            document_url=document_url,
+            redirect_chain=tuple(dict.fromkeys(candidate.redirect_chain + fetched.redirect_chain)),
+            raw_source_evidence={
+                **candidate.raw_source_evidence,
+                "landing_from_cache": fetched.from_cache,
+                "primary_pdf_link_title": link_title,
+                "official_pdf_links_found": len(bitstreams),
+            },
+        )
 
-__all__ = ["BlockedOfficialSource", "ExternalDocumentSource", "IndiaCodeSource"]
+    def download(self, candidate: SourceCandidate) -> tuple[FetchResult, PdfProbe]:
+        if not candidate.document_url:
+            raise NetworkSafetyError("Candidate has no official document URL")
+        fetched = self.client.fetch(candidate.document_url, expected_pdf=True)
+        return fetched, validate_pdf(fetched.body)
+
+    def verify_authority(self, candidate: SourceCandidate) -> bool:
+        allowed = {item.casefold() for item in self.definition.domains}
+        urls = [candidate.discovery_url, candidate.landing_url, candidate.document_url]
+        for url in (item for item in urls if item):
+            parsed = urllib.parse.urlparse(url)
+            if parsed.scheme not in self.definition.allowed_url_schemes:
+                return False
+            if (parsed.hostname or "").casefold() not in allowed:
+                return False
+        return candidate.source_authority == self.definition.authority_class.value
+
+
+__all__ = ["BlockedOfficialSource", "ExternalDocumentSource", "IndiaCodeSource", "_LinkParser", "_official_urljoin"]

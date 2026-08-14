@@ -51,7 +51,7 @@ class PostgresRetrievalRepository:
     def get_document(self, document_id: int) -> dict[str, Any] | None:
         with self.connect() as connection:
             return connection.execute(
-                "SELECT id, file_name, file_path FROM documents WHERE id = %s",
+                "SELECT id, file_name, file_path, source_origin FROM documents WHERE id = %s",
                 (document_id,),
             ).fetchone()
 

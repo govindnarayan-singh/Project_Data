@@ -71,6 +71,13 @@ class ManifestEntry:
     document_label: str
     notes: str
     absolute_path: Path
+    source_origin: str = "LOCAL_ORIGINAL"
+    source_authority: str = ""
+    external_catalogue_id: int | None = None
+    document_kind: str = "GOVERNMENT_RESOLUTION"
+    canonical_identity: str = ""
+    document_year: int | None = None
+    original_acquisition_path: str = ""
 
     @property
     def file_name(self) -> str:
@@ -116,6 +123,12 @@ class BatchResult:
     error_message: str = ""
     document_label: str = ""
     notes: str = ""
+    source_origin: str = "LOCAL_ORIGINAL"
+    source_authority: str = ""
+    document_kind: str = ""
+    canonical_identity: str = ""
+    document_id: int = 0
+    metadata_status: str = ""
 
     @classmethod
     def fieldnames(cls) -> list[str]:
@@ -259,7 +272,12 @@ class BatchIngestor:
     def _operation(
         self, entry: ManifestEntry, digest: str, force: bool
     ) -> tuple[Operation, dict[str, Any] | None]:
-        identity = self.storage.find_document_identity(entry.database_path, digest)
+        if entry.source_origin == "LOCAL_ORIGINAL":
+            identity = self.storage.find_document_identity(entry.database_path, digest)
+        else:
+            identity = self.storage.find_document_identity(
+                entry.database_path, digest, entry.source_origin
+            )
         if identity is None:
             return Operation.NEW, None
         if force or identity["sha256"] != digest:
@@ -314,12 +332,18 @@ class BatchIngestor:
             department=entry.department,
             document_label=entry.document_label,
             notes=entry.notes,
+            source_origin=entry.source_origin,
+            source_authority=entry.source_authority,
+            document_kind=entry.document_kind,
+            canonical_identity=entry.canonical_identity,
         )
 
         try:
             result.sha256 = self.sha256_fn(entry.absolute_path)
-            operation, _identity = self._operation(entry, result.sha256, force)
+            operation, identity = self._operation(entry, result.sha256, force)
             result.operation = operation.value
+            if identity:
+                result.document_id = int(identity["id"])
         except Exception as error:
             return self._failure(result, Status.FAILED_DATABASE, "identity", error, started)
 
@@ -360,6 +384,20 @@ class BatchIngestor:
             metadata = self.extract_metadata_fn(
                 normalized, entry.department, entry.file_name
             )
+            if entry.source_origin == "EXTERNAL_OFFICIAL":
+                metadata.update(
+                    {
+                        "document_type": entry.document_kind,
+                        "document_kind": entry.document_kind,
+                        "canonical_identity": entry.canonical_identity,
+                        "canonical_title": entry.document_label,
+                        "document_year": entry.document_year,
+                        "issuing_authority": entry.department,
+                        "gr_number": None,
+                        "gr_date": None,
+                        "subject": entry.document_label,
+                    }
+                )
             metadata_validation = self.validate_metadata_fn(metadata)
             result.gr_number = str(metadata.get("gr_number") or "")
             result.gr_date = (
@@ -367,6 +405,15 @@ class BatchIngestor:
             )
             result.subject = str(metadata.get("subject") or "")
             self._apply_validation(result, metadata_validation)
+            if entry.document_kind == "ACT":
+                result.metadata_status = (
+                    "VALID" if entry.canonical_identity and entry.document_label
+                    and entry.document_year and entry.department else "MISSING"
+                )
+            else:
+                result.metadata_status = (
+                    "WARNING" if metadata_validation.has_warnings else "VALID"
+                )
         except Exception as error:
             return self._failure(result, Status.FAILED_METADATA, "metadata", error, started)
 
@@ -423,7 +470,7 @@ class BatchIngestor:
 
         database_started = self.clock()
         try:
-            self.storage.replace_document(
+            result.document_id = self.storage.replace_document(
                 sha256=result.sha256,
                 file_path=entry.database_path,
                 file_name=entry.file_name,
@@ -438,6 +485,12 @@ class BatchIngestor:
                 pages=extracted.pages,
                 chunks=chunks,
                 embeddings=embeddings,
+                source_origin=entry.source_origin,
+                document_kind=entry.document_kind,
+                canonical_identity=entry.canonical_identity,
+                document_year=entry.document_year,
+                external_catalogue_id=entry.external_catalogue_id,
+                original_acquisition_path=entry.original_acquisition_path,
             )
         except Exception as error:
             result.database_elapsed_seconds = round(
@@ -450,7 +503,9 @@ class BatchIngestor:
 
         result.status = (
             Status.SUCCESS_WITH_WARNING.value
-            if metadata_validation.has_warnings
+            if (
+                entry.document_kind != "ACT" and metadata_validation.has_warnings
+            ) or result.metadata_status != "VALID"
             else Status.SUCCESS.value
         )
         result.elapsed_seconds = round(self.clock() - started, 6)
