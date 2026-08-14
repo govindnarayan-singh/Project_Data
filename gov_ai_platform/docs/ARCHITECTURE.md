@@ -211,3 +211,21 @@ separately from archive root identity, relative archive path, original remote
 filename, safe local filename, SHA-256, size, timestamps, authority, adapter,
 and identity state. Kind directories are controlled and archive filenames are
 identity-derived, Windows-safe, collision-resistant, and SHA-suffixed.
+
+## Sovereign database backup and External Acquisition V2.1
+
+The Podman volume is operational storage, not the sovereign backup. The
+`knowledge_engine.backup` boundary invokes PostgreSQL 17 logical tools inside
+the existing container, copies custom/globals/schema artifacts to configured
+Windows `BACKUP_ROOT`, inventories both permanent PDF roots, and performs a
+full isolated restore before declaring PASS. pgvector remains native PostgreSQL
+table data; vectors are not exported to CSV. See
+`docs/DATABASE_BACKUP_AND_RECOVERY.md`.
+
+V2.1 adds structured legal-title quality gates, exact title-suffix/year
+canonicalization, explicit principal/amendment/consolidated semantics, and a
+reusable official Divyang Sahayak date-index adapter. Parser prose and amendment
+footnotes are rejected before discovery. Existing archived India Code documents
+close truncated target aliases only through matching canonical identity,
+existing acquisition provenance, parseable archive bytes, and exact SHA; they
+never enter a new-ingestion manifest.

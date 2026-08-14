@@ -48,6 +48,27 @@ SOURCE_REGISTRY = (
         rate_policy=RatePolicy(request_delay_seconds=0.75),
     ),
     SourceDefinition(
+        source_id="divyang_sahayak",
+        source_name="Maharashtra Divyang Sahayak Government Resolution Index",
+        authority_class=AuthorityLevel.OFFICIAL_SECONDARY,
+        jurisdiction="Maharashtra, India (disability administration)",
+        supported_document_kinds=(
+            "GOVERNMENT_RESOLUTION", "CIRCULAR", "GOVERNMENT_CIRCULAR", "GOVERNMENT_ORDER",
+        ),
+        supported_strategies=(
+            AcquisitionStrategy.MAHARASHTRA_GOVERNMENT_RESOLUTION,
+            AcquisitionStrategy.MAHARASHTRA_CIRCULAR,
+            AcquisitionStrategy.MAHARASHTRA_GOVERNMENT_ORDER,
+        ),
+        base_url="https://divyangsahayakportal.maharashtra.gov.in/site/government-resolutions",
+        base_host="divyangsahayakportal.maharashtra.gov.in",
+        domains=("divyangsahayakportal.maharashtra.gov.in",),
+        discovery_mechanism="Public official department GR index, filtered by published date and PDF identity",
+        metadata_mechanism="Official index title/date plus parsed first-page administrative identity",
+        download_mechanism="Official public /uploads/GR/ PDF link",
+        rate_policy=RatePolicy(request_delay_seconds=1.0),
+    ),
+    SourceDefinition(
         source_id="maharashtra_gazette",
         source_name="Maharashtra e-Gazette",
         authority_class=AuthorityLevel.OFFICIAL_PRIMARY,

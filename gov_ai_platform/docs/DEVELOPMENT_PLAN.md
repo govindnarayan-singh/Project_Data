@@ -43,3 +43,18 @@ Next recommended action: run the planned next external acquisition batch from `o
 Next measured stage: harden reusable official-source coverage and upstream
 parser target quality. Do not ingest the empty V2 manifest or collapse legal
 versions without explicit version evidence.
+
+## Completed: sovereign backup V1 and acquisition hardening V2.1
+
+1. Created and full-restore-verified a PostgreSQL 17 custom dump on Windows D:
+   with native pgvector data, globals/schema dumps, checksums, and source inventories.
+2. Replayed exactly the frozen 30-target batch with structured legal target
+   quality, title-suffix/year resolution, and version semantics.
+3. Added a reusable official Divyang Sahayak public-index adapter without
+   bypassing CAPTCHA; runtime DNS/source access remains a measured blocker.
+4. Kept the empty V2.1 manifest out of ingestion and preserved all search,
+   graph, archive, and retrieval baselines.
+
+Next measured stage: expand official source adapters further. Do not expand the
+target batch until alternate government-domain coverage is executable and
+identity-complete.

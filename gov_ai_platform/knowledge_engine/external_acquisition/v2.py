@@ -434,7 +434,12 @@ class ExternalAcquisitionV2Service:
                 return replace(enriched, acquisition_status="AMBIGUOUS", verification_status="REJECTED",
                                target_state=TargetState.AMBIGUOUS.value)
             fetched, probe = adapter.download(enriched)
-            final_match = verify_identity(reference, discovered_title=enriched.discovered_title)
+            final_match = verify_identity(
+                reference, discovered_title=enriched.discovered_title,
+                discovered_identifier=enriched.discovered_identifier,
+                discovered_date=enriched.discovered_date,
+                discovered_issuer=enriched.discovered_issuer,
+            )
             corroborates, pdf_evidence = legal_pdf_corroborates(reference, probe.probe_text)
             if not corroborates:
                 final_match = replace(final_match, status="MISMATCH")
@@ -469,7 +474,8 @@ class ExternalAcquisitionV2Service:
                     "download_from_cache": fetched.from_cache, "quarantine_created": created},
             )
         except NetworkSafetyError as error:
-            return replace(candidate, discovery_status="NETWORK_FAILED", acquisition_status="BLOCKED",
+            return replace(candidate, discovery_status="NETWORK_FAILED", identity_match_status="NOT_EVALUATED",
+                           acquisition_status="BLOCKED",
                            verification_status="BLOCKED", target_state=TargetState.NETWORK_FAILED.value,
                            raw_source_evidence={**candidate.raw_source_evidence, "network_error": str(error)})
         except (OSError, ValueError) as error:
@@ -513,6 +519,7 @@ class ExternalAcquisitionV2Service:
             TargetState.AUTO_VERIFIED_READY.value, "ALREADY_INGESTED", "LOCAL_DUPLICATE_DISCOVERED",
             TargetState.AMBIGUOUS.value, TargetState.ARCHIVE_FAILED.value,
             TargetState.IDENTITY_MISMATCH.value, TargetState.UNPARSEABLE_DOWNLOAD.value,
+            TargetState.UNPARSEABLE_REFERENCE.value,
             TargetState.NETWORK_FAILED.value, TargetState.BLOCKED_BY_ENVIRONMENT.value,
             TargetState.BLOCKED_BY_SOURCE.value, TargetState.NOT_FOUND_AUTHORITATIVE.value,
         ):

@@ -12,6 +12,46 @@ from knowledge_engine.graph.normalization import (
 from .models import ReferenceIdentity
 
 
+_GENERIC_LEGAL_TOKENS = {
+    "ACT", "RULE", "RULES", "THE", "THIS", "OF", "BY", "INS", "SUBS",
+    "MAHARASHTRA", "AMENDMENT", "PROVISIONS", "WHETHER", "DATE", "NOTE",
+}
+
+
+def legal_identity_quality(identifier: str) -> tuple[bool, str]:
+    """Reject prose/footnote fragments before they become legal-title queries."""
+    canonical = identifier.strip().upper()
+    if not re.search(r"_(ACT|RULES?)_(19|20)\d{2}$", canonical):
+        return False, "LEGAL_TITLE_AND_YEAR_REQUIRED"
+    tokens = [token for token in canonical.split("_") if token]
+    if tokens and tokens[0].isdigit():
+        return False, "FOOTNOTE_PREFIX"
+    substantive = [token for token in tokens[:-2] if token not in _GENERIC_LEGAL_TOKENS and not token.isdigit()]
+    if not substantive:
+        return False, "GENERIC_OR_PROSE_FRAGMENT"
+    return True, "STRUCTURED_LEGAL_TITLE_YEAR"
+
+
+def legal_version_semantics(identifier: str) -> str:
+    canonical = identifier.upper()
+    if "_AMENDMENT_ACT_" in canonical:
+        return "AMENDMENT_ACT_EXACT"
+    if "CONSOLIDATED" in canonical or "AS_AMENDED" in canonical:
+        return "CONSOLIDATED_VERSION_OF_TARGET"
+    if re.search(r"_ACT_(19|20)\d{2}$", canonical):
+        return "PRINCIPAL_ACT_EXACT"
+    return "AMBIGUOUS_VERSION"
+
+
+def _legal_suffix_match(expected: str, discovered: str) -> bool:
+    valid, _ = legal_identity_quality(expected)
+    if not valid or not discovered.endswith(expected):
+        return False
+    expected_year = re.search(r"_(19|20)\d{2}$", expected)
+    discovered_year = re.search(r"_(19|20)\d{2}$", discovered)
+    return bool(expected_year and discovered_year and expected_year.group(0) == discovered_year.group(0))
+
+
 @dataclass(frozen=True, slots=True)
 class IdentityMatch:
     status: str
@@ -50,7 +90,17 @@ def verify_identity(
         normalized = normalize_legal_reference(discovered_title, reference.reference_kind)
     else:
         normalized = normalize_document_number(discovered_identifier)
-    number_match = bool(normalized and normalized == expected)
+    exact_number_match = bool(normalized and normalized == expected)
+    legal_suffix_match = bool(
+        reference.reference_kind in {"ACT", "RULE"}
+        and normalized and _legal_suffix_match(expected, normalized)
+    )
+    administrative_prefix_match = bool(
+        reference.reference_kind not in {"ACT", "RULE"}
+        and normalized and expected.endswith(("/", "-")) and normalized.startswith(expected)
+        and reference.reference_date and discovered_date == reference.reference_date
+    )
+    number_match = exact_number_match or legal_suffix_match or administrative_prefix_match
     date_conflict = bool(reference.reference_date and discovered_date and reference.reference_date != discovered_date)
     issuer_conflict = bool(
         reference.issuer
@@ -64,6 +114,9 @@ def verify_identity(
         "stored_normalized_identifier": reference.normalized_identifier,
         "discovered_identifier": normalized,
         "number_match": number_match,
+        "exact_number_match": exact_number_match,
+        "legal_suffix_match": legal_suffix_match,
+        "administrative_prefix_match": administrative_prefix_match,
         "date_match": date_match,
         "issuer_match": issuer_match,
         "date_conflict": date_conflict,
@@ -108,4 +161,7 @@ def legal_pdf_corroborates(reference: ReferenceIdentity, probe_text: str) -> tup
     }
 
 
-__all__ = ["IdentityMatch", "expected_identifier", "legal_pdf_corroborates", "verify_identity"]
+__all__ = [
+    "IdentityMatch", "expected_identifier", "legal_identity_quality", "legal_pdf_corroborates",
+    "legal_version_semantics", "verify_identity",
+]

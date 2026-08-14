@@ -134,3 +134,29 @@ remain `BLOCKED_BY_SOURCE` because CAPTCHA was not bypassed. No new target
 passed final archival gates, so `external_verified_targets_v2.csv` is an empty,
 valid manifest. Replay used cache, inserted zero catalogue rows, and reproduced
 its SHA.
+
+## V2.1 hardening and replay
+
+V2.1 preserves the exact 30-target artifact. Legal discovery requires a
+structured Act/Rule title plus year and rejects footnote/prose fragments before
+network access. A full canonical title ending with the structured target
+title/year may match deterministically; year changes never match. Principal
+Acts, Amendment Acts, consolidated texts, version variants, and ambiguous
+versions remain distinct.
+
+`divyang_sahayak` is an `OFFICIAL_SECONDARY` adapter for the public Maharashtra
+Divyang Sahayak government-resolution index. It is reusable only for disability
+administration, requires an exact listed date, then verifies the identifier in
+the PDF probe. It does not call the CAPTCHA-protected GR form. The public index
+and matching documents were independently observed, but the project runtime
+could not reach that host during replay, so it resolved zero targets. No CAPTCHA
+or stateful control was bypassed.
+
+The controlled official-response replay produced nine candidates across five
+targets. Three title aliases resolve to already-ingested archived India Code
+Acts using existing provenance and archive SHA; they are not new downloads or
+manifest rows. Six Rights Act PDFs across two target groups remain
+`AMBIGUOUS_VERSION`. The National Green Tribunal candidate could not complete
+metadata/download access. Eight malformed Act targets are unparseable. The
+V2.1 manifest is empty, replay inserts zero catalogue rows, and no ingestion,
+embedding, or graph change occurs.

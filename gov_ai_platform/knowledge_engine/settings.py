@@ -37,6 +37,11 @@ class Settings:
     external_document_root: Path = _resolve_path(
         os.getenv("EXTERNAL_DOCUMENT_ROOT", "../Government_Documents/External_Official")
     )
+    backup_root: Path = _resolve_path(
+        os.getenv("BACKUP_ROOT", "../Backups/gov_ai_platform")
+    )
+    backup_keep_last: int = int(os.getenv("BACKUP_KEEP_LAST", "0"))
+    postgres_container: str = os.getenv("POSTGRES_CONTAINER", "gr-postgres")
     external_http_timeout_seconds: float = float(os.getenv("EXTERNAL_HTTP_TIMEOUT_SECONDS", "15"))
     external_http_max_bytes: int = int(os.getenv("EXTERNAL_HTTP_MAX_BYTES", str(25 * 1024 * 1024)))
     external_http_max_redirects: int = int(os.getenv("EXTERNAL_HTTP_MAX_REDIRECTS", "3"))

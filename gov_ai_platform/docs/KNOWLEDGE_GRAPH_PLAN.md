@@ -266,3 +266,14 @@ externally verified identities. These metrics remain separate.
 No V2 identity became archived-ready, so graph closure is unchanged. Backfill
 of the five prior Acts improves permanent local custody without creating a
 relation.
+
+## V2.1 target-quality and availability result
+
+The frozen target batch exposed eight Act parser fragments (footnote actions,
+generic “this Act” prose, and running-text notes). V2.1 rejects them before
+external discovery rather than weakening identity. Exact structured suffix plus
+year matching closes three truncated aliases to already-ingested, archived Acts
+through existing provenance; it creates neither graph edges nor availability
+duplicates. Rights Act distinct hashes remain ambiguous versions. Because the
+V2.1 new-document manifest is empty, mention/target/known/archive closure and
+graph document coverage are unchanged.

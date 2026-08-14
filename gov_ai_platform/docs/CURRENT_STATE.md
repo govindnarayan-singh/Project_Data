@@ -263,3 +263,26 @@ Maharashtra administrative targets remain CAPTCHA-blocked; controls were not
 bypassed. No V2 target reached final AUTO_VERIFIED_READY, so the V2 manifest is
 empty and the search corpus, KG, embeddings, and dense metrics are unchanged.
 Cache replay inserted zero catalogue rows and reproduced the manifest SHA.
+
+## Sovereign Backup V1 and External Acquisition V2.1 (2026-08-14)
+
+A 10,755,917-byte PostgreSQL custom dump is stored under configured Windows D:
+backup storage with SHA-256
+`ce3f7cbea14263c5598d1865c3206427612bae8a193e88b1e7da5118eafba76d`.
+Archive inspection found pgvector and all required tables/data. A full isolated
+restore reproduced 71/1,322/1,237/1,237 search counts, 1,024 vector dimensions,
+1,408 KG candidates, 88 relations, 17 REFERENCES, 71 ISSUED_BY, 2,715 local
+catalogue rows, and 63 external catalogue rows. Inventories cover 2,715 GR PDFs
+and five external PDFs with zero SHA mismatches. Production was unchanged and
+the temporary database was removed.
+
+V2.1 replayed the same 30-row SHA
+`8d14c5a80c6cc618cf73f64493f80fac6457ee3bec27aad222b58e7a9d2725a8`.
+Eight false legal targets are rejected as identifier-extraction fragments.
+Three truncated title/year aliases resolve exactly to already-ingested India
+Code documents through existing provenance and archive SHA; two Rights Act
+groups remain `AMBIGUOUS_VERSION`. The National Green Tribunal landing fetch
+remained unavailable. The runtime could not reach the new official Divyang
+Sahayak domain, so all 16 CAPTCHA targets remain source-blocked and no CAPTCHA
+was bypassed. No new document reached AUTO_VERIFIED_READY; the V2.1 manifest is
+empty. Search/KG counts and dense retrieval remain unchanged.
