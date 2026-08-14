@@ -459,7 +459,180 @@ class DivyangSahayakSource:
         ) and candidate.source_authority == self.definition.authority_class.value
 
 
+class MaharashtraDepartmentSource:
+    """Reusable exact-query adapter for official Maharashtra department sites."""
+
+    DEPARTMENT_SCOPE = {
+        "maharashtra_finance": "finance department",
+        "maharashtra_parliamentary_affairs": "parliamentary affairs department",
+        "maharashtra_environment": "environment department",
+        "maharashtra_marathi_language": "marathi language department",
+        "maharashtra_it": "electronics, information technology and artificial intelligence department",
+    }
+
+    def __init__(self, definition: SourceDefinition, *, cache_dir: Path):
+        self.definition = definition
+        policy = definition.rate_policy
+        self.client = SafeHttpClient(
+            allowed_domains=definition.domains,
+            allowed_schemes=definition.allowed_url_schemes,
+            cache_dir=cache_dir,
+            timeout_seconds=settings.external_http_timeout_seconds or policy.timeout_seconds,
+            max_bytes=settings.external_http_max_bytes,
+            max_redirects=settings.external_http_max_redirects,
+            retry_count=settings.external_http_retry_count,
+            retry_backoff_seconds=policy.backoff_seconds,
+            rate_delay_seconds=max(
+                settings.external_http_rate_delay_seconds, policy.request_delay_seconds
+            ),
+            user_agent=settings.external_http_user_agent,
+        )
+
+    def supports(self, reference: ReferenceIdentity) -> bool:
+        expected = self.DEPARTMENT_SCOPE.get(self.definition.source_id, "")
+        return (
+            reference.reference_kind in self.definition.supported_document_kinds
+            and bool(expected)
+            and reference.issuer.strip().casefold() == expected
+        )
+
+    def build_queries(self, reference: ReferenceIdentity) -> list[str]:
+        return generate_queries(reference)
+
+    def _search_url(self, reference: ReferenceIdentity) -> str:
+        query = urllib.parse.quote(reference.normalized_identifier, safe="")
+        if self.definition.source_id == "maharashtra_it":
+            return f"https://{self.definition.base_host}/search/node?keys={query}"
+        return f"https://{self.definition.base_host}/?s={query}"
+
+    def _links(self, body: bytes, base_url: str) -> list[tuple[str, str]]:
+        parser = _LinkParser()
+        parser.feed(body.decode("utf-8", errors="replace"))
+        allowed = {item.casefold() for item in self.definition.domains}
+        results: list[tuple[str, str]] = []
+        for href, title, _attrs in parser.links:
+            url = _official_urljoin(base_url, href)
+            parsed = urllib.parse.urlparse(url)
+            if parsed.scheme != "https" or (parsed.hostname or "").casefold() not in allowed:
+                continue
+            path = parsed.path.casefold()
+            is_pdf = path.endswith(".pdf")
+            is_document = "/document/" in path and "/document-category/" not in path
+            is_marathi_post = (
+                self.definition.source_id == "maharashtra_marathi_language"
+                and bool(re.fullmatch(r"/\d+/?", parsed.path))
+            )
+            if is_pdf or is_document or is_marathi_post:
+                item = (url, title)
+                if item not in results:
+                    results.append(item)
+            if len(results) >= 8:
+                break
+        return results
+
+    def search(self, reference: ReferenceIdentity) -> list[SourceCandidate]:
+        if not self.supports(reference):
+            return []
+        search_url = self._search_url(reference)
+        try:
+            fetched = self.client.fetch(search_url)
+            links = self._links(fetched.body, fetched.final_url)
+        except NetworkSafetyError as error:
+            return [SourceCandidate(
+                target_key=reference.target_key,
+                source_adapter=self.definition.source_id,
+                source_domain=self.definition.base_host,
+                source_authority=self.definition.authority_class.value,
+                discovery_query=reference.normalized_identifier,
+                discovery_status="NETWORK_FAILED",
+                acquisition_status="BLOCKED",
+                target_state=TargetState.NETWORK_FAILED.value,
+                raw_source_evidence={
+                    "reason": "OFFICIAL_DEPARTMENT_SOURCE_UNAVAILABLE",
+                    "network_error": str(error),
+                },
+            )]
+        candidates = []
+        for url, title in links:
+            direct_pdf = urllib.parse.urlparse(url).path.casefold().endswith(".pdf")
+            candidates.append(SourceCandidate(
+                target_key=reference.target_key,
+                source_adapter=self.definition.source_id,
+                source_domain=urllib.parse.urlparse(url).hostname or "",
+                source_authority=self.definition.authority_class.value,
+                discovery_query=reference.normalized_identifier,
+                discovery_status="DISCOVERED",
+                discovery_url=search_url,
+                landing_url=fetched.final_url if direct_pdf else url,
+                document_url=url if direct_pdf else "",
+                redirect_chain=fetched.redirect_chain,
+                discovered_title=title,
+                discovered_issuer=reference.issuer,
+                discovered_document_kind=reference.reference_kind,
+                identity_match_status="NOT_EVALUATED",
+                acquisition_status="DISCOVERED",
+                raw_source_evidence={
+                    "identity_deferred_to_local_pdf": True,
+                    "official_department_search": fetched.final_url,
+                },
+            ))
+        if candidates:
+            return candidates
+        return [SourceCandidate(
+            target_key=reference.target_key,
+            source_adapter=self.definition.source_id,
+            source_domain=self.definition.base_host,
+            source_authority=self.definition.authority_class.value,
+            discovery_query=reference.normalized_identifier,
+            discovery_status="NOT_FOUND",
+            acquisition_status="NOT_FOUND",
+            target_state=TargetState.NOT_FOUND_AUTHORITATIVE.value,
+            raw_source_evidence={"reason": "TARGET_NOT_PUBLISHED_ON_DEPARTMENT_SOURCE"},
+        )]
+
+    def fetch_candidate_metadata(self, candidate: SourceCandidate) -> SourceCandidate:
+        if candidate.document_url:
+            return candidate
+        try:
+            fetched = self.client.fetch(candidate.landing_url)
+            links = [item for item in self._links(fetched.body, fetched.final_url) if item[0].casefold().endswith(".pdf")]
+        except NetworkSafetyError as error:
+            return replace(
+                candidate,
+                acquisition_status="DOWNLOAD_FAILED",
+                raw_source_evidence={**candidate.raw_source_evidence, "metadata_error": str(error)},
+            )
+        if not links:
+            return replace(
+                candidate,
+                acquisition_status="DOWNLOAD_FAILED",
+                raw_source_evidence={**candidate.raw_source_evidence, "metadata_error": "NO_OFFICIAL_PDF_LINK"},
+            )
+        return replace(
+            candidate,
+            landing_url=fetched.final_url,
+            document_url=links[0][0],
+            redirect_chain=tuple(dict.fromkeys(candidate.redirect_chain + fetched.redirect_chain)),
+        )
+
+    def download(self, candidate: SourceCandidate) -> tuple[FetchResult, PdfProbe]:
+        if not candidate.document_url:
+            raise NetworkSafetyError("Candidate has no official PDF URL")
+        fetched = self.client.fetch(candidate.document_url, expected_pdf=True)
+        return fetched, validate_pdf(fetched.body)
+
+    def verify_authority(self, candidate: SourceCandidate) -> bool:
+        allowed = {domain.casefold() for domain in self.definition.domains}
+        return all(
+            urllib.parse.urlparse(url).scheme == "https"
+            and (urllib.parse.urlparse(url).hostname or "").casefold() in allowed
+            for url in (candidate.discovery_url, candidate.landing_url, candidate.document_url)
+            if url
+        ) and candidate.source_authority == self.definition.authority_class.value
+
+
 __all__ = [
     "BlockedOfficialSource", "DivyangSahayakSource", "ExternalDocumentSource", "IndiaCodeSource",
+    "MaharashtraDepartmentSource",
     "_LinkParser", "_OfficialIndexParser", "_official_urljoin",
 ]

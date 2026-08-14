@@ -25,13 +25,13 @@ from .archive import (
     promote_verified_file,
     resolve_archive_path,
 )
-from .identity import legal_pdf_corroborates, verify_identity
+from .identity import administrative_pdf_identifier, legal_pdf_corroborates, verify_identity
 from .models import ReferenceIdentity, SourceCandidate, TargetState
 from .network import NetworkSafetyError
 from .queries import assert_public_query, generate_queries
 from .registry import SOURCE_REGISTRY, classify_strategy, sources_for_strategy, validate_registry
 from .repository import ExternalAcquisitionRepository
-from .storage import store_verified_file, validate_pdf
+from .storage import stage_incoming_file, validate_pdf
 
 
 OUTPUT_DIR = PROJECT_ROOT / "outputs" / "external_acquisition_v2"
@@ -250,8 +250,8 @@ class ExternalAcquisitionV2Service:
             "archive_root": str(root), "exists": root.is_dir(), "archived_documents": len(files),
             "total_bytes": sum(path.stat().st_size for path in files),
             "duplicate_sha_values": sum(count - 1 for count in hashes.values() if count > 1),
-            "quarantine_root": str(settings.external_acquisition_root),
-            "quarantine_is_permanent": False,
+            "incoming_root": str(settings.external_incoming_root),
+            "incoming_is_permanent_archive": False,
         }
         status = "PASS" if (
             all(database[key] == value for key, value in EXPECTED_COUNTS.items())
@@ -416,7 +416,7 @@ class ExternalAcquisitionV2Service:
             return IndiaCodeSource(definition, cache_dir=CACHE_DIR / definition.source_id)
         return BlockedOfficialSource(definition)
 
-    def _download_to_quarantine(
+    def _download_to_incoming(
         self, reference: ReferenceIdentity, adapter, candidate: SourceCandidate,
         ingested_hashes: set[str], local_hashes: set[str],
     ) -> SourceCandidate:
@@ -424,7 +424,8 @@ class ExternalAcquisitionV2Service:
             if candidate.discovery_status == "NETWORK_FAILED":
                 return replace(candidate, target_state=TargetState.NETWORK_FAILED.value)
             return candidate
-        if candidate.identity_match_status not in {"MATCH_EXACT", "MATCH_STRONG"}:
+        deferred_local_identity = bool(candidate.raw_source_evidence.get("identity_deferred_to_local_pdf"))
+        if candidate.identity_match_status not in {"MATCH_EXACT", "MATCH_STRONG"} and not deferred_local_identity:
             return candidate
         try:
             enriched = adapter.fetch_candidate_metadata(candidate)
@@ -433,30 +434,51 @@ class ExternalAcquisitionV2Service:
             if not adapter.verify_authority(enriched):
                 return replace(enriched, acquisition_status="AMBIGUOUS", verification_status="REJECTED",
                                target_state=TargetState.AMBIGUOUS.value)
-            fetched, probe = adapter.download(enriched)
+            fetched, _transport_probe = adapter.download(enriched)
+            path, digest, created = stage_incoming_file(
+                settings.external_incoming_root,
+                identifier=enriched.discovered_identifier or reference.normalized_identifier,
+                body=fetched.body,
+            )
+            local_body = path.read_bytes()
+            if hashlib.sha256(local_body).hexdigest() != digest:
+                raise ValueError("Incoming PDF changed before local verification")
+            probe = validate_pdf(local_body)
+            local_identifier = enriched.discovered_identifier
+            local_evidence: dict[str, object] = {}
+            if reference.reference_kind not in {"ACT", "RULE"}:
+                local_identifier, local_evidence = administrative_pdf_identifier(reference, probe.probe_text)
             final_match = verify_identity(
                 reference, discovered_title=enriched.discovered_title,
-                discovered_identifier=enriched.discovered_identifier,
+                discovered_identifier=local_identifier,
                 discovered_date=enriched.discovered_date,
                 discovered_issuer=enriched.discovered_issuer,
             )
-            corroborates, pdf_evidence = legal_pdf_corroborates(reference, probe.probe_text)
+            if reference.reference_kind in {"ACT", "RULE"}:
+                corroborates, pdf_evidence = legal_pdf_corroborates(reference, probe.probe_text)
+            else:
+                corroborates = bool(local_identifier)
+                pdf_evidence = local_evidence
             if not corroborates:
                 final_match = replace(final_match, status="MISMATCH")
             evidence = {**enriched.identity_evidence, **final_match.evidence, **pdf_evidence,
                         "pdf_signature_valid": True, "pdf_parse_valid": True}
             if final_match.status not in {"MATCH_EXACT", "MATCH_STRONG"}:
                 return replace(
-                    enriched, document_url=fetched.final_url, identity_match_status=final_match.status,
+                    enriched, document_url=fetched.final_url,
+                    discovered_identifier=final_match.discovered_identifier,
+                    identity_match_status=final_match.status,
                     identity_evidence=evidence, acquisition_status="DOWNLOADED",
                     verification_status="REJECTED", target_state=TargetState.IDENTITY_MISMATCH.value,
-                    content_type=fetched.content_type, file_size=len(fetched.body), page_count=probe.page_count,
+                    content_type=fetched.content_type, file_size=len(local_body), page_count=probe.page_count,
+                    local_acquired_path=path.relative_to(settings.external_incoming_root).as_posix(),
+                    sha256=digest,
                     original_remote_filename=_remote_filename(fetched.final_url),
+                    raw_source_evidence={**enriched.raw_source_evidence,
+                        "incoming_root_identity": "EXTERNAL_INCOMING",
+                        "incoming_created": created,
+                        "local_pdf_verification": "FAILED_IDENTITY"},
                 )
-            path, digest, created = store_verified_file(
-                settings.external_acquisition_root,
-                identifier=final_match.discovered_identifier, body=fetched.body,
-            )
             duplicate = (
                 "ALREADY_INGESTED" if digest in ingested_hashes else
                 "LOCAL_DUPLICATE_DISCOVERED" if digest in local_hashes else "NEW_DOCUMENT"
@@ -467,11 +489,14 @@ class ExternalAcquisitionV2Service:
                 discovered_identifier=final_match.discovered_identifier,
                 identity_match_status=final_match.status, identity_evidence=evidence,
                 acquisition_status="DOWNLOADED", verification_status="AUTO_VERIFIED",
-                local_acquired_path=path.relative_to(PROJECT_ROOT).as_posix(), sha256=digest,
-                content_type=fetched.content_type, file_size=len(fetched.body), page_count=probe.page_count,
+                local_acquired_path=path.relative_to(settings.external_incoming_root).as_posix(), sha256=digest,
+                content_type=fetched.content_type, file_size=len(local_body), page_count=probe.page_count,
                 duplicate_status=duplicate, original_remote_filename=_remote_filename(fetched.final_url),
                 raw_source_evidence={**enriched.raw_source_evidence,
-                    "download_from_cache": fetched.from_cache, "quarantine_created": created},
+                    "download_from_cache": fetched.from_cache,
+                    "incoming_root_identity": "EXTERNAL_INCOMING",
+                    "incoming_created": created,
+                    "local_pdf_verification": "PASS"},
             )
         except NetworkSafetyError as error:
             return replace(candidate, discovery_status="NETWORK_FAILED", identity_match_status="NOT_EVALUATED",
@@ -491,7 +516,9 @@ class ExternalAcquisitionV2Service:
         if candidate.duplicate_status == "LOCAL_DUPLICATE_DISCOVERED":
             return replace(candidate, acquisition_status="AUTO_VERIFIED", target_state="LOCAL_DUPLICATE_DISCOVERED")
         try:
-            source = (PROJECT_ROOT / candidate.local_acquired_path).resolve(strict=True)
+            incoming_root = settings.external_incoming_root.resolve(strict=True)
+            source = (incoming_root / candidate.local_acquired_path).resolve(strict=True)
+            source.relative_to(incoming_root)
             archived = promote_verified_file(
                 source, document_kind=reference.reference_kind,
                 identity=candidate.discovered_identifier or reference.normalized_identifier,
@@ -650,7 +677,7 @@ class ExternalAcquisitionV2Service:
                     else:
                         discovered = adapter.search(reference)
                     downloaded = [
-                        self._download_to_quarantine(reference, adapter, item, ingested_hashes, local_hashes)
+                        self._download_to_incoming(reference, adapter, item, ingested_hashes, local_hashes)
                         for item in discovered
                     ]
                     target_results.extend(downloaded)
@@ -841,7 +868,7 @@ class ExternalAcquisitionV2Service:
                 "percentage": local_archived / denominator if denominator else 0.0,
                 "definition": (
                     "Exact target has physical immutable source bytes in GR_ROOT or the configured "
-                    "EXTERNAL_DOCUMENT_ROOT; quarantine alone is excluded."
+                    "EXTERNAL_DOCUMENT_ROOT; Incoming alone is excluded."
                 ),
             },
         }
@@ -1045,7 +1072,7 @@ BLOCKED_BY_SOURCE: {metrics['blocked_by_source']}
 DOWNLOAD
 --------------------------------
 
-Downloaded to quarantine: {metrics['downloads']}
+Downloaded to local Incoming: {metrics['downloads']}
 
 Valid PDFs: {metrics['valid_pdfs']}
 
@@ -1116,7 +1143,7 @@ Other: {sum(row.get('document_kind') not in {'GOVERNMENT_RESOLUTION', 'ACT', 'CI
 All manifest files use permanent archive source: YES
 MUST BE YES
 
-Temporary quarantine sources: {manifest_validation['temporary_quarantine_sources']}
+Temporary Incoming sources: {manifest_validation['temporary_quarantine_sources']}
 MUST BE 0
 
 Already ingested: {manifest_validation['already_ingested']}
@@ -1250,7 +1277,7 @@ Confirmed:
 - existing 2,715 GR files were not moved
 - every previously ingested external official document has permanent local source bytes
 - every new AUTO_VERIFIED_READY V2 document has permanent local source bytes
-- quarantine is not treated as permanent authoritative storage
+- Incoming is staging only and is not treated as permanent authoritative storage
 - archived bytes are immutable
 - no UI work
 - no V2 ingestion

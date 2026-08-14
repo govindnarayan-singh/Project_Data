@@ -58,3 +58,20 @@ versions without explicit version evidence.
 Next measured stage: expand official source adapters further. Do not expand the
 target batch until alternate government-domain coverage is executable and
 identity-complete.
+
+## Completed: native database runtime and local-first acquisition V2.2
+
+1. Restored the verified database into native Windows PostgreSQL 17.11 with
+   pgvector 0.8.6 and switched Django to `127.0.0.1:5434`; Podman is rollback-only.
+2. Created and isolated-restore-tested a new native logical snapshot with exact
+   71-document/1,237-vector integrity.
+3. Changed external acquisition to Incoming-first local verification and
+   immutable `External_Official` promotion.
+4. Replayed the same frozen 30 targets with five additional issuer-scoped
+   Maharashtra department sources and strict identity/version rules.
+5. Produced a one-row V2.2 manifest for the archived National Green Tribunal
+   Act. No ingestion, embeddings, or KG changes were run.
+
+Next measured stage: review the V2.2 manifest under a separately authorized
+ingestion task and continue source-specific work for the remaining unresolved
+administrative targets. Do not loosen identity rules or bypass CAPTCHA.

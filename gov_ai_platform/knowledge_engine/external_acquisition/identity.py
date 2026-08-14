@@ -137,6 +137,26 @@ def verify_identity(
     return IdentityMatch(status, normalized, evidence)
 
 
+def administrative_pdf_identifier(
+    reference: ReferenceIdentity, probe_text: str
+) -> tuple[str, dict[str, object]]:
+    """Find the exact normalized administrative identifier in local PDF text."""
+    expected = normalize_document_number(reference.normalized_identifier)
+    for line_number, raw_line in enumerate(probe_text.splitlines()[:120], start=1):
+        normalized_line = normalize_document_number(raw_line)
+        if expected and expected in normalized_line:
+            return expected, {
+                "local_pdf_identifier_found": True,
+                "local_pdf_identifier_line": line_number,
+                "local_pdf_identifier_evidence": raw_line.strip()[:500],
+            }
+    return "", {
+        "local_pdf_identifier_found": False,
+        "local_pdf_identifier_line": 0,
+        "local_pdf_identifier_evidence": "",
+    }
+
+
 def legal_pdf_corroborates(reference: ReferenceIdentity, probe_text: str) -> tuple[bool, dict[str, object]]:
     """Require canonical legal-title tokens and year in the downloaded PDF probe."""
     expected = expected_identifier(reference)
@@ -147,7 +167,7 @@ def legal_pdf_corroborates(reference: ReferenceIdentity, probe_text: str) -> tup
     tokens = [token.casefold() for token in base.split("_") if token and token not in ignored]
     normalized_probe = re.sub(r"[^0-9a-z]+", " ", probe_text.casefold())
     present = [token for token in tokens if re.search(rf"\b{re.escape(token)}s?\b", normalized_probe)]
-    required = max(2, (len(tokens) * 3 + 3) // 4) if tokens else 0
+    required = max(1, (len(tokens) * 3 + 3) // 4) if tokens else 0
     year_present = not year or bool(re.search(rf"\b{re.escape(year)}\b", normalized_probe))
     corroborates = bool(tokens) and len(present) >= required and year_present
     return corroborates, {
@@ -162,6 +182,6 @@ def legal_pdf_corroborates(reference: ReferenceIdentity, probe_text: str) -> tup
 
 
 __all__ = [
-    "IdentityMatch", "expected_identifier", "legal_identity_quality", "legal_pdf_corroborates",
+    "IdentityMatch", "administrative_pdf_identifier", "expected_identifier", "legal_identity_quality", "legal_pdf_corroborates",
     "legal_version_semantics", "verify_identity",
 ]

@@ -47,7 +47,7 @@ separate atomic body/metadata caches. HTML named `.pdf` is rejected by
 Content-Type and `%PDF`; accepted files must also parse with at least one page.
 Server filenames are ignored.
 
-Downloads enter `data/acquisition/quarantine/` with deterministic safe names.
+Downloads enter configured `EXTERNAL_INCOMING_ROOT` with deterministic safe names.
 SHA-256 and PDF page count are recorded. Files are immutable and deduplicated;
 the manifest rejects any SHA already ingested or present in the 2,715-file
 local catalogue.
@@ -61,7 +61,7 @@ PDF probe must contain the canonical title tokens and year. Subject similarity
 and BGE-M3 are forbidden identity evidence.
 
 `AUTO_VERIFIED` requires an allowed official source, MATCH_EXACT/MATCH_STRONG,
-a valid parsed PDF, safe quarantine, complete landing/document/query
+a valid locally parsed PDF, safe Incoming path, complete landing/document/query
 provenance, and no local/ingested SHA collision. Multiple distinct official
 files for one identity are `VERSION_VARIANT` and remain ambiguous. No automatic
 path may create `HUMAN_CONFIRMED`.
@@ -97,7 +97,7 @@ Evidence is under `outputs/external_acquisition_v1_1/`.
 The next separately authorized step is the five-row AUTO_VERIFIED manifest:
 production batch ingestion, BGE-M3 embeddings, deterministic KG rerun, closure
 measurement, integrity checks, and frozen retrieval regression. Until that
-gate, the external catalogue and quarantine remain non-search storage.
+gate, the external catalogue and Incoming remain non-search storage.
 ## Production ingestion closure (2026-08-14)
 
 The frozen five-row manifest (`03fbb7f0dd07b28b714cbb7ba938b0544797f74fa3f69f46d99ddeab9fa0424a`) was ingested without another discovery run. All five rows are `ACT`, `OFFICIAL_PRIMARY`, and `MATCH_EXACT`. Two accepted V1.1 rows omitted by the earlier catalogue upsert were reconciled from the already-frozen `verified_targets.csv`; their earlier failed/rejected rows were retained and no network source was contacted.
@@ -108,17 +108,17 @@ The next 30-target priority file is planning only. The 13 earlier `BLOCKED_BY_SO
 
 ## Persistent archive policy (V2)
 
-`EXTERNAL_ACQUISITION_ROOT` is quarantine only. A file cannot become a future
+`EXTERNAL_INCOMING_ROOT` is staging only. A file cannot become a future
 ingestion source until authority and identity gates pass and the exact bytes are
 promoted to `EXTERNAL_DOCUMENT_ROOT`. The archive uses root identity
 `EXTERNAL_OFFICIAL`, controlled kind directories, safe identity-derived
 SHA-suffixed filenames, and relative PostgreSQL paths. Remote filenames remain
 provenance only.
 
-Promotion verifies quarantine SHA, copies without re-saving, verifies SHA,
+Promotion verifies Incoming SHA, copies without re-saving, verifies SHA,
 size, byte equality, and PDF parsing at the destination, and never overwrites
 different bytes. Same-SHA destinations are reused. `ARCHIVE_FAILED` is excluded
-from manifests. Document provenance retains both quarantine evidence and the
+from manifests. Document provenance retains both Incoming evidence and the
 permanent archive link.
 
 The archive is authoritative project data, not cache. A portable backup must
@@ -160,3 +160,33 @@ manifest rows. Six Rights Act PDFs across two target groups remain
 metadata/download access. Eight malformed Act targets are unparseable. The
 V2.1 manifest is empty, replay inserts zero catalogue rows, and no ingestion,
 embedding, or graph change occurs.
+
+## V2.2 local-first discovery (2026-08-14)
+
+The current acquisition boundary is:
+
+```text
+Internet → Government_Documents/Incoming → local verification
+  → Government_Documents/External_Official → later authorized ingestion
+```
+
+Incoming bytes are stored atomically before PDF parsing or identity work. The
+stored file is reread and hash-checked, and all document/identity validation is
+performed from that local copy. Promotion copies the exact bytes to a safe,
+immutable, kind-scoped archive path and verifies byte equality. Incoming never
+appears in an ingestion manifest.
+
+V2.2 replayed the unchanged 30-row target file at SHA-256
+`8d14c5a80c6cc618cf73f64493f80fac6457ee3bec27aad222b58e7a9d2725a8`.
+Five issuer-scoped official Maharashtra department adapters were added for
+Finance, Parliamentary Affairs, Environment, Marathi Language, and IT; the
+existing Divyang and India Code adapters remain strict. The run found 12
+official candidates across eight targets, locally validated nine PDFs, kept two
+version groups ambiguous, and rejected two mismatches. Four candidates matched
+exactly; three were already-ingested aliases and one new National Green
+Tribunal Act passed every archive gate.
+
+`data/manifests/external_verified_targets_v2_2.csv` therefore contains exactly
+one permanent `EXTERNAL_OFFICIAL` document. Replay inserted zero catalogue
+rows, archive integrity passed for six files, and no ingestion, page creation,
+chunking, embeddings, or graph mutation occurred.

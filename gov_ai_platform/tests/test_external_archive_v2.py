@@ -126,7 +126,7 @@ def test_archive_promotion_is_byte_identical_immutable_and_same_sha_reuses(tmp_p
     assert source.read_bytes() == body
 
 
-def test_archive_promotion_rejects_sha_mismatch_and_non_quarantine_source(tmp_path):
+def test_archive_promotion_rejects_sha_mismatch_and_non_incoming_source(tmp_path):
     fake = _settings(tmp_path)
     body = _pdf_bytes()
     source = fake.external_acquisition_root / "candidate.pdf"
@@ -136,7 +136,7 @@ def test_archive_promotion_rejects_sha_mismatch_and_non_quarantine_source(tmp_pa
     with patch("knowledge_engine.external_acquisition.archive.settings", fake):
         with pytest.raises(ArchiveSafetyError, match="SHA-256"):
             promote_verified_file(source, document_kind="ACT", identity="Act", expected_sha256="0" * 64)
-        with pytest.raises(ArchiveSafetyError, match="quarantine"):
+        with pytest.raises(ArchiveSafetyError, match="Incoming"):
             promote_verified_file(
                 outside, document_kind="ACT", identity="Act",
                 expected_sha256=hashlib.sha256(body).hexdigest(),

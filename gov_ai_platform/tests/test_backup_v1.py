@@ -67,6 +67,15 @@ def bare_service() -> BackupService:
     return service
 
 
+def bare_native_service() -> BackupService:
+    service = object.__new__(BackupService)
+    service.mode = "native"
+    service.container = "gr-postgres"
+    service.postgres_bin = Path("D:/PostgreSQL/17/bin")
+    service.database = DatabaseIdentity("grdb", "gr_user", "127.0.0.1", "5434", "secret")
+    return service
+
+
 def test_database_artifacts_use_custom_schema_and_globals_dumps(tmp_path: Path) -> None:
     service = bare_service()
     fake = ArtifactPodman()
@@ -78,6 +87,26 @@ def test_database_artifacts_use_custom_schema_and_globals_dumps(tmp_path: Path) 
     assert any("pg_dump -U gr_user -d grdb -Fc -f" in call for call in joined)
     assert any("pg_dumpall -U gr_user --globals-only -f" in call for call in joined)
     assert any("pg_dump -U gr_user -d grdb --schema-only" in call for call in joined)
+    assert "EXTENSION - vector" in listing
+
+
+def test_native_database_artifacts_use_windows_postgres_tools(tmp_path: Path) -> None:
+    service = bare_native_service()
+    calls: list[tuple[str, ...]] = []
+
+    def native(executable: str, *args: str, timeout: int = 600) -> subprocess.CompletedProcess[str]:
+        calls.append((executable, *args))
+        if "-f" in args:
+            Path(args[args.index("-f") + 1]).write_text("non-zero", encoding="utf-8")
+        stdout = "1; 0 0 EXTENSION - vector gr_user\n" if executable == "pg_restore" else ""
+        return subprocess.CompletedProcess(args, 0, stdout, "")
+
+    service._native = native  # type: ignore[method-assign]
+    artifacts, listing = service._create_database_artifacts("20260814T010203", tmp_path)
+    assert set(artifacts) == {"grdb.dump", "globals.sql", "schema.sql"}
+    assert any(call[0] == "pg_dump" and "-Fc" in call for call in calls)
+    assert any(call[0] == "pg_dumpall" and "--globals-only" in call for call in calls)
+    assert any(call[0] == "pg_restore" and "--list" in call for call in calls)
     assert "EXTENSION - vector" in listing
 
 
@@ -111,6 +140,36 @@ def test_restore_rehearsal_isolated_validates_vectors_and_cleans_up(tmp_path: Pa
     assert any(call[:5] == ("exec", "gr-postgres", "pg_restore", "-U", "gr_user") for call in calls)
     assert any("dropdb" in call and restore_name in call for call in calls)
     assert service._last_restore_cleanup == {"database": restore_name, "removed": True}
+
+
+def test_native_restore_rehearsal_never_targets_production_and_cleans_up(tmp_path: Path) -> None:
+    service = bare_native_service()
+    calls: list[tuple[str, ...]] = []
+
+    def native(executable: str, *args: str, timeout: int = 600) -> subprocess.CompletedProcess[str]:
+        calls.append((executable, *args))
+        return subprocess.CompletedProcess(args, 0, "", "")
+
+    expected = {
+        "documents": 71, "pages": 1322, "chunks": 1237, "embeddings": 1237,
+        "embedding_dimensions": 1024, "kg_candidates": 1408, "kg_relations": 88,
+        "references": 17, "issued_by": 71, "local_catalogue": 2715, "external_catalogue": 63,
+    }
+    service._native = native  # type: ignore[method-assign]
+    service.database_counts = lambda database=None: dict(expected)  # type: ignore[method-assign]
+    service.database_integrity = lambda database: {  # type: ignore[method-assign]
+        "status": "PASS", "errors": {},
+        "vector_sanity": {"id": 1, "dimensions": 1024, "self_distance": 0.0},
+    }
+    dump = tmp_path / "grdb.dump"
+    dump.write_bytes(b"dump")
+    result = service._restore_rehearsal(dump, expected)
+    restore_name = result["temporary_database"]
+    assert result["status"] == "PASS"
+    assert restore_name != "grdb"
+    assert any(call[0] == "createdb" and restore_name in call for call in calls)
+    assert any(call[0] == "pg_restore" and restore_name in call for call in calls)
+    assert any(call[0] == "dropdb" and restore_name in call for call in calls)
 
 
 def test_artifact_failure_still_attempts_safe_container_cleanup(tmp_path: Path) -> None:

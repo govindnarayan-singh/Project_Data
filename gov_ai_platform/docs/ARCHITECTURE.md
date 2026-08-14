@@ -163,8 +163,8 @@ External acquisition is a separate security boundary under
 `knowledge_engine.external_acquisition`. Its PostgreSQL catalogue records
 discovery and provenance but never creates documents, chunks, vectors, or
 edges. Sources come from an explicit official registry and queries are
-deterministic. Future authorized downloads go first to
-`data/acquisition/quarantine` and must pass HTTPS/domain, redirect, timeout,
+deterministic. Authorized network bytes go first to configured
+`EXTERNAL_INCOMING_ROOT` and must pass HTTPS/domain, redirect, timeout,
 size, content-type, PDF-signature, filename, hash, and identity gates. See
 `docs/EXTERNAL_ACQUISITION.md`.
 
@@ -176,7 +176,7 @@ Frozen unresolved target
   → configured official adapter
   → minimal public identity query
   → official result and canonical landing page
-  → official PDF in quarantine
+  → official PDF bytes stored in local Incoming
   → parsed PDF title/year identity probe
   → AUTO_VERIFIED_READY manifest (not ingestion)
 ```
@@ -194,32 +194,33 @@ Administrative documents now carry an explicit `source_origin`: `LOCAL_ORIGINAL`
 ## Permanent external document archive V2
 
 `GR_ROOT` remains the unchanged 2,715-file Maharashtra collection.
-`EXTERNAL_ACQUISITION_ROOT` is controlled quarantine/evidence storage only.
+`EXTERNAL_INCOMING_ROOT` is controlled staging/evidence storage only.
 `EXTERNAL_DOCUMENT_ROOT` is the persistent immutable archive for verified
 official external documents.
 
 ```text
-official source → quarantine → PDF/identity/provenance verification
+official source → Incoming → local PDF/identity/provenance verification
   → controlled immutable archive path → AUTO_VERIFIED_READY
   → later separately authorized ingestion
 ```
 
 The source resolver maps only the closed `LOCAL_ORIGINAL` and
 `EXTERNAL_OFFICIAL` classes to configured roots; HTTP callers cannot select a
-filesystem root. Catalogue and document provenance retain quarantine evidence
+filesystem root. Catalogue and document provenance retain Incoming evidence
 separately from archive root identity, relative archive path, original remote
 filename, safe local filename, SHA-256, size, timestamps, authority, adapter,
 and identity state. Kind directories are controlled and archive filenames are
 identity-derived, Windows-safe, collision-resistant, and SHA-suffixed.
 
-## Sovereign database backup and External Acquisition V2.1
+## Native database runtime and External Acquisition V2.2
 
-The Podman volume is operational storage, not the sovereign backup. The
-`knowledge_engine.backup` boundary invokes PostgreSQL 17 logical tools inside
-the existing container, copies custom/globals/schema artifacts to configured
-Windows `BACKUP_ROOT`, inventories both permanent PDF roots, and performs a
-full isolated restore before declaring PASS. pgvector remains native PostgreSQL
-table data; vectors are not exported to CSV. See
+Native Windows PostgreSQL 17.11 with pgvector 0.8.6 on `127.0.0.1:5434` is the
+normal database runtime. Podman is rollback-only. The `knowledge_engine.backup`
+boundary invokes the configured native PostgreSQL logical tools, writes
+custom/globals/schema artifacts to Windows `BACKUP_ROOT`, inventories both
+permanent PDF roots, and performs a full isolated restore before declaring
+PASS. Vectors remain native PostgreSQL table data and are never exported to
+CSV. See
 `docs/DATABASE_BACKUP_AND_RECOVERY.md`.
 
 V2.1 adds structured legal-title quality gates, exact title-suffix/year
@@ -229,3 +230,9 @@ footnotes are rejected before discovery. Existing archived India Code documents
 close truncated target aliases only through matching canonical identity,
 existing acquisition provenance, parseable archive bytes, and exact SHA; they
 never enter a new-ingestion manifest.
+
+V2.2 keeps the exact frozen 30 targets and adds issuer-scoped Maharashtra
+department adapters. Every response body is atomically staged in Incoming;
+PDF parsing, identity checks, SHA calculation, and archive promotion then read
+only local bytes. A manifest can reference only immutable `EXTERNAL_OFFICIAL`
+paths. Network content is never used as the post-staging document of record.

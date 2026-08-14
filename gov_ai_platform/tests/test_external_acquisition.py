@@ -1,3 +1,4 @@
+import hashlib
 import io
 import socket
 import urllib.error
@@ -35,7 +36,12 @@ from knowledge_engine.external_acquisition.registry import (
     validate_registry,
 )
 from knowledge_engine.external_acquisition.service import ExternalAcquisitionService
-from knowledge_engine.external_acquisition.storage import safe_filename, store_verified_file, validate_pdf
+from knowledge_engine.external_acquisition.storage import (
+    safe_filename,
+    stage_incoming_file,
+    store_verified_file,
+    validate_pdf,
+)
 
 
 FIXTURES = Path(__file__).parent / "fixtures" / "external"
@@ -282,6 +288,17 @@ def test_storage_rejects_non_pdf_and_server_filename_is_never_used(tmp_path):
     assert safe_filename("a/b\\c") == "a_b_c.pdf"
     with pytest.raises(ValueError):
         store_verified_file(tmp_path, identifier="bad", body=b"MZ executable")
+
+
+def test_incoming_stages_bytes_before_local_pdf_verification(tmp_path):
+    incoming, digest, created = stage_incoming_file(
+        tmp_path, identifier="../../unsafe name", body=b"MZ executable"
+    )
+    assert created is True
+    assert incoming.parent == tmp_path.resolve()
+    assert hashlib.sha256(incoming.read_bytes()).hexdigest() == digest
+    with pytest.raises(ValueError, match="PDF signature"):
+        validate_pdf(incoming.read_bytes())
 
 
 def test_mock_search_and_landing_fixtures_expose_supported_links():

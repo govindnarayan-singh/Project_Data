@@ -63,15 +63,19 @@ def _is_within(path: Path, root: Path) -> bool:
         return False
 
 
+def _incoming_root() -> Path:
+    return getattr(settings, "external_incoming_root", settings.external_acquisition_root)
+
+
 def ensure_archive_root(root: Path | None = None) -> Path:
     root = root or settings.external_document_root
     resolved = root.resolve(strict=False)
     gr_root = settings.gr_root.resolve(strict=False)
-    quarantine = settings.external_acquisition_root.resolve(strict=False)
+    incoming = _incoming_root().resolve(strict=False)
     if resolved == gr_root or _is_within(resolved, gr_root) or _is_within(gr_root, resolved):
         raise ArchiveSafetyError("EXTERNAL_DOCUMENT_ROOT must not overlap GR_ROOT")
-    if resolved == quarantine or _is_within(resolved, quarantine) or _is_within(quarantine, resolved):
-        raise ArchiveSafetyError("EXTERNAL_DOCUMENT_ROOT must not overlap acquisition quarantine")
+    if resolved == incoming or _is_within(resolved, incoming) or _is_within(incoming, resolved):
+        raise ArchiveSafetyError("EXTERNAL_DOCUMENT_ROOT must not overlap EXTERNAL_INCOMING_ROOT")
     resolved.mkdir(parents=True, exist_ok=True)
     probe = resolved / f".archive-write-probe-{uuid.uuid4().hex}"
     try:
@@ -141,15 +145,15 @@ def promote_verified_file(
     root: Path | None = None,
 ) -> ArchiveResult:
     source = source_path.resolve(strict=True)
-    quarantine = settings.external_acquisition_root.resolve(strict=True)
-    if not _is_within(source, quarantine):
-        raise ArchiveSafetyError("Only controlled quarantine files may be promoted")
+    incoming = _incoming_root().resolve(strict=True)
+    if not _is_within(source, incoming):
+        raise ArchiveSafetyError("Only controlled Incoming files may be promoted")
     if source.suffix.casefold() != ".pdf":
         raise ArchiveSafetyError("Only PDF files may be archived")
     body = source.read_bytes()
     digest = hashlib.sha256(body).hexdigest()
     if digest != expected_sha256.casefold():
-        raise ArchiveSafetyError("Quarantine SHA-256 does not match verified provenance")
+        raise ArchiveSafetyError("Incoming SHA-256 does not match verified provenance")
     source_size = len(body)
     probe = validate_pdf(body)
     archive_root = ensure_archive_root(root)
@@ -176,7 +180,7 @@ def promote_verified_file(
     archived = destination.read_bytes()
     archived_digest = hashlib.sha256(archived).hexdigest()
     if len(archived) != source_size or archived_digest != digest or archived != body:
-        raise ArchiveSafetyError("Archived source is not byte-identical to quarantine")
+        raise ArchiveSafetyError("Archived source is not byte-identical to Incoming")
     validate_pdf(archived)
     try:
         destination.chmod(0o444)

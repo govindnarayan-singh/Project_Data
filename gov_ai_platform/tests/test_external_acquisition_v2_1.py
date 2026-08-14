@@ -6,9 +6,12 @@ from pathlib import Path
 from knowledge_engine.external_acquisition.adapters import (
     DivyangSahayakSource,
     IndiaCodeSource,
+    MaharashtraDepartmentSource,
     _OfficialIndexParser,
 )
 from knowledge_engine.external_acquisition.identity import (
+    administrative_pdf_identifier,
+    legal_pdf_corroborates,
     legal_identity_quality,
     legal_version_semantics,
     verify_identity,
@@ -47,6 +50,16 @@ def test_title_suffix_plus_exact_year_is_deterministic_match() -> None:
         reference("TRIBUNAL_ACT_2010"),
         discovered_title="The National Green Tribunal Act, 2011",
     ).status == "MISMATCH"
+
+
+def test_short_structured_legal_alias_requires_its_token_and_exact_year_in_local_pdf() -> None:
+    target = reference("TRIBUNAL_ACT_2010")
+    matched, evidence = legal_pdf_corroborates(
+        target, "The National Green Tribunal Act, 2010"
+    )
+    assert matched is True
+    assert evidence["required_token_count"] == 1
+    assert legal_pdf_corroborates(target, "The National Green Tribunal Act, 2011")[0] is False
 
 
 def test_principal_amendment_and_consolidated_versions_stay_distinct() -> None:
@@ -118,3 +131,46 @@ def test_v21_closure_baseline_includes_archive_already_promoted_by_v2() -> None:
     normalized = _normalize_v21_closure_baseline(before, after)
     assert normalized["local_archived_availability_closure"]["numerator"] == 12
     assert before["local_archived_availability_closure"]["numerator"] == 7
+
+
+def test_administrative_identity_is_extracted_from_local_pdf_probe() -> None:
+    target = reference(
+        "अभियान-2021/प्र.क्र.57/तां.क.1",
+        kind="GOVERNMENT_RESOLUTION",
+        issuer="Environment Department",
+    )
+    identifier, evidence = administrative_pdf_identifier(
+        target,
+        "महाराष्ट्र शासन\nशासन निर्णय क्रमांक अभियान-2021/प्र.क्र.57/तां.क.1\n",
+    )
+    assert identifier == target.normalized_identifier
+    assert evidence["local_pdf_identifier_found"] is True
+
+
+def test_department_adapter_is_reusable_and_defers_identity_to_local_pdf(tmp_path: Path) -> None:
+    definition = next(source for source in SOURCE_REGISTRY if source.source_id == "maharashtra_finance")
+    adapter = MaharashtraDepartmentSource(definition, cache_dir=tmp_path)
+    target = reference(
+        "संलेको-2021/प्र.क्र.177/कोषाप्रशा-2",
+        kind="GOVERNMENT_ORDER",
+        issuer="Finance Department",
+    )
+
+    class Client:
+        def fetch(self, url, expected_pdf=False):
+            from knowledge_engine.external_acquisition.network import FetchResult
+
+            body = b'<a href="/document/example-order/">Example order</a>'
+            return FetchResult(url, url, "text/html", body)
+
+    adapter.client = Client()  # type: ignore[assignment]
+    rows = adapter.search(target)
+    assert len(rows) == 1
+    assert rows[0].landing_url == "https://finance.maharashtra.gov.in/document/example-order/"
+    assert rows[0].identity_match_status == "NOT_EVALUATED"
+    assert rows[0].raw_source_evidence["identity_deferred_to_local_pdf"] is True
+    assert not adapter.supports(reference(
+        target.normalized_identifier,
+        kind="GOVERNMENT_ORDER",
+        issuer="Environment Department",
+    ))

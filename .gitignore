@@ -13,6 +13,11 @@ __pycache__/
 
 # Input documents and generated data
 GRs/
+Government_Documents/
+PostgreSQL/
+Backups/
+build/
+installers/
 cache_local/
 logs/
 metadata/

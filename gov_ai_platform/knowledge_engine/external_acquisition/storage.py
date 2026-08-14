@@ -55,4 +55,25 @@ def store_verified_file(root: Path, *, identifier: str, body: bytes) -> tuple[Pa
     return target, digest, True
 
 
-__all__ = ["PdfProbe", "safe_filename", "store_verified_file", "validate_pdf"]
+def stage_incoming_file(root: Path, *, identifier: str, body: bytes) -> tuple[Path, str, bool]:
+    """Atomically retain downloaded bytes before any document-level trust gate."""
+    if not body:
+        raise ValueError("Incoming payload is empty")
+    resolved_root = root.resolve()
+    resolved_root.mkdir(parents=True, exist_ok=True)
+    digest = hashlib.sha256(body).hexdigest()
+    target = (resolved_root / safe_filename(f"{identifier}-{digest[:12]}")).resolve()
+    target.relative_to(resolved_root)
+    if target.exists():
+        if hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+            raise ValueError("Existing incoming file has a conflicting hash")
+        return target, digest, False
+    temporary = target.with_suffix(target.suffix + ".tmp")
+    temporary.write_bytes(body)
+    temporary.replace(target)
+    return target, digest, True
+
+
+__all__ = [
+    "PdfProbe", "safe_filename", "stage_incoming_file", "store_verified_file", "validate_pdf",
+]

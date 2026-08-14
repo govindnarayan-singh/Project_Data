@@ -97,6 +97,9 @@ def validate_backup_root(root: Path) -> Path:
 class DatabaseIdentity:
     name: str
     user: str
+    host: str = "127.0.0.1"
+    port: str = "5432"
+    password: str = ""
 
 
 class BackupService:
@@ -105,6 +108,10 @@ class BackupService:
         self.runner = runner or SubprocessRunner()
         self.container = settings.postgres_container
         self.podman = shutil.which("podman") or "podman"
+        self.mode = settings.postgres_backup_mode
+        if self.mode not in {"native", "podman"}:
+            raise BackupError("POSTGRES_BACKUP_MODE must be native or podman")
+        self.postgres_bin = settings.postgres_bin.resolve(strict=False)
         self.database = self._database_identity()
 
     @staticmethod
@@ -118,10 +125,33 @@ class BackupService:
             raise BackupError("DATABASE_URL has an unsafe or missing database name")
         if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_$-]*", user):
             raise BackupError("DATABASE_URL has an unsafe or missing user")
-        return DatabaseIdentity(name=name, user=user)
+        return DatabaseIdentity(
+            name=name,
+            user=user,
+            host=str(values.get("host") or "127.0.0.1"),
+            port=str(values.get("port") or "5432"),
+            password=str(values.get("password") or ""),
+        )
 
     def _podman(self, *args: str, timeout: int = 600) -> subprocess.CompletedProcess[str]:
         return self.runner.run([self.podman, *args], timeout=timeout)
+
+    def _native(self, executable: str, *args: str, timeout: int = 600) -> subprocess.CompletedProcess[str]:
+        tool = self.postgres_bin / f"{executable}.exe"
+        if not tool.is_file():
+            raise BackupError(f"Native PostgreSQL tool is missing: {tool}")
+        environment = os.environ.copy()
+        if self.database.password:
+            environment["PGPASSWORD"] = self.database.password
+        return subprocess.run(
+            [str(tool), *args], check=True, capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=timeout, env=environment,
+        )
+
+    def _native_connection_args(self) -> list[str]:
+        return [
+            "-h", self.database.host, "-p", self.database.port, "-U", self.database.user,
+        ]
 
     def _connect(self, database: str | None = None):
         import psycopg
@@ -194,7 +224,9 @@ class BackupService:
             "postgresql_version": version,
             "pgvector_version": extensions.get("vector", "NOT_INSTALLED"),
             "pg_trgm_version": extensions.get("pg_trgm", "NOT_INSTALLED"),
-            "container": self.container,
+            "runtime_mode": getattr(self, "mode", "podman"),
+            "native_postgres_bin": str(getattr(self, "postgres_bin", "")),
+            "container": self.container if getattr(self, "mode", "podman") == "podman" else "ROLLBACK_ONLY",
         }
 
     def _inventory_catalogues(self) -> tuple[dict[str, dict[str, Any]], dict[str, dict[str, Any]]]:
@@ -279,6 +311,29 @@ class BackupService:
         }
 
     def _create_database_artifacts(self, snapshot_id: str, database_dir: Path) -> tuple[dict[str, Path], str]:
+        if getattr(self, "mode", "podman") == "native":
+            local = {
+                "grdb.dump": database_dir / "grdb.dump",
+                "globals.sql": database_dir / "globals.sql",
+                "schema.sql": database_dir / "schema.sql",
+            }
+            connection = self._native_connection_args()
+            self._native(
+                "pg_dump", *connection, "-d", self.database.name, "-Fc", "-f", str(local["grdb.dump"])
+            )
+            self._native(
+                "pg_dumpall", *connection, "--globals-only", "-f", str(local["globals.sql"])
+            )
+            self._native(
+                "pg_dump", *connection, "-d", self.database.name, "--schema-only",
+                "--no-owner", "--no-privileges", "-f", str(local["schema.sql"]),
+            )
+            for path in local.values():
+                if not path.is_file() or path.stat().st_size == 0:
+                    raise BackupError(f"Backup artifact is empty or missing: {path}")
+            archive_list = self._native("pg_restore", "--list", str(local["grdb.dump"])).stdout
+            return local, archive_list
+
         temporary = f"/tmp/gov_ai_backup_{snapshot_id}"
         remote = {
             "grdb.dump": f"{temporary}_grdb.dump",
@@ -325,14 +380,25 @@ class BackupService:
         database = f"grdb_restore_check_{datetime.now().strftime('%Y%m%d%H%M%S')}_{suffix}"
         if not SAFE_RESTORE_DATABASE.fullmatch(database):
             raise BackupError("Unsafe restore database name")
+        native = getattr(self, "mode", "podman") == "native"
         remote_dump = f"/tmp/{database}.dump"
         created = False
         removed = False
         try:
-            self._podman("cp", str(dump), f"{self.container}:{remote_dump}")
-            self._podman("exec", self.container, "createdb", "-U", self.database.user, "-T", "template0", database)
+            if native:
+                connection = self._native_connection_args()
+                self._native("createdb", *connection, "-T", "template0", database)
+            else:
+                self._podman("cp", str(dump), f"{self.container}:{remote_dump}")
+                self._podman("exec", self.container, "createdb", "-U", self.database.user, "-T", "template0", database)
             created = True
-            self._podman("exec", self.container, "pg_restore", "-U", self.database.user, "-d", database, "--no-owner", "--no-privileges", "--exit-on-error", remote_dump, timeout=1200)
+            if native:
+                self._native(
+                    "pg_restore", *self._native_connection_args(), "-d", database,
+                    "--no-owner", "--no-privileges", "--exit-on-error", str(dump), timeout=1200,
+                )
+            else:
+                self._podman("exec", self.container, "pg_restore", "-U", self.database.user, "-d", database, "--no-owner", "--no-privileges", "--exit-on-error", remote_dump, timeout=1200)
             restored = self.database_counts(database)
             integrity = self.database_integrity(database)
             count_keys = (
@@ -358,14 +424,18 @@ class BackupService:
         finally:
             if created:
                 try:
-                    self._podman("exec", self.container, "dropdb", "-U", self.database.user, "--if-exists", database)
+                    if native:
+                        self._native("dropdb", *self._native_connection_args(), "--if-exists", database)
+                    else:
+                        self._podman("exec", self.container, "dropdb", "-U", self.database.user, "--if-exists", database)
                     removed = True
                 except Exception:
                     removed = False
-            try:
-                self._podman("exec", self.container, "rm", "-f", remote_dump, timeout=60)
-            except Exception:
-                pass
+            if not native:
+                try:
+                    self._podman("exec", self.container, "rm", "-f", remote_dump, timeout=60)
+                except Exception:
+                    pass
             self._last_restore_cleanup = {"database": database, "removed": removed}
 
     def _git_commit(self) -> str:
@@ -412,7 +482,7 @@ class BackupService:
         checksums = {path.relative_to(snapshot).as_posix(): sha256_file(path) for path in checksum_targets}
         manifest = {
             "snapshot_id": snapshot_id, "created_at": now.isoformat(),
-            "project_state": "External Acquisition V2 complete; search corpus frozen at 71 documents",
+            "project_state": "Native Windows PostgreSQL 17; search corpus frozen at 71 documents",
             **info, "database_name": self.database.name, **before,
             **inventories, "git_commit": self._git_commit(),
             "backup_files": {name: {"path": path.relative_to(snapshot).as_posix(), "bytes": path.stat().st_size, "sha256": checksums[path.relative_to(snapshot).as_posix()]} for name, path in artifacts.items()},
@@ -440,6 +510,25 @@ class BackupService:
         return summary
 
     def restore_instructions(self, snapshot_id: str) -> str:
+        if getattr(self, "mode", "podman") == "native":
+            return f"""# Restore snapshot `{snapshot_id}`
+
+The custom-format `database/grdb.dump` is authoritative. The normal runtime is
+native Windows PostgreSQL 17 with pgvector installed. Keep `globals.sql`
+protected because role dumps can contain password hashes. Never overwrite a
+running production database.
+
+```powershell
+$pgbin = '{self.postgres_bin}'
+& "$pgbin\\createdb.exe" -h {self.database.host} -p {self.database.port} -U {self.database.user} -T template0 {self.database.name}
+& "$pgbin\\pg_restore.exe" -h {self.database.host} -p {self.database.port} -U {self.database.user} -d {self.database.name} --no-owner --no-privileges --exit-on-error database\\grdb.dump
+& "$pgbin\\psql.exe" -h {self.database.host} -p {self.database.port} -U {self.database.user} -d {self.database.name} -c "SELECT extname,extversion FROM pg_extension ORDER BY extname;"
+```
+
+Configure `GR_ROOT`, `EXTERNAL_INCOMING_ROOT`, and `EXTERNAL_DOCUMENT_ROOT`,
+verify `metadata/database_counts.json`, run `python manage.py check`, and then
+start Django. Podman is rollback-only and is not part of this restore path.
+"""
         return f"""# Restore snapshot `{snapshot_id}`
 
 The custom-format `database/grdb.dump` is authoritative. Keep `globals.sql`

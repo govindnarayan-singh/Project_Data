@@ -226,7 +226,7 @@ GR search CAPTCHA is not bypassed. Seven Act targets were queried through India
 Code; 21 official candidates were discovered.
 
 Five Act targets are AUTO_VERIFIED_READY after official landing-page, PDF,
-parsed-title/year, authority, hash, quarantine, and provenance gates. The
+parsed-title/year, authority, hash, local staging, and provenance gates. The
 Rights of Persons with Disabilities Act remains AMBIGUOUS due to original and
 amended official variants, and the generic Amendment Act target is an identity
 mismatch. The five-row manifest SHA-256 is
@@ -286,3 +286,26 @@ remained unavailable. The runtime could not reach the new official Divyang
 Sahayak domain, so all 16 CAPTCHA targets remain source-blocked and no CAPTCHA
 was bypassed. No new document reached AUTO_VERIFIED_READY; the V2.1 manifest is
 empty. Search/KG counts and dense retrieval remain unchanged.
+
+## Native PostgreSQL and External Acquisition V2.2 (2026-08-14)
+
+The application now uses native Windows PostgreSQL 17.11 plus pgvector 0.8.6
+at `127.0.0.1:5434`; Podman is rollback-only. The verified sovereign dump was
+restored with exact counts of 71 documents, 1,322 pages, 1,237 chunks, and
+1,237 valid 1,024-D vectors. Django is configured through the local `.env` for
+the native database.
+
+The new native snapshot
+`20260814T223701+0530_native-windows-v1` is 10,763,722 bytes with SHA-256
+`f3407b82d6922c00b899186e5bcfb8469d46f0716fb4e93c364912e381bc6c86`.
+Its isolated restore passed all relational and vector checks, was removed, and
+left production unchanged.
+
+External acquisition is now genuinely local-first: Internet bytes are stored
+under `Government_Documents/Incoming`, verification rereads only that local
+file, and accepted exact bytes are promoted to `External_Official`. V2.2 ran
+the same frozen 30 targets, found 12 candidates, validated nine local PDFs,
+produced four exact matches, preserved two ambiguous groups, and archived one
+new National Green Tribunal Act. The one-row V2.2 manifest uses only the
+permanent archive. No ingestion occurred; searchable corpus, KG, vectors, and
+retrieval semantics remain unchanged.

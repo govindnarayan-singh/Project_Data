@@ -22,7 +22,7 @@ def _resolve_path(value: str) -> Path:
 class Settings:
     gr_root: Path = _resolve_path(os.getenv("GR_ROOT", "../GRs"))
     cache_dir: Path = _resolve_path(os.getenv("CACHE_DIR", "../.cache_local"))
-    database_url: str = os.getenv("DATABASE_URL", "postgresql://gr_user:gr_password@localhost:5433/grdb")
+    database_url: str = os.getenv("DATABASE_URL", "postgresql://gr_user:gr_password@127.0.0.1:5434/grdb")
     embed_model: str = os.getenv("EMBED_MODEL", "BAAI/bge-m3")
     embed_dim: int = int(os.getenv("EMBED_DIM", "1024"))
     tesseract_cmd: str = os.getenv("TESSERACT_CMD", "tesseract")
@@ -33,7 +33,14 @@ class Settings:
     embed_batch_size: int = int(os.getenv("EMBED_BATCH_SIZE", "8"))
     kg_review_mode: str = os.getenv("KG_REVIEW_MODE", "auto")
     kg_auto_ingest_resolved: bool = os.getenv("KG_AUTO_INGEST_RESOLVED", "false").strip().casefold() in {"1", "true", "yes", "on"}
-    external_acquisition_root: Path = _resolve_path(os.getenv("EXTERNAL_ACQUISITION_ROOT", "data/acquisition/quarantine"))
+    # Compatibility name retained for existing catalogue/provenance code. New
+    # acquisition writes land in a durable local Incoming directory first.
+    external_acquisition_root: Path = _resolve_path(
+        os.getenv(
+            "EXTERNAL_INCOMING_ROOT",
+            os.getenv("EXTERNAL_ACQUISITION_ROOT", "../Government_Documents/Incoming"),
+        )
+    )
     external_document_root: Path = _resolve_path(
         os.getenv("EXTERNAL_DOCUMENT_ROOT", "../Government_Documents/External_Official")
     )
@@ -41,6 +48,13 @@ class Settings:
         os.getenv("BACKUP_ROOT", "../Backups/gov_ai_platform")
     )
     backup_keep_last: int = int(os.getenv("BACKUP_KEEP_LAST", "0"))
+    postgres_backup_mode: str = os.getenv("POSTGRES_BACKUP_MODE", "native").strip().casefold()
+    postgres_bin: Path = _resolve_path(
+        os.getenv("POSTGRES_BIN", "../PostgreSQL/17/pgsql/bin")
+    )
+    postgres_data: Path = _resolve_path(
+        os.getenv("POSTGRES_DATA", "../PostgreSQL/data17")
+    )
     postgres_container: str = os.getenv("POSTGRES_CONTAINER", "gr-postgres")
     external_http_timeout_seconds: float = float(os.getenv("EXTERNAL_HTTP_TIMEOUT_SECONDS", "15"))
     external_http_max_bytes: int = int(os.getenv("EXTERNAL_HTTP_MAX_BYTES", str(25 * 1024 * 1024)))
@@ -50,6 +64,10 @@ class Settings:
     external_http_user_agent: str = os.getenv(
         "EXTERNAL_HTTP_USER_AGENT", "GovAIAdministrativeAcquisition/1.0 (+local research)"
     )
+
+    @property
+    def external_incoming_root(self) -> Path:
+        return self.external_acquisition_root
 
 
 settings = Settings()

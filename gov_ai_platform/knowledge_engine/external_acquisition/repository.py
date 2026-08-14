@@ -86,6 +86,8 @@ class ExternalAcquisitionRepository:
                        original_remote_filename=EXCLUDED.original_remote_filename,
                        archive_status=EXCLUDED.archive_status,archived_at=EXCLUDED.archived_at,
                        downloaded_at=EXCLUDED.downloaded_at,updated_at=now()
+                   WHERE external_acquisition_candidates.verification_status<>'AUTO_VERIFIED'
+                      OR EXCLUDED.verification_status='AUTO_VERIFIED'
                    RETURNING id,(xmax=0) AS inserted""",
                 (
                     run_id, reference.target_key, reference.reference_kind, reference.raw_identifier,
@@ -103,6 +105,22 @@ class ExternalAcquisitionRepository:
                     candidate.discovery_status, candidate.sha256,
                 ),
             ).fetchone()
+            if row is None:
+                # The conflict guard deliberately prevents a failed alternate
+                # from downgrading an already verified candidate. Return that
+                # stable catalogue identity so callers retain upsert semantics.
+                row = connection.execute(
+                    """SELECT id,false AS inserted
+                         FROM external_acquisition_candidates
+                        WHERE target_key=%s AND source_adapter=%s AND source_url=%s
+                          AND discovered_identifier=%s""",
+                    (
+                        reference.target_key,
+                        candidate.source_adapter,
+                        candidate.source_url,
+                        candidate.discovered_identifier,
+                    ),
+                ).fetchone()
             connection.commit()
         return int(row["id"]), bool(row["inserted"])
 

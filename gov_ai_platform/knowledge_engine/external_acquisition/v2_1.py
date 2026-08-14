@@ -129,7 +129,7 @@ class ExternalAcquisitionV21Service(v2_module.ExternalAcquisitionV2Service):
             raise ValueError(f"Archived identity SHA mismatch for document {row['document_id']}")
         return dict(row)
 
-    def _download_to_quarantine(
+    def _download_to_incoming(
         self, reference: ReferenceIdentity, adapter, candidate: SourceCandidate,
         ingested_hashes: set[str], local_hashes: set[str],
     ) -> SourceCandidate:
@@ -150,7 +150,7 @@ class ExternalAcquisitionV21Service(v2_module.ExternalAcquisitionV2Service):
                     "download_skipped": "ALREADY_INGESTED",
                 },
             )
-        return super()._download_to_quarantine(reference, adapter, candidate, ingested_hashes, local_hashes)
+        return super()._download_to_incoming(reference, adapter, candidate, ingested_hashes, local_hashes)
 
     @staticmethod
     def _act_number(evidence: str) -> str:
