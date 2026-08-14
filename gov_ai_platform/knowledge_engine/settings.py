@@ -33,6 +33,15 @@ class Settings:
     embed_batch_size: int = int(os.getenv("EMBED_BATCH_SIZE", "8"))
     kg_review_mode: str = os.getenv("KG_REVIEW_MODE", "auto")
     kg_auto_ingest_resolved: bool = os.getenv("KG_AUTO_INGEST_RESOLVED", "false").strip().casefold() in {"1", "true", "yes", "on"}
+    external_acquisition_root: Path = _resolve_path(os.getenv("EXTERNAL_ACQUISITION_ROOT", "data/acquisition/quarantine"))
+    external_http_timeout_seconds: float = float(os.getenv("EXTERNAL_HTTP_TIMEOUT_SECONDS", "15"))
+    external_http_max_bytes: int = int(os.getenv("EXTERNAL_HTTP_MAX_BYTES", str(25 * 1024 * 1024)))
+    external_http_max_redirects: int = int(os.getenv("EXTERNAL_HTTP_MAX_REDIRECTS", "3"))
+    external_http_retry_count: int = int(os.getenv("EXTERNAL_HTTP_RETRY_COUNT", "1"))
+    external_http_rate_delay_seconds: float = float(os.getenv("EXTERNAL_HTTP_RATE_DELAY_SECONDS", "0.5"))
+    external_http_user_agent: str = os.getenv(
+        "EXTERNAL_HTTP_USER_AGENT", "GovAIAdministrativeAcquisition/1.0 (+local research)"
+    )
 
 
 settings = Settings()

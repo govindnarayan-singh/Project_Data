@@ -32,3 +32,9 @@ five digital and three OCR pages, resolves through indexed deterministic keys,
 persists machine-labelled local targets, rejects self/ambiguous matches, and
 writes the safe graph-completion manifest. Catalogue rows never have chunks or
 embeddings.
+
+`closure.py` implements separate mention, exact-target, local-availability,
+known-availability, and document-graph coverage metrics. The sibling
+`knowledge_engine.external_acquisition` package owns official-source adapters,
+deterministic queries, identity gates, network/download safety, quarantine, and
+the non-search external catalogue.

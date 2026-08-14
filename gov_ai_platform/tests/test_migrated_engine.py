@@ -59,6 +59,14 @@ class MetadataTests(unittest.TestCase):
         metadata = extract_metadata("महाराष्ट्र शासन", "Test", file_name)
         self.assertEqual(metadata["gr_date_source"], "filename")
 
+    def test_earliest_labelled_date_wins_across_named_and_numeric_formats(self):
+        text = (
+            "\u0926\u093f\u0928\u093e\u0902\u0915 :-12 \u090f\u092a\u094d\u0930\u093f\u0932, 2023\n"
+            "body reference \u0926\u093f.17.04.2015"
+        )
+        metadata = extract_metadata(text, "Test", "19990101-wrong.pdf")
+        self.assertEqual(metadata["gr_date"], date(2023, 4, 12))
+
 
 class PdfDecisionTests(unittest.TestCase):
     def test_character_weighted_confidence(self):

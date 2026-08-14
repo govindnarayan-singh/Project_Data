@@ -143,6 +143,7 @@ class CorpusIdentityService:
 
     def build_catalogue(self, *, resume: bool = True, workers: int = 8) -> dict[str, Any]:
         started = time.perf_counter()
+        link_reconciliation = self.repository.reconcile_catalogue_ingested_links()
         ingested_by_path, ingested_by_sha = self.repository.ingested_identities()
         inventory_started = time.perf_counter()
         inventory = build_inventory(
@@ -207,6 +208,7 @@ class CorpusIdentityService:
             "ocr_attempted_pdfs_this_run": sum(bool(item["ocr_pages"]) for item in timings),
             "quality_statuses": dict(quality_counts),
             "slowest_identity_probes": sorted(timings, key=lambda item: -item["elapsed_seconds"])[:20],
+            "ingested_link_reconciliation": link_reconciliation,
         }
         return {"summary": summary, "rows": rows, "inventory": inventory}
 

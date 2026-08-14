@@ -333,9 +333,13 @@ def run(
                 value["selection_key"],
             ),
         )
-        selected_smoke.extend(extras[: 10 - len(selected_smoke)])
-        if len(selected_smoke) != 10:
-            raise ValueError(f"Expected 10 passing smoke tests, got {len(selected_smoke)}")
+        smoke_target = min(10, len(new_documents))
+        selected_smoke.extend(extras[: smoke_target - len(selected_smoke)])
+        if len(selected_smoke) != smoke_target:
+            raise ValueError(
+                f"Expected {smoke_target} passing smoke tests for {len(new_documents)} new documents, "
+                f"got {len(selected_smoke)}"
+            )
         smoke_rows: list[dict[str, Any]] = []
         for selected in selected_smoke:
             document = selected["document"]

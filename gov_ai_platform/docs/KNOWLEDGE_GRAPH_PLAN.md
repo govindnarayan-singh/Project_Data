@@ -217,3 +217,18 @@ The measured outcome supports **C. EXPAND CORPUS FROM OTHER SOURCES**: 109
 groups appear truly absent, 65 are unstored Acts/Rules, 24 are external/non-GR,
 and five are damaged/incomplete; six remain locally ambiguous. Do not treat a
 five-row batch as graph completion.
+
+## KG Brain Phase V2 results
+
+The automated five-document loop is proven: five ingestions and five intended
+AUTO_VERIFIED REFERENCES closures, each with evidence provenance. The expanded
+documents added one reciprocal reference. Unchanged KG replay inserted zero
+candidates, relations, and evidence; no strong-relation rule was weakened.
+
+`knowledge_engine.graph.closure` separately measures parseable mention closure,
+exact normalized target closure, local availability, known availability, and
+validated document-graph coverage. ISSUED_BY is excluded. External Acquisition
+V1 uses an official registry, deterministic queries, and non-search lifecycle
+states. Live query egress was blocked by environment policy, so the next action
+is **B. HARDEN EXTERNAL ACQUISITION** after explicit authorization, not
+graph-aware retrieval.

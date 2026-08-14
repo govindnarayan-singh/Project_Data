@@ -152,3 +152,18 @@ lives here, and traversal is simple. Neo4j would introduce dual-write and
 synchronization risk. Evaluate it only after measured need: tens/hundreds of
 thousands of validated edges, frequent multi-hop queries, a demonstrated
 PostgreSQL traversal bottleneck, or required interactive graph algorithms.
+
+## Local closure and external acquisition V1
+
+The controlled loop is now `RESOLVED_LOCAL target -> frozen manifest -> atomic
+ingestion -> deterministic KG re-resolution -> AUTO_VERIFIED REFERENCES with
+evidence`. Catalogue rows remain non-search records.
+
+External acquisition is a separate security boundary under
+`knowledge_engine.external_acquisition`. Its PostgreSQL catalogue records
+discovery and provenance but never creates documents, chunks, vectors, or
+edges. Sources come from an explicit official registry and queries are
+deterministic. Future authorized downloads go first to
+`data/acquisition/quarantine` and must pass HTTPS/domain, redirect, timeout,
+size, content-type, PDF-signature, filename, hash, and identity gates. See
+`docs/EXTERNAL_ACQUISITION.md`.

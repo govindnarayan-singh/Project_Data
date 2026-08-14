@@ -14,14 +14,14 @@ Completed foundations:
 
 Next measured stages:
 
-1. Expand corpus from authoritative external sources for 203 NOT_FOUND_LOCAL groups
-2. Re-run identity indexing and deterministic resolution for acquired files
-3. Consider controlled ingestion only after a sufficiently strong manifest exists
-4. Repeat versioned KG extraction and evaluation
-5. Independent human review when available
-6. Human-confirmed AMENDS/SUPERSEDES/CANCELS/CORRECTS/EXTENDS relations
-7. Graph-aware retrieval experiment
-8. Hybrid retrieval, reranking, then RAG as separately gated stages
+1. Obtain explicit external-data authorization for the official 20-target batch
+2. Harden official adapters from measured live behavior without bypassing access controls
+3. Verify and quarantine only exact/strong official candidates
+4. Ingest externally only after a non-empty AUTO_VERIFIED/READY manifest exists
+5. Expand the independent KG relationship benchmark
+6. Independent human review when available
+7. Human-confirmed AMENDS/SUPERSEDES/CANCELS/CORRECTS/EXTENDS relations
+8. Graph-aware retrieval only after closure is materially better
 
 Do not begin a later stage without its own baseline, evaluation labels, and
 explicit authorization. Dense retrieval remains unchanged in KG V1.

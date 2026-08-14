@@ -190,3 +190,29 @@ zero. Search storage remains 61 documents, 1,022 pages, and 740
 chunks/embeddings with the same fingerprint. Evidence is under
 `outputs/corpus_identity_v1/`; recommendation: **C. EXPAND CORPUS FROM OTHER
 SOURCES**.
+
+## KG Brain Phase V2 local closure (2026-08-14)
+
+The frozen five-row local manifest retained SHA-256
+`2b0a705996160ad5da54e60c5a4606a4c129405f3b3e9b48cd22418d718e2f1b`.
+All five PDFs ingested and replay skipped all five. The corpus is now 66
+documents, 1,044 pages, and 765 chunks/1,024-dimensional embeddings. A real
+metadata defect was corrected: the earliest labelled header date wins across
+named/numeric formats and accepts compound `:-` separators. Atomic reprocessing
+preserved document IDs.
+
+KG now has 771 candidates and 73 relations: seven REFERENCES and 66 ISSUED_BY.
+All five intended targets closed as provenance-linked AUTO_VERIFIED REFERENCES;
+one additional reciprocal REFERENCES edge was found. KG replay inserted zero
+candidates, relations, or evidence. All 18 strong signals remain unpromoted and
+HUMAN_CONFIRMED remains zero.
+
+Closure before -> after: reference mentions 1/374 -> 8/392, referenced targets
+1/238 -> 7/252, local/known availability 6/238 -> 7/252, and graph document
+coverage 2/61 -> 12/66. Frozen Recall@5/@10 remains 100%; only Q006 changed
+rank, with no Top-10 pass-to-fail transition.
+
+External Acquisition V1 selected 20 of 237 eligible unresolved targets. The
+environment blocked live query egress, so all 20 attempts are BLOCKED, no file
+was downloaded or verified, and the external manifest is empty. Evidence is
+under `outputs/kg_brain_phase_v2/`.

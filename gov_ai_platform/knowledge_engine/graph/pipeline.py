@@ -26,10 +26,15 @@ class KnowledgeGraphPipeline:
         self.quality_policy = quality_policy or QualityPolicy.from_csv()
         self.validation_policy = validation_policy or KnowledgeGraphValidationPolicy.from_env()
 
-    def run(self, *, auto_verify_enabled: bool, expected_documents: int = 61) -> tuple[GraphRunResult, dict[str, int]]:
+    def run(
+        self,
+        *,
+        auto_verify_enabled: bool,
+        expected_documents: int | None = None,
+    ) -> tuple[GraphRunResult, dict[str, int]]:
         wall_started = time.perf_counter()
         documents, pages = self.repository.load_corpus()
-        if len(documents) != expected_documents:
+        if expected_documents is not None and len(documents) != expected_documents:
             raise ValueError(f"Expected exactly {expected_documents} controlled documents, found {len(documents)}")
         pages_by_document: dict[int, list[dict]] = defaultdict(list)
         for page in pages:

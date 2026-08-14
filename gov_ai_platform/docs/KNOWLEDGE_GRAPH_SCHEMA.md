@@ -136,3 +136,16 @@ validation, ingestion eligibility, and timestamp. A consistency constraint
 requires a catalogue target exactly for `RESOLVED_LOCAL_EXACT` or
 `RESOLVED_LOCAL_STRONG`. No fake `documents` row is permitted. Self/page-header
 identities are `SOURCE_UNPARSEABLE`, not edges.
+
+## External acquisition schema (migration 004)
+
+`external_acquisition_runs` records restartable run state.
+`external_acquisition_candidates` is a non-search catalogue keyed idempotently
+by exact target, adapter, URL, and discovered identifier. It retains raw and
+normalized identity, query, authority class, discovery/identity/acquisition/
+verification states, URLs, title/date/issuer evidence, hashes/file facts,
+adapter evidence, priority, and timestamps.
+
+`INGESTED`, `LOCAL_CATALOGUED`, `EXTERNAL_DISCOVERED`, `EXTERNAL_VERIFIED`, and
+`NOT_FOUND` are distinct. READY_FOR_INGESTION requires an AUTO_VERIFIED acquired
+path and SHA-256; discovery cannot create a fake search document.

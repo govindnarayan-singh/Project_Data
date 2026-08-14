@@ -82,6 +82,47 @@ class CorpusIdentityRepository:
         by_sha = {str(row["sha256"]): int(row["id"]) for row in rows}
         return by_path, by_sha
 
+    def reconcile_catalogue_ingested_links(self) -> dict[str, int]:
+        """Refresh catalogue-to-search-document links without re-probing PDFs."""
+        with self.connect() as connection:
+            catalogue = connection.execute(
+                "SELECT id,relative_path,sha256,ingested_document_id FROM local_document_catalog ORDER BY id"
+            ).fetchall()
+            documents = connection.execute(
+                "SELECT id,file_path,sha256 FROM documents ORDER BY id"
+            ).fetchall()
+            by_path = {
+                str(row["file_path"]).replace("\\", "/").casefold(): int(row["id"])
+                for row in documents
+            }
+            by_sha = {str(row["sha256"]): int(row["id"]) for row in documents}
+            updates = 0
+            with connection.transaction():
+                for row in catalogue:
+                    path_target = by_path.get(str(row["relative_path"]).replace("\\", "/").casefold())
+                    sha_target = by_sha.get(str(row["sha256"]))
+                    if path_target is not None and sha_target is not None and path_target != sha_target:
+                        raise ValueError(
+                            f"Catalogue row {row['id']} path and SHA-256 resolve to different documents"
+                        )
+                    target = path_target if path_target is not None else sha_target
+                    if row["ingested_document_id"] != target:
+                        connection.execute(
+                            "UPDATE local_document_catalog SET ingested_document_id=%s,updated_at=now() WHERE id=%s",
+                            (target, int(row["id"])),
+                        )
+                        updates += 1
+        return {
+            "catalogue_rows": len(catalogue),
+            "ingested_documents": len(documents),
+            "updated_links": updates,
+            "linked_catalogue_rows": sum(
+                (by_path.get(str(row["relative_path"]).replace("\\", "/").casefold())
+                 or by_sha.get(str(row["sha256"]))) is not None
+                for row in catalogue
+            ),
+        }
+
     def upsert_record(self, record: IdentityRecord, connection=None) -> tuple[int, bool]:
         own_connection = connection is None
         active = connection or self.connect()
