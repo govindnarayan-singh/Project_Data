@@ -115,3 +115,24 @@ Dense retrieval and graph traversal remain separate. A future measured phase
 may expand retrieved documents through validated edges while retaining edge
 evidence. No vector score creates or validates an edge, and V1 does not change
 Top-K ranking or semantics.
+
+## Local corpus identity schema (migration 003)
+
+`local_document_catalog` is a persistent identity index for every local PDF,
+including the 61 ingested files. It is deliberately not `documents`: it has no
+pages, chunks, vectors, or search visibility. Unique relative path, SHA-256,
+file size/mtime, catalogue version, and upsert semantics distinguish new,
+unchanged, and changed files. Indexed keys cover number, number/date,
+number/department, number/date/department, legal title/year, and kind.
+
+Identity states are `IDENTIFIED_EXACT`, `IDENTIFIED_PARTIAL`, `NO_IDENTIFIER`,
+`AMBIGUOUS_METADATA`, `EXTRACTION_FAILED`, `NEEDS_OCR`, and `QUALITY_BLOCKED`.
+Raw number/date/department/subject and evidence page/method coexist with every
+normalized value. Acts and Rules use observed title/year canonical keys.
+
+Migration `003_local_corpus_identity_v1.sql` additively extends candidates with
+`resolved_target_catalog_id`, local resolution method/evidence/count, machine
+validation, ingestion eligibility, and timestamp. A consistency constraint
+requires a catalogue target exactly for `RESOLVED_LOCAL_EXACT` or
+`RESOLVED_LOCAL_STRONG`. No fake `documents` row is permitted. Self/page-header
+identities are `SOURCE_UNPARSEABLE`, not edges.

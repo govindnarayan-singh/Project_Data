@@ -188,3 +188,32 @@ resolved + AMBIGUOUS + NOT_IN_CORPUS + NEEDS_REVIEW
 
 SELF_REFERENCE_REJECTED is not a target and UNPARSEABLE lacks a defensible
 identity, so both are excluded. The current rate is 1/374 (0.2674%).
+
+## Local Corpus Identity V1
+
+The hardened acquisition stage now maintains a PostgreSQL identity catalogue
+for all 2,715 local PDFs. Version 1.0.2 used 7,227 bounded digital page probes
+and selectively OCRed 43 pages across 31 PDFs with Tesseract `mar+eng`. Final
+identity status is 1,062 exact and 1,653 partial. It extracted 2,037 unique
+normalized identifiers, 626 text dates, all 2,715 folder departments, and 804
+deterministic document kinds. The 314 duplicate identifier groups were not
+merged.
+
+Resolver V2 evaluated 233 groups: 2 RESOLVED_LOCAL_EXACT, 3
+RESOLVED_LOCAL_STRONG, 6 AMBIGUOUS_LOCAL, 203 NOT_FOUND_LOCAL, 11
+BLOCKED_QUALITY, and 8 SOURCE_UNPARSEABLE self/page-header groups. Exact full
+keys are preferred. Structural series/year/proposal keys require independent
+date or explicit-department corroboration. Filename dates corroborate but are
+never publication proof. No fuzzy edit, subject similarity, or vector identity
+proof is used.
+
+The five eligible targets are frozen in
+`data/manifests/kg_resolved_local_targets_v1.csv` (two Tier B, three Tier C),
+with no ingested/duplicate/missing/outside-root/hash-conflict row. None of the
+18 strong relation signals gained a resolved local target; HUMAN_CONFIRMED is
+zero.
+
+The measured outcome supports **C. EXPAND CORPUS FROM OTHER SOURCES**: 109
+groups appear truly absent, 65 are unstored Acts/Rules, 24 are external/non-GR,
+and five are damaged/incomplete; six remain locally ambiguous. Do not treat a
+five-row batch as graph completion.

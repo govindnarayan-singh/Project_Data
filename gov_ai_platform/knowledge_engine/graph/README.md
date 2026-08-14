@@ -25,3 +25,10 @@ unresolved groups, performs limited digital metadata probes, and produces a
 graph-guided manifest. It never ingests, chunks, embeds, or changes documents.
 
 See `docs/KNOWLEDGE_GRAPH_SCHEMA.md` and `docs/KNOWLEDGE_GRAPH_PLAN.md`.
+
+`knowledge_engine.corpus_identity` is the V2 local identity layer. It stores
+all 2,715 PDF identities outside the search corpus, adaptively probes at most
+five digital and three OCR pages, resolves through indexed deterministic keys,
+persists machine-labelled local targets, rejects self/ambiguous matches, and
+writes the safe graph-completion manifest. Catalogue rows never have chunks or
+embeddings.

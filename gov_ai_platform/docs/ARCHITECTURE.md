@@ -126,3 +126,29 @@ SHA-aware inventory, performs limited digital metadata probes, consolidates
 targets, resolves only deterministic identity matches, ranks transparently,
 and freezes a manifest. It never OCRs the full corpus, chunks, embeds, or writes
 document rows.
+
+## Local corpus identity layer
+
+The identity layer separates an ingested document (`documents` plus pages,
+chunks, and BGE-M3 vectors), a local catalogued document (identity metadata
+only), and an unresolved external document (preserved KG evidence with no
+deterministic local identity).
+
+All 2,715 PDFs are represented in PostgreSQL `local_document_catalog` by safe
+relative path, SHA-256, file facts, raw/normalized administrative identity,
+date, department, kind, subject preview, evidence page/method, quality, and
+version. Digital probing is bounded to five early pages; Tesseract `mar+eng` is
+used only for unusable early headers and is bounded to three pages. Catalogue
+rows never enter retrieval.
+
+KG candidates may point to a real ingested target or a non-search catalogue
+target. Local targets remain machine-labelled and cannot create an authoritative
+edge until ingestion. `KG_AUTO_INGEST_RESOLVED=false` is a future restartable
+batch option and remains disabled.
+
+PostgreSQL remains the V1 graph system of record because graph scale is small,
+provenance and administrative metadata are transactional here, pgvector already
+lives here, and traversal is simple. Neo4j would introduce dual-write and
+synchronization risk. Evaluate it only after measured need: tens/hundreds of
+thousands of validated edges, frequent multi-hop queries, a demonstrated
+PostgreSQL traversal bottleneck, or required interactive graph algorithms.

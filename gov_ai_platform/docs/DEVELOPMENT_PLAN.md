@@ -10,18 +10,18 @@ Completed foundations:
 6. Deterministic reference parsing/resolution, review artifacts, idempotence, and graph detail UI
 7. Production-oriented administrative portal UI with document, graph, corpus, and evaluation workspaces
 8. Configurable automatic KG validation policy and graph-guided local-corpus acquisition V1
+9. Persistent 2,715-PDF local identity catalogue and deterministic resolver V2
 
 Next measured stages:
 
-1. Harden acquisition resolution for the three ambiguous and 212 unmatched groups
-2. Controlled ingestion of a sufficiently strong frozen graph-guided manifest
-3. Repeat versioned KG extraction and evaluation
-4. Independent human review when available
-5. Human-confirmed AMENDS/SUPERSEDES/CANCELS/CORRECTS/EXTENDS relations
-6. Graph-aware retrieval experiment
-7. Hybrid retrieval
-8. Reranking
-9. RAG
+1. Expand corpus from authoritative external sources for 203 NOT_FOUND_LOCAL groups
+2. Re-run identity indexing and deterministic resolution for acquired files
+3. Consider controlled ingestion only after a sufficiently strong manifest exists
+4. Repeat versioned KG extraction and evaluation
+5. Independent human review when available
+6. Human-confirmed AMENDS/SUPERSEDES/CANCELS/CORRECTS/EXTENDS relations
+7. Graph-aware retrieval experiment
+8. Hybrid retrieval, reranking, then RAG as separately gated stages
 
 Do not begin a later stage without its own baseline, evaluation labels, and
 explicit authorization. Dense retrieval remains unchanged in KG V1.

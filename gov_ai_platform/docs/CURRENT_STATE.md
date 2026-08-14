@@ -161,3 +161,32 @@ candidates, and 62 relations. Document graph coverage is 2/61; reference
 resolution is 1/374 using the documented target-bearing denominator. The frozen
 29-question retrieval benchmark remains exactly unchanged. Full evidence is in
 `outputs/graph_guided_expansion_v1/`.
+
+## Local corpus identity and KG resolution V2 (2026-08-13)
+
+Additive migration 003 created a non-search PostgreSQL identity catalogue and
+local-target candidate fields. The verified pre-migration custom backup is
+`outputs/backups/pre_corpus_identity_v1_20260813.dump` (6,041,050 bytes,
+SHA-256 `4e23fec60526f4159b9a3031b08b4edd358cabaf12e3944233445b67f48e5b6f`).
+
+All 2,715 PDFs are catalogued idempotently: 1,062 IDENTIFIED_EXACT and 1,653
+IDENTIFIED_PARTIAL. The build used 7,227 digital probes and 43 selective OCR
+pages across 31 PDFs. It produced 2,037 unique identifiers, 314 duplicate
+identifier groups, 626 text dates, 2,715 departments, and 804 known kinds. No
+full PDF was OCRed, chunked, embedded, or ingested.
+
+Resolution V2 over 233 groups is 2 exact, 3 strong, 6 ambiguous, 203 not found,
+11 quality blocked, and 8 source-unparseable self/page-header groups. Automatic
+local resolution is 2.15%; mention coverage is 1.63%; distinct citing-document
+coverage is 8.93%. The safe five-row manifest contains two Tier B and three Tier
+C targets, SHA-256
+`2b0a705996160ad5da54e60c5a4606a4c129405f3b3e9b48cd22418d718e2f1b`.
+
+The earlier seven-row probe accepted two cases that fail V2 date evidence and
+used source-folder department where no explicit reference department existed.
+V2 does not preserve those assumptions. Five is the defensible result, not a
+forced increase. All 18 strong signals remain candidates and HUMAN_CONFIRMED is
+zero. Search storage remains 61 documents, 1,022 pages, and 740
+chunks/embeddings with the same fingerprint. Evidence is under
+`outputs/corpus_identity_v1/`; recommendation: **C. EXPAND CORPUS FROM OTHER
+SOURCES**.

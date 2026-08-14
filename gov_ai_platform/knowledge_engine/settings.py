@@ -32,6 +32,7 @@ class Settings:
     chunk_overlap_tokens: int = int(os.getenv("CHUNK_OVERLAP_TOKENS", "100"))
     embed_batch_size: int = int(os.getenv("EMBED_BATCH_SIZE", "8"))
     kg_review_mode: str = os.getenv("KG_REVIEW_MODE", "auto")
+    kg_auto_ingest_resolved: bool = os.getenv("KG_AUTO_INGEST_RESOLVED", "false").strip().casefold() in {"1", "true", "yes", "on"}
 
 
 settings = Settings()
