@@ -78,6 +78,10 @@ class ManifestEntry:
     canonical_identity: str = ""
     document_year: int | None = None
     original_acquisition_path: str = ""
+    archive_source_root: str = ""
+    archive_relative_path: str = ""
+    archived_sha256: str = ""
+    archived_at: Any = None
 
     @property
     def file_name(self) -> str:
@@ -491,6 +495,10 @@ class BatchIngestor:
                 document_year=entry.document_year,
                 external_catalogue_id=entry.external_catalogue_id,
                 original_acquisition_path=entry.original_acquisition_path,
+                archive_source_root=entry.archive_source_root,
+                archive_relative_path=entry.archive_relative_path,
+                archived_sha256=entry.archived_sha256,
+                archived_at=entry.archived_at,
             )
         except Exception as error:
             result.database_elapsed_seconds = round(

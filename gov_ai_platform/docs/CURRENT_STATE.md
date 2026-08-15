@@ -309,3 +309,22 @@ produced four exact matches, preserved two ambiguous groups, and archived one
 new National Green Tribunal Act. The one-row V2.2 manifest uses only the
 permanent archive. No ingestion occurred; searchable corpus, KG, vectors, and
 retrieval semantics remain unchanged.
+
+## KG Brain V2 (2026-08-15)
+
+The frozen V2.2 NGT Act was ingested from `External_Official` as document 82:
+23 digital pages, 30 chunks, and 30 1,024-D BGE-M3 embeddings. Archive SHA-256
+remains `1530b1eb8370bee560559341cc53a93ae81e755bd3a04331a03ebc1e9208627f`;
+replay returned `SKIPPED_UNCHANGED`.
+
+The corpus is 72 documents, 1,345 pages, 1,267 chunks/embeddings. Two KG passes
+yield 1,501 candidates and 91 relations (19 REFERENCES, 72 ISSUED_BY); the
+second inserted zero rows. Of 66 strong signals, one explicit signal failed
+parser validity, 62 are context-dependent, and three ambiguous. Strong edges
+and HUMAN_CONFIRMED remain zero.
+
+Topology is 19 document edges, 24 connected documents, 48 isolates, 57 weak
+components, largest component 7, two bounded cycles, and maximum observed
+simple directed depth 3. The 40-case Benchmark V2 has complete provenance and
+all applicable metrics at 100%. All 29 dense ranks are unchanged. Evidence is
+under `outputs/kg_brain_v2/`.

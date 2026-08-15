@@ -67,6 +67,10 @@ class PostgresStorage(PostgresRetrievalRepository):
         document_year: int | None = None,
         external_catalogue_id: int | None = None,
         original_acquisition_path: str = "",
+        archive_source_root: str = "",
+        archive_relative_path: str = "",
+        archived_sha256: str = "",
+        archived_at=None,
     ) -> int:
         from psycopg.types.json import Jsonb
 
@@ -181,7 +185,8 @@ class PostgresStorage(PostgresRetrievalRepository):
                         raise ValueError("External documents require catalogue provenance")
                     candidate = connection.execute(
                         """SELECT id,sha256,acquisition_status,verification_status,
-                                  identity_match_status,discovered_at,downloaded_at,updated_at
+                                  identity_match_status,discovered_at,downloaded_at,updated_at,
+                                  archive_source_root,archive_relative_path,archive_status,archived_at
                              FROM external_acquisition_candidates WHERE id=%s FOR UPDATE""",
                         (external_catalogue_id,),
                     ).fetchone()
@@ -193,6 +198,15 @@ class PostgresStorage(PostgresRetrievalRepository):
                         raise ValueError("External catalogue row is not deterministically verified")
                     if candidate["acquisition_status"] not in {"READY_FOR_INGESTION", "INGESTED"}:
                         raise ValueError("External catalogue row is not ingestion-eligible")
+                    if not (
+                        archive_source_root == "EXTERNAL_OFFICIAL"
+                        and candidate["archive_source_root"] == archive_source_root
+                        and candidate["archive_relative_path"] == archive_relative_path
+                        and candidate["archive_status"] == "EXTERNAL_OFFICIAL_ARCHIVED"
+                        and archived_sha256 == sha256
+                        and candidate["archived_at"] is not None
+                    ):
+                        raise ValueError("External permanent archive provenance is incomplete or inconsistent")
                     lifecycle = (
                         ("DISCOVERED", candidate["discovered_at"]),
                         ("DOWNLOADED", candidate["downloaded_at"]),
@@ -211,13 +225,21 @@ class PostgresStorage(PostgresRetrievalRepository):
                         )
                     connection.execute(
                         """INSERT INTO external_document_provenance(
-                               document_id,external_candidate_id,original_acquisition_path,acquired_sha256)
-                           VALUES (%s,%s,%s,%s)
+                               document_id,external_candidate_id,original_acquisition_path,acquired_sha256,
+                               archive_source_root,archive_relative_path,archived_sha256,archived_at)
+                           VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
                            ON CONFLICT (document_id) DO UPDATE SET
                                external_candidate_id=EXCLUDED.external_candidate_id,
                                original_acquisition_path=EXCLUDED.original_acquisition_path,
-                               acquired_sha256=EXCLUDED.acquired_sha256""",
-                        (document_id, external_catalogue_id, original_acquisition_path, sha256),
+                               acquired_sha256=EXCLUDED.acquired_sha256,
+                               archive_source_root=EXCLUDED.archive_source_root,
+                               archive_relative_path=EXCLUDED.archive_relative_path,
+                               archived_sha256=EXCLUDED.archived_sha256,
+                               archived_at=EXCLUDED.archived_at""",
+                        (
+                            document_id, external_catalogue_id, original_acquisition_path, sha256,
+                            archive_source_root, archive_relative_path, archived_sha256, archived_at,
+                        ),
                     )
                     connection.execute(
                         """UPDATE external_acquisition_candidates

@@ -172,3 +172,13 @@ safe local filename, original remote filename, archive status, and timestamp.
 `external_document_provenance` stores permanent archive linkage separately
 from the original quarantine path, and lifecycle evidence includes the archive
 milestone. Archive state alone never implies search ingestion.
+
+## KG Brain V2 read model (no migration)
+
+Validated `kg_relations`, `kg_relation_evidence`, and
+`kg_reference_candidates` remain the system of record. Recursive traversal
+accepts only validated document edges, an explicit direction, and depth 1–5;
+every hop is hydrated with its original candidate evidence. Source is always
+the actor/citing document and target the affected/cited document. Cycles,
+effect flags, components, priorities, and benchmarks are read-only projections
+or artifacts, not legal facts or persisted relations.

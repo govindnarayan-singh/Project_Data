@@ -277,3 +277,18 @@ through existing provenance; it creates neither graph edges nor availability
 duplicates. Rights Act distinct hashes remain ambiguous versions. Because the
 V2.1 new-document manifest is empty, mention/target/known/archive closure and
 graph document coverage are unchanged.
+
+## KG Brain V2 result
+
+The NGT Act closes and creates references only through exact identity
+resolution. Full extraction produces 1,501 candidates, 19 REFERENCES, and 72
+ISSUED_BY edges. Coverage is 24/72. Live closure is mention 31/1,103,
+referenced target 12/639, local original 7/639, local archived 14/639, and
+known availability 14/639. Denominator growth is retained.
+
+Graph Completion Priority V2 uses documented weights: distinct citing
+documents 20 each, mentions 4, cross-component opportunity 30, strong signals
+15, identifier completeness 8, date 5, issuer 4, up to five quality mentions 2
+each, adapter availability 5, and exact local availability 25. The queue is
+planning only. Benchmark V2 uses traceable source evidence and explicitly is
+not independent human ground truth.

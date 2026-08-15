@@ -1,0 +1,41 @@
+﻿benchmark_id,query_type,source_document_id,expected_targets,expected_relations,expected_path,expected_evidence_pages,max_depth,label_source,notes
+KGB2-001,DIRECT_REFERENCE,24,[23],"[""REFERENCES""]","[24, 23]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 63
+KGB2-002,DIRECT_REFERENCE,7,[65],"[""REFERENCES""]","[7, 65]",[3],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 192
+KGB2-003,DIRECT_REFERENCE,50,[67],"[""REFERENCES""]","[50, 67]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 194
+KGB2-004,DIRECT_REFERENCE,65,[7],"[""REFERENCES""]","[65, 7]",[2],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 195
+KGB2-005,DIRECT_REFERENCE,44,[66],"[""REFERENCES""]","[44, 66]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 264
+KGB2-006,DIRECT_REFERENCE,49,[68],"[""REFERENCES""]","[49, 68]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 265
+KGB2-007,DIRECT_REFERENCE,57,[69],"[""REFERENCES""]","[57, 69]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 268
+KGB2-008,DIRECT_REFERENCE,6,[73],"[""REFERENCES""]","[6, 73]",[340],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 412
+KGB2-009,DIRECT_REFERENCE,8,[74],"[""REFERENCES""]","[8, 74]",[13],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 416
+KGB2-010,DIRECT_REFERENCE,21,[71],"[""REFERENCES""]","[21, 71]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 417
+KGB2-011,DIRECT_REFERENCE,21,[72],"[""REFERENCES""]","[21, 72]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 418
+KGB2-012,DIRECT_REFERENCE,27,[71],"[""REFERENCES""]","[27, 71]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored validated edge 420
+KGB2-013,REVERSE_REFERENCE,23,[24],"[""REFERENCES""]","[24, 23]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 63
+KGB2-014,REVERSE_REFERENCE,65,[7],"[""REFERENCES""]","[7, 65]",[3],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 192
+KGB2-015,REVERSE_REFERENCE,67,[50],"[""REFERENCES""]","[50, 67]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 194
+KGB2-016,REVERSE_REFERENCE,7,[65],"[""REFERENCES""]","[65, 7]",[2],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 195
+KGB2-017,REVERSE_REFERENCE,66,[44],"[""REFERENCES""]","[44, 66]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 264
+KGB2-018,REVERSE_REFERENCE,68,[49],"[""REFERENCES""]","[49, 68]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 265
+KGB2-019,REVERSE_REFERENCE,69,[57],"[""REFERENCES""]","[57, 69]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 268
+KGB2-020,REVERSE_REFERENCE,73,[6],"[""REFERENCES""]","[6, 73]",[340],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 412
+KGB2-021,REVERSE_REFERENCE,74,[8],"[""REFERENCES""]","[8, 74]",[13],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 416
+KGB2-022,REVERSE_REFERENCE,71,[21],"[""REFERENCES""]","[21, 71]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 417
+KGB2-023,REVERSE_REFERENCE,72,[21],"[""REFERENCES""]","[21, 72]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 418
+KGB2-024,REVERSE_REFERENCE,71,[27],"[""REFERENCES""]","[27, 71]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Reverse lookup of stored validated edge 420
+KGB2-025,RELATION_EVIDENCE_PAGE,29,[70],"[""REFERENCES""]","[29, 70]",[1],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Evidence attached to relation 421
+KGB2-026,RELATION_EVIDENCE_PAGE,34,[70],"[""REFERENCES""]","[34, 70]",[5],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Evidence attached to relation 423
+KGB2-027,RELATION_EVIDENCE_PAGE,71,[72],"[""REFERENCES""]","[71, 72]",[10],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Evidence attached to relation 430
+KGB2-028,RELATION_EVIDENCE_PAGE,72,[71],"[""REFERENCES""]","[72, 71]",[19],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Evidence attached to relation 431
+KGB2-029,RELATION_EVIDENCE_PAGE,74,[71],"[""REFERENCES""]","[74, 71]",[29],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Evidence attached to relation 432
+KGB2-030,RELATION_EVIDENCE_PAGE,82,[71],"[""REFERENCES""]","[82, 71]",[6],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Evidence attached to relation 906
+KGB2-031,ISSUED_BY,4,"[""Electronics, Information Technology and Artificial Intelligence Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 64
+KGB2-032,ISSUED_BY,5,"[""Electronics, Information Technology and Artificial Intelligence Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 65
+KGB2-033,ISSUED_BY,6,"[""Environment Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 66
+KGB2-034,ISSUED_BY,7,"[""Finance Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 67
+KGB2-035,ISSUED_BY,8,"[""Housing Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 68
+KGB2-036,ISSUED_BY,9,"[""Marathi Language Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 69
+KGB2-037,ISSUED_BY,10,"[""Minorities Development Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 70
+KGB2-038,ISSUED_BY,11,"[""Parliamentary Affairs Department""]","[""ISSUED_BY""]",[],[],1,AUTO_VERIFIED_SOURCE_EVIDENCE,Stored department edge 71
+KGB2-039,NO_PATH_WITHIN_BOUND,24,[4],[],[],[],3,AUTO_VERIFIED_SOURCE_EVIDENCE,Deterministically isolated target; expectation applies only within max depth
+KGB2-040,SHORTEST_PATH,8,[71],"[""REFERENCES"", ""REFERENCES""]","[8, 74, 71]","[13, 29]",2,AUTO_VERIFIED_SOURCE_EVIDENCE,Observed validated shortest directed chain

@@ -50,3 +50,10 @@ catalogue target may increase known/local-archived availability but cannot
 create an edge until separately authorized ingestion produces a real document
 target and ordinary evidence gates pass. Quarantine never counts as permanent
 archive.
+
+KG Brain V2 adds `traversal.py` for bounded recursive PostgreSQL paths and hop
+provenance, `analytics.py` for effects/topology/completion priority/performance,
+`benchmark_v2.py` for deterministic source-evidence evaluation, and
+`brain_v2.py` for reproducible orchestration. Use `python -m cli.graph --help`
+for inspection. PostgreSQL remains the graph system of record; Neo4j is not
+required.

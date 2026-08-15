@@ -75,3 +75,16 @@ identity-complete.
 Next measured stage: review the V2.2 manifest under a separately authorized
 ingestion task and continue source-specific work for the remaining unresolved
 administrative targets. Do not loosen identity rules or bypass CAPTCHA.
+
+## Completed: Major Knowledge Graph Brain V2
+
+1. Ingested exactly the authorized archived NGT Act and proved unchanged replay.
+2. Re-extracted all 72 documents twice with zero second-run inserts.
+3. Added bounded PostgreSQL traversal, cycle/shortest-path semantics, complete
+   hop provenance, read-only effects, topology metrics, and inspection CLI.
+4. Evaluated every strong signal without weakening gates; none was safe to
+   promote and no HUMAN_CONFIRMED state was fabricated.
+5. Froze a 40-case benchmark and 50-target explainable graph-completion queue.
+
+Next: run KG-guided acquisition from the V2 priority artifact. Missing exact
+documents remain the measured connectivity bottleneck.

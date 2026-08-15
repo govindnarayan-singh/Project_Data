@@ -236,3 +236,17 @@ department adapters. Every response body is atomically staged in Incoming;
 PDF parsing, identity checks, SHA calculation, and archive promotion then read
 only local bytes. A manifest can reference only immutable `EXTERNAL_OFFICIAL`
 paths. Network content is never used as the post-staging document of record.
+
+## KG Brain V2
+
+The graph remains in native PostgreSQL. Bounded recursive CTEs support
+upstream, downstream, mixed-history, and shortest directed paths at default
+depth 3 and maximum depth 5. Every hop retains relation ID, validation state,
+candidate/evidence links, source page, raw excerpt, depth, and path position;
+visited-node arrays terminate and report cycles.
+
+Relation direction is actor to affected target: `A AMENDS B` means A performs
+the action on B. Automatic promotion creates `AUTO_VERIFIED`, never
+`HUMAN_CONFIRMED`, only after all deterministic gates. Effect flags are
+read-only graph facts, not legal status. Current measurements do not justify
+Neo4j.
