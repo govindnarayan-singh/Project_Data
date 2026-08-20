@@ -88,3 +88,13 @@ administrative targets. Do not loosen identity rules or bypass CAPTCHA.
 
 Next: run KG-guided acquisition from the V2 priority artifact. Missing exact
 documents remain the measured connectivity bottleneck.
+## Next acquisition step after KG-guided V1
+
+Harden official-source coverage before ingestion. The highest-value remaining
+targets are dominated by the CAPTCHA-controlled Maharashtra GR source, an
+unusable certificate on the Divyang public index, and absent issuer metadata
+that correctly prevents routing to issuer-scoped department adapters. Do not
+loosen identity matching to improve yield. Repair upstream target parsing for
+legal suffixes/headings separately, then rerun the same frozen queue or a
+versioned successor. No routine pre/post PostgreSQL backups are part of this
+workflow; any destructive schema requirement must stop for explicit review.

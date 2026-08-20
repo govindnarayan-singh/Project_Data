@@ -292,3 +292,12 @@ documents 20 each, mentions 4, cross-component opportunity 30, strong signals
 each, adapter availability 5, and exact local availability 25. The queue is
 planning only. Benchmark V2 uses traceable source evidence and explicitly is
 not independent human ground truth.
+## KG-guided graph-completion acquisition
+
+`data/manifests/kg_graph_completion_priority_v2.csv` is the immutable V1
+campaign input. Primary acquisition tier precedence is graph bridge, then
+multi-cited, then strong-relation signal, then standard reference. Bridge and
+relation values are potential future-ingestion effects only: acquisition does
+not create nodes, REFERENCES, or strong edges. The campaign records citing
+components, potential component merges, incoming REFERENCES, and strong-signal
+evidence without mutating the 1,501-candidate/91-relation graph.

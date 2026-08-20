@@ -190,3 +190,22 @@ Tribunal Act passed every archive gate.
 one permanent `EXTERNAL_OFFICIAL` document. Replay inserted zero catalogue
 rows, archive integrity passed for six files, and no ingestion, page creation,
 chunking, embeddings, or graph mutation occurred.
+## KG-guided local-first campaign
+
+Run `python -m cli.kg_guided_acquisition_v1 baseline|run|replay|integrity` with
+native PostgreSQL. The runner freezes the exact 50-row KG queue, blocks damaged
+or ambiguous identities before discovery, and sends only public document
+identity fields to eligible official adapters. Discovery metadata is
+provisional. PDF response bytes are immediately staged under configured
+`Government_Documents/Incoming`; PDF parsing, SHA calculation, identity
+extraction, version checks, and duplicate analysis use the reopened local file.
+
+Only `NEW_DOCUMENT + AUTO_VERIFIED + EXTERNAL_OFFICIAL_ARCHIVED` rows enter
+`data/manifests/kg_graph_completion_verified_v1.csv`, whose source is always a
+relative path beneath `Government_Documents/External_Official`. Incoming,
+cache, temporary, and remote URL paths are forbidden as future-ingestion
+sources. CAPTCHA and stateful controls are not bypassed. Empty verified
+manifests are valid when all discovered candidates fail strict gates.
+
+This workflow never invokes a database migration, creates a routine backup,
+loads BGE-M3, generates embeddings, or ingests acquired files.

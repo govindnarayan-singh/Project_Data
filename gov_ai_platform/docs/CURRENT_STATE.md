@@ -328,3 +328,25 @@ components, largest component 7, two bounded cycles, and maximum observed
 simple directed depth 3. The 40-case Benchmark V2 has complete provenance and
 all applicable metrics at 100%. All 29 dense ranks are unchanged. Evidence is
 under `outputs/kg_brain_v2/`.
+## KG-guided acquisition V1 (2026-08-15)
+
+The frozen 50-target graph-completion queue is now executable through
+`cli.kg_guided_acquisition_v1`. The campaign preserves rank and membership,
+classifies parser/identity quality before network access, assigns bridge,
+multi-cited, strong-relation, and standard tiers, and routes only to scoped
+official adapters. The verified manifest is currently empty: strict local PDF
+title extraction rejected a Water Act PDF for a target that omitted the
+distinguishing `WATER` token, while the National Green Tribunal Act bytes were
+already ingested. Maharashtra administrative targets remain primarily blocked
+by the official GR CAPTCHA; the Divyang public index also presented a hostname
+certificate failure during this run.
+
+All downloaded PDF bytes are written first to
+`D:/LLM_Project_data/Government_Documents/Incoming`, reopened locally for PDF,
+SHA, identity, and duplicate checks, and only exact verified bytes may be
+promoted to `Government_Documents/External_Official`. No acquired document was
+ingested. Native PostgreSQL remains 72 documents, 1,345 pages, 1,267 chunks,
+1,267 embeddings, 1,501 KG candidates, and 91 relations.
+
+Routine task backups are disabled by user policy. This campaign created no
+database backup and did not invoke Podman.

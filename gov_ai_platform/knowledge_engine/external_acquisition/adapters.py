@@ -404,28 +404,23 @@ class DivyangSahayakSource:
             candidates = []
             for href, title, listed_date in matched_rows:
                 url = _official_urljoin(fetched.final_url, href)
-                pdf = self.client.fetch(url, expected_pdf=True)
-                probe = validate_pdf(pdf.body)
-                identifier = self._probe_contains(reference, probe.probe_text)
-                if not identifier:
-                    continue
-                match = verify_identity(
-                    reference, discovered_title=title, discovered_identifier=identifier,
-                    discovered_date=reference.reference_date, discovered_issuer=reference.issuer,
-                )
                 candidates.append(SourceCandidate(
                     target_key=reference.target_key, source_adapter=self.definition.source_id,
                     source_domain=urllib.parse.urlparse(url).hostname or "",
                     source_authority=self.definition.authority_class.value,
                     discovery_query=reference.normalized_identifier, discovery_status="DISCOVERED",
                     discovery_url=self.INDEX_URL, landing_url=self.INDEX_URL, document_url=url,
-                    redirect_chain=tuple(dict.fromkeys(fetched.redirect_chain + pdf.redirect_chain)),
-                    discovered_title=title, discovered_identifier=identifier,
+                    redirect_chain=fetched.redirect_chain,
+                    discovered_title=title, discovered_identifier="",
                     discovered_date=reference.reference_date, discovered_issuer=reference.issuer,
                     discovered_document_kind=reference.reference_kind,
-                    identity_match_status=match.status, identity_evidence=match.evidence,
+                    identity_match_status="NOT_EVALUATED", identity_evidence={},
                     acquisition_status="DISCOVERED",
-                    raw_source_evidence={"official_index_date": listed_date, "official_index_title": title},
+                    raw_source_evidence={
+                        "official_index_date": listed_date,
+                        "official_index_title": title,
+                        "identity_deferred_to_local_pdf": True,
+                    },
                 ))
             if candidates:
                 return candidates

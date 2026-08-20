@@ -250,3 +250,18 @@ the action on B. Automatic promotion creates `AUTO_VERIFIED`, never
 `HUMAN_CONFIRMED`, only after all deterministic gates. Effect flags are
 read-only graph facts, not legal status. Current measurements do not justify
 Neo4j.
+## KG-controlled acquisition boundary
+
+The KG completion queue controls ordering, but not trust. Network discovery
+terminates at a durable Incoming write. A separate local verification boundary
+reopens those bytes and applies PDF security, deterministic identity/version,
+SHA, provenance, and three-way duplicate checks (search corpus, local GR
+catalogue, external archive). Promotion copies the exact verified Incoming
+bytes into the immutable External_Official root; future ingestion can consume
+only that permanent root.
+
+Acquisition catalogue writes are bounded and idempotent and are separate from
+the search corpus and KG. Normal database runtime is native Windows PostgreSQL
+17 on `127.0.0.1:5434`; Podman is not a runtime fallback. Routine task backups
+are disabled, and an unexpected destructive schema requirement is a stop
+condition rather than an automatic backup-and-proceed path.
