@@ -71,8 +71,12 @@ def test_source_registry_has_full_contract_and_only_authoritative_https_sources(
     assert all(item.base_url.startswith("https://") for item in SOURCE_REGISTRY)
     assert all(item.discovery_mechanism and item.metadata_mechanism and item.download_mechanism for item in SOURCE_REGISTRY)
     assert all(item.rate_policy.retry_count >= 0 for item in SOURCE_REGISTRY)
-    assert {item.adapter for item in sources_for_kind("ACT")} == {"india_code", "maharashtra_gazette"}
-    assert {item.adapter for item in sources_for_strategy(AcquisitionStrategy.INDIA_ACT)} == {"india_code"}
+    assert {item.adapter for item in sources_for_kind("ACT")} == {
+        "india_code", "maharashtra_gazette", "maharashtra_law_judiciary"
+    }
+    assert {item.adapter for item in sources_for_strategy(AcquisitionStrategy.INDIA_ACT)} == {
+        "india_code", "maharashtra_law_judiciary"
+    }
     assert not any(item.authority.value == "NON_AUTHORITATIVE" and item.enabled for item in SOURCE_REGISTRY)
 
 

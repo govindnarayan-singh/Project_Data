@@ -67,6 +67,12 @@ class SourceDefinition:
     enabled: bool = True
     automated_discovery: bool = True
     block_reason: str = ""
+    supported_issuers: tuple[str, ...] = ()
+    coverage_start_year: int | None = None
+    coverage_end_year: int | None = None
+    search_executable: bool = True
+    coverage_confirmed: bool = False
+    coverage_evidence_url: str = ""
 
     # Compatibility names used by the V1 repository and reports.
     @property

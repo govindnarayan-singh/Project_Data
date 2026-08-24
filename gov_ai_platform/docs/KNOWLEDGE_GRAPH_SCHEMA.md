@@ -182,3 +182,28 @@ every hop is hydrated with its original candidate evidence. Source is always
 the actor/citing document and target the affected/cited document. Cycles,
 effect flags, components, priorities, and benchmarks are read-only projections
 or artifacts, not legal facts or persisted relations.
+
+## Benchmark V3 and strong-signal semantics
+
+`data/knowledge_graph/kg_relationship_benchmark_v3.csv` contains machine labels
+derived only from persisted validated evidence. Query categories are evaluated
+against the same public bounded traversal/repository contracts used by the
+application. Negative strong-relation cases assert that an evidence-bearing
+candidate remains unpromoted when deterministic linkage gates fail; they do not
+serve as positive precision labels. An AUTO_VERIFIED strong edge still requires
+explicit wording, explicit action-to-target linkage, a unique ingested target,
+correct direction, quality passes, and complete provenance.
+
+## V4 parser and coverage fields (no migration)
+
+Reference issuer extraction now populates the existing `raw_department` and
+`normalized_department` candidate columns and updates those fields during
+idempotent conflict replay. Canonical aliases cover the observed Marathi
+Finance, Parliamentary Affairs, Environment, Marathi Language, IT, disability,
+and General Administration department names. This is an application/parser
+change only; no schema migration was required.
+
+Operational source-coverage fields are run artifacts and frozen-priority
+columns, not database truth or graph relations. They measure routing capability
+for a target at a point in time and must not be interpreted as document
+existence, legal effect, or ingestion approval.

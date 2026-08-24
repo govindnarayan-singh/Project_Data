@@ -51,6 +51,7 @@ class GraphNormalizationTests(SimpleTestCase):
 
     def test_department_alias(self):
         assert normalize_department_alias("Government of Maharashtra - Finance Department") == "finance department"
+        assert normalize_department_alias("पर्यावरण व वातावरणीय बदल विभाग") == "environment department"
 
     def test_act_and_rule_canonicalization(self):
         assert normalize_legal_reference("Rights of Persons with Disabilities Act, 2016", "ACT") == "RIGHTS_OF_PERSONS_WITH_DISABILITIES_ACT_2016"
@@ -97,6 +98,38 @@ class ReferenceParserV1Tests(SimpleTestCase):
         first = parse("Government Resolution No. ABC/2020/1 dated 1st Jan 2020")[0]
         second = parse("Government Resolution No. ABC/2020/1 dated 1st Jan 2020")[0]
         assert first.fingerprint == second.fingerprint
+
+    def test_explicit_reference_issuer_is_extracted_and_canonicalized(self):
+        candidates = parse(
+            "संदर्भ :-\n१) पर्यावरण व वातावरणीय बदल विभाग शासन निर्णय क्र. अभियान-2021/प्र.क्र.14/तां.क.1 दि. 01/01/2021"
+        )
+        assert candidates[0].raw_department == "पर्यावरण व वातावरणीय बदल विभाग"
+        assert candidates[0].normalized_department == "environment department"
+
+    def test_english_reference_issuer_is_extracted(self):
+        candidate = parse(
+            "References: Finance Department Government Resolution No. FIN-2020/CR-1 dated 01/01/2020"
+        )[0]
+        assert candidate.normalized_department == "finance department"
+
+    def test_issuer_after_document_type_is_extracted(self):
+        candidate = parse(
+            "वाचा: (१) शासन निर्णय, पर्यावरण व वातावरणीय बदल विभाग क्र. अभियान-2022/प्र.क्र.120/तां.क.1 दि. 05/12/2022"
+        )[0]
+        assert candidate.normalized_department == "environment department"
+
+    def test_roman_item_prefix_does_not_pollute_issuer(self):
+        candidate = parse(
+            "संदर्भ: x) संसदीय कार्य विभाग, शासन निर्णय क्रमांक: याचिका-2021/प्र.क्र.95/पाच, दि.25.08.2021"
+        )[0]
+        assert candidate.normalized_department == "parliamentary affairs department"
+
+    def test_nested_document_type_does_not_pollute_issuer(self):
+        candidate = parse(
+            "ष्. हा शासन निर्णय, शासन परिपत्रक, वित्त विभाग, क्रमांकः- अर्थसं-2023/प्र.क्र.40/अर्थ-3, दिनांक 01/01/2023"
+        )[0]
+        assert candidate.raw_department == "वित्त विभाग"
+        assert candidate.normalized_department == "finance department"
 
 
 class ResolverPolicyTests(SimpleTestCase):

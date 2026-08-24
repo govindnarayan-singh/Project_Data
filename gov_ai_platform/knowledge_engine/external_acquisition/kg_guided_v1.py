@@ -322,7 +322,7 @@ class KgGuidedAcquisitionV1Service:
             return IndiaCodeSource(definition, cache_dir=cache)
         if definition.source_id == "divyang_sahayak":
             return DivyangSahayakSource(definition, cache_dir=cache)
-        if definition.source_id in {"maharashtra_finance", "maharashtra_parliamentary_affairs", "maharashtra_environment", "maharashtra_marathi_language", "maharashtra_it"}:
+        if definition.source_id in {"maharashtra_finance", "maharashtra_parliamentary_affairs", "maharashtra_environment", "maharashtra_marathi_language", "maharashtra_it", "maharashtra_law_judiciary"}:
             return MaharashtraDepartmentSource(definition, cache_dir=cache)
         return BlockedOfficialSource(definition)
 

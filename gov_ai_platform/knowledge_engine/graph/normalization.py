@@ -76,7 +76,20 @@ def normalize_department_alias(value: str) -> str:
     text = normalize_reference_whitespace(value).casefold()
     text = re.sub(r"\b(the|government of maharashtra|maharashtra government)\b", "", text)
     text = re.sub(r"[^0-9a-z\u0900-\u097f]+", " ", text)
-    return " ".join(text.split())
+    text = " ".join(text.split())
+    aliases = {
+        "वित्त विभाग": "finance department",
+        "संसदीय कार्य विभाग": "parliamentary affairs department",
+        "पर्यावरण विभाग": "environment department",
+        "पर्यावरण व वातावरणीय बदल विभाग": "environment department",
+        "पर्यावरण आणि हवामान बदल विभाग": "environment department",
+        "मराठी भाषा विभाग": "marathi language department",
+        "माहिती तंत्रज्ञान विभाग": "electronics information technology and artificial intelligence department",
+        "सामाजिक न्याय व विशेष सहाय्य विभाग": "persons with disabilities welfare department",
+        "दिव्यांग कल्याण विभाग": "persons with disabilities welfare department",
+        "सामान्य प्रशासन विभाग": "general administration department",
+    }
+    return aliases.get(text, text)
 
 
 def _valid_date(day: int, month: int, year: int) -> date | None:

@@ -350,3 +350,46 @@ ingested. Native PostgreSQL remains 72 documents, 1,345 pages, 1,267 chunks,
 
 Routine task backups are disabled by user policy. This campaign created no
 database backup and did not invoke Podman.
+
+## KG Brain V3 (2026-08-24)
+
+The frozen 50-target queue was revalidated and the 18 safe network-eligible
+targets were routed through the official registry. India Code yielded two local
+Incoming PDFs: the National Green Tribunal Act was already ingested and the
+Water Act was an exact-identity mismatch. The verified manifest therefore has
+zero rows (`b0cc6cfb5646db29db92a9f4d65ade9ee847d78dd1bf2b8b904c942257175308`),
+so ingestion was safely skipped.
+
+Two full KG reruns were idempotent. Live state remains 1,501 candidates and 91
+relations (19 REFERENCES, 72 ISSUED_BY, zero strong edges). The lone explicit
+supersession signal is not a parser defect: it identifies the prior decision by
+date only, with no unique number or issuer. Topology remains 24 connected / 48
+isolated documents, 57 components, largest component 7, and 2 cycles. Benchmark
+V3 has 85 evidence-derived cases and all measured metrics pass. The next
+bottleneck is official Maharashtra source coverage, not graph correctness.
+
+## KG Brain V4 (2026-08-24)
+
+V4 replayed the exact 50-row V3 priority artifact at SHA-256
+`1bff4028b37fbb8117d0c75033f9b36aa29fe303235d06409f6fe49241a363fa`.
+The source audit now separates kind support, issuer support, jurisdiction/year
+support, measured network reachability, executable search, target queryability,
+and confirmed source-family coverage. The old 47/50 claim was kind support
+only; 18 identities remain quality-ready and 10 have at least one fully
+queryable official route.
+
+The generic reference parser now extracts explicit Marathi/English issuers and
+persists corrected issuer fields on replay. Eight frozen targets gained issuer
+evidence. A reusable Maharashtra Law and Judiciary Act List adapter was added
+with official S3WaaS PDF allowlisting and state-jurisdiction gating. The live
+campaign found one Finance candidate, staged and reopened it from Incoming,
+and rejected it as an identity mismatch. The V4 manifest is therefore empty
+(`b0cc6cfb5646db29db92a9f4d65ade9ee847d78dd1bf2b8b904c942257175308`);
+no document, page, chunk, embedding, or archive file was added.
+
+Two KG reruns were idempotent and preserved 1,501 candidates, 91 relations,
+24 connected / 48 isolated documents, 57 components, largest component 7,
+and closure 12/639. Benchmark V4 contains 85 evidence-derived cases with all
+applicable metrics passing. Native PostgreSQL 17.11/pgvector 0.8.6 remained the
+only runtime; Podman commands and database backups were both zero. Evidence is
+under `outputs/kg_brain_v4/`.

@@ -65,6 +65,19 @@ SOURCE_HEADER_RE = re.compile(
     r"^(?:शासन\s+(?:निर्णय|परिपत्रक|आदेश|शुद्धीपत्रक)|(?:government\s+)?(?:resolution|circular|order|notification|corrigendum))\s+(?:क्रमांक|क्र\.?|no\.?)",
     re.IGNORECASE,
 )
+DEPARTMENT_BEFORE_TYPE_RE = re.compile(
+    r"(?:^|[;,:\)])\s*(?:\(?[०-९0-9]{1,3}\)?[.)]?\s*)?"
+    r"(?P<department>[\u0900-\u097fA-Za-z][\u0900-\u097fA-Za-z &.'()/-]{1,110}?\s+विभाग|"
+    r"[A-Za-z][A-Za-z &.'()/-]{1,110}?\s+Department)\s*,?\s*(?:चा|ची|चे|च्या)?\s*"
+    r"(?=शासन\s+(?:निर्णय|परिपत्रक|पत्र|आदेश|शुद्धीपत्रक)|Government\s+(?:Resolution|Circular|Letter|Order))",
+    re.IGNORECASE,
+)
+DEPARTMENT_AFTER_TYPE_RE = re.compile(
+    r"(?:शासन\s+(?:निर्णय|परिपत्रक|पत्र|आदेश|शुद्धीपत्रक)|Government\s+(?:Resolution|Circular|Letter|Order))"
+    r"\s*,?\s*(?P<department>[\u0900-\u097fA-Za-z][\u0900-\u097fA-Za-z &.'()/-]{1,110}?\s+विभाग|"
+    r"[A-Za-z][A-Za-z &.'()/-]{1,110}?\s+Department)\s*,?\s*(?=(?:क्रमांक|क्र\.?|No\.?|Number))",
+    re.IGNORECASE,
+)
 BOILERPLATE_RE = re.compile(r"(?:संकेतस्थळ|website).{0,100}(?:आदेश|निर्णय|परिपत्रक)|(?:डिजीटल|digital)\s+स्वाक्षरी", re.IGNORECASE)
 STOP_RE = re.compile(
     r"\s+(?:(?:दिनांक|तारीख|[वल]?दि\.?|dated|Dt\.?)\s*.*|"
@@ -179,6 +192,19 @@ def _relation_signal(text: str) -> tuple[str, str]:
     return "", ""
 
 
+def extract_reference_department(text: str) -> tuple[str, str]:
+    """Extract an explicit issuer adjacent to the cited administrative document type."""
+    normalized_text = normalize_reference_whitespace(text)
+    match = DEPARTMENT_BEFORE_TYPE_RE.search(normalized_text) or DEPARTMENT_AFTER_TYPE_RE.search(normalized_text)
+    if not match:
+        return "", ""
+    raw = match.group("department")
+    raw = re.sub(r"^\s*(?:\(?[०-९0-9]{1,3}\)?[.)]?|[ivxlcdm]{1,6}[.)])\s*", "", raw, flags=re.IGNORECASE)
+    raw = re.sub(r"^(?:वाचा|संदर्भ|references?)\s*[:\-–—]*\s*", "", raw, flags=re.IGNORECASE)
+    raw = raw.strip(" ,.-")
+    return raw, normalize_department_alias(raw)
+
+
 def _fingerprint(source_document_id: int, source_page: int, kind: str, number: str, normalized_date: str, evidence_hash: str) -> str:
     # Raw evidence identity is stable when parser cleanup improves. Number/date
     # remain arguments for an explicit API but are deliberately not identity.
@@ -206,6 +232,7 @@ class ReferenceParser:
                     kind = detect_reference_kind(evidence)
                     raw_number, normalized_number = _extract_identifier(evidence, kind)
                     raw_date, normalized_date = _extract_date(evidence)
+                    raw_department, normalized_department = extract_reference_department(evidence)
                     signal, candidate_relation = _relation_signal(evidence)
                     if not normalized_number and not normalized_date.value:
                         continue
@@ -241,8 +268,8 @@ class ReferenceParser:
                         reference_kind=kind, raw_evidence_text=evidence,
                         raw_document_number=raw_number, normalized_document_number=normalized_number,
                         raw_reference_date=raw_date, normalized_reference_date=normalized_date.value,
-                        date_parse_status=normalized_date.status, raw_department="",
-                        normalized_department=normalize_department_alias(""),
+                        date_parse_status=normalized_date.status, raw_department=raw_department,
+                        normalized_department=normalized_department,
                         pattern_id=f"REF_{_language(evidence)}_{kind.value}_{context}", parser_version=self.version,
                         parser_status=status, parser_notes=notes, relation_signal=signal,
                         candidate_relation_type=candidate_relation, evidence_hash=evidence_hash, fingerprint=fp,

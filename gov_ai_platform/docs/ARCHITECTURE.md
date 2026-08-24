@@ -265,3 +265,33 @@ the search corpus and KG. Normal database runtime is native Windows PostgreSQL
 17 on `127.0.0.1:5434`; Podman is not a runtime fallback. Routine task backups
 are disabled, and an unexpected destructive schema requirement is a stop
 condition rather than an automatic backup-and-proceed path.
+
+## KG Brain V3 completion cycle
+
+KG Brain V3 composes the frozen V2 graph-priority queue, strict local-first
+official acquisition, a verified-manifest gate, deterministic KG reruns, and
+read-only graph analysis. An empty verified manifest is a normal terminal gate:
+ingestion and embedding are skipped while source diagnostics, relation review,
+topology, closure, history, performance, and benchmark artifacts still run.
+The evidence-derived V3 benchmark contains 85 distinct query cases and labels
+itself `AUTO_VERIFIED_SOURCE_EVIDENCE`, never independent human ground truth.
+
+## KG Brain V4 source-coverage boundary
+
+V4 inserts an operational coverage decision before network discovery:
+
+```text
+frozen target
+  → kind + explicit issuer + jurisdiction/year support
+  → public search executable + measured network reachability
+  → target queryable on an allowlisted official source
+  → discovery → Incoming → local PDF/SHA/identity verification
+  → External_Official only after exact verification
+```
+
+The source registry records stable coverage contracts; the matrix records
+run-specific reachability and queryability. The Maharashtra Law and Judiciary
+Act List is a reusable state-law adapter with `lj.maharashtra.gov.in` and
+official `cdnbbsr.s3waas.gov.in` PDF delivery. Central Acts remain routed to
+India Code. CAPTCHA/stateful sources remain registered official coverage but
+are not executable adapters, and no bypass or private endpoint is used.

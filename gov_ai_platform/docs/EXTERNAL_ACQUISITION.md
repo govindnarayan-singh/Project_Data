@@ -209,3 +209,37 @@ manifests are valid when all discovered candidates fail strict gates.
 
 This workflow never invokes a database migration, creates a routine backup,
 loads BGE-M3, generates embeddings, or ingests acquired files.
+
+## KG Brain V3 source audit
+
+The V3 cycle mirrors every attempt into `outputs/kg_brain_v3`, including the
+source registry snapshot, queries/results, local Incoming paths, hashes,
+identity and duplicate outcomes, and a human-readable
+`government_source_audit.csv`. Both downloaded India Code files were reopened
+from Incoming for validation. Neither was promoted: one was already ingested
+and one mismatched the frozen legal identity. Official Maharashtra GR requests
+remained blocked by the source's case-sensitive CAPTCHA; the workflow did not
+bypass it. The next campaign should add only reusable official adapters with
+the same HTTPS, SSRF, redirect, size, PDF, local-first, and identity controls.
+
+## V4 operational source coverage
+
+Source coverage is no longer a single boolean. Every frozen target/source pair
+records `ADAPTER_KIND_SUPPORT`, `ADAPTER_ISSUER_SUPPORT`,
+`ADAPTER_JURISDICTION_SUPPORT`, `ADAPTER_YEAR_SUPPORT`,
+`ADAPTER_NETWORK_REACHABLE`, `ADAPTER_SEARCH_EXECUTABLE`, `TARGET_QUERYABLE`,
+and `SOURCE_COVERAGE_CONFIRMED`. A source can support a document kind while
+remaining non-queryable because issuer evidence is absent, jurisdiction does
+not match, the public search is CAPTCHA/stateful, or the runtime cannot reach
+the source.
+
+Issuer-scoped routing uses only an issuer explicitly extracted from reference
+evidence; the citing document's department is never substituted. The Law and
+Judiciary adapter covers public Maharashtra state Act/Rule titles only and
+does not claim central legislation. Department adapters execute at most three
+deterministic public-identity queries. Search engines may locate an official
+surface, but only registry-allowlisted government URLs can become candidates.
+
+The V4 campaign produced one locally staged Finance PDF and rejected it as an
+identity mismatch. No bytes were promoted to `External_Official`, the verified
+manifest is empty, and ingestion was skipped.

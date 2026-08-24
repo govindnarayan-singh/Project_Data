@@ -98,3 +98,36 @@ loosen identity matching to improve yield. Repair upstream target parsing for
 legal suffixes/headings separately, then rerun the same frozen queue or a
 versioned successor. No routine pre/post PostgreSQL backups are part of this
 workflow; any destructive schema requirement must stop for explicit review.
+
+## Completed: KG Brain V3
+
+1. Revalidated and executed the frozen 50-target KG completion batch under the
+   local-first and official-only policy.
+2. Applied the zero-row verified-manifest gate; no ingestion or dense-model load
+   occurred.
+3. Proved two-run KG idempotence and remeasured closure/topology/history.
+4. Investigated all 66 strong signals without weakening unique-target gates.
+5. Froze an 85-case V3 source-evidence benchmark and a fresh 50-target V3
+   priority queue.
+
+Next: harden reusable official-source coverage, especially CAPTCHA-independent
+Maharashtra government indexes and issuer-scoped sources. Do not launch a
+second acquisition campaign until a versioned work package authorizes it.
+
+## Completed: KG Brain V4
+
+1. Replayed the exact V3 50-target queue without membership or rank drift.
+2. Replaced the misleading adapter-availability boolean with auditable kind,
+   issuer, jurisdiction/year, network, executable-search, queryability, and
+   source-coverage fields.
+3. Fixed generic explicit-issuer extraction and persistence, and added one
+   reusable official Maharashtra Law and Judiciary Act List adapter.
+4. Preserved the local-first Incoming boundary and rejected the sole downloaded
+   V4 candidate on exact identity mismatch.
+5. Applied the empty-manifest ingestion gate, rebuilt the KG twice, froze the
+   V4 priority and 85-case benchmark, and verified archive/database integrity.
+
+Next: expand reusable official Maharashtra indexes further, prioritizing the
+queryable-source gaps in `source_graph_value.csv`. Do not weaken identity or
+version rules, infer missing jurisdiction, bypass CAPTCHA/stateful controls, or
+ingest the empty manifest.

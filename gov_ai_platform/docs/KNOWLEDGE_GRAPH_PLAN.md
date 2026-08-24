@@ -301,3 +301,29 @@ relation values are potential future-ingestion effects only: acquisition does
 not create nodes, REFERENCES, or strong edges. The campaign records citing
 components, potential component merges, incoming REFERENCES, and strong-signal
 evidence without mutating the 1,501-candidate/91-relation graph.
+
+## V3 evaluation and next priority
+
+KG Brain V3 rebuilds the unresolved queue from the live graph without embeddings
+and freezes it as `kg_graph_completion_priority_v3.csv`. The V3 benchmark grows
+from 40 to 85 only through distinct stored-edge, reverse-edge, evidence-page,
+ISSUED_BY, bounded path, no-path, negative-strong-signal, and cycle-safety cases.
+Administrative-history projections remain bounded to depth 5, cycle-safe, and
+fully hydrated with relation/candidate IDs, evidence pages, raw text, and
+validation status. No `VALID`, `INVALID`, `IN_FORCE`, or `REPEALED` conclusion is
+inferred.
+
+## V4 source-operability and graph result
+
+`kg_graph_completion_priority_v4.csv` preserves the exact V3 target membership
+and rank while adding the operational source fields. Acquisition yield is not
+used as graph truth: a downloaded mismatch creates no document or edge, and an
+empty verified manifest creates no embeddings. The parser's explicit issuer
+field is provenance for deterministic resolution and source routing, not an
+inferred ISSUED_BY relation for the cited target.
+
+Two post-gate KG runs update all 1,501 candidate records and insert zero new
+candidates, relations, or evidence on the second run. The graph and closure are
+unchanged because no new target entered the corpus. Benchmark V4 retains 85
+source-evidence cases, uses `KGB4-*` identifiers, and remains explicitly not
+independent human ground truth.

@@ -463,6 +463,7 @@ class MaharashtraDepartmentSource:
         "maharashtra_environment": "environment department",
         "maharashtra_marathi_language": "marathi language department",
         "maharashtra_it": "electronics, information technology and artificial intelligence department",
+        "maharashtra_law_judiciary": "law and judiciary department",
     }
 
     def __init__(self, definition: SourceDefinition, *, cache_dir: Path):
@@ -485,7 +486,16 @@ class MaharashtraDepartmentSource:
 
     def supports(self, reference: ReferenceIdentity) -> bool:
         expected = self.DEPARTMENT_SCOPE.get(self.definition.source_id, "")
-        return (
+        legal_open_scope = (
+            self.definition.source_id == "maharashtra_law_judiciary"
+            and reference.reference_kind in {"ACT", "RULE"}
+            and not reference.issuer.strip()
+            and (
+                "maharashtra" in f"{reference.normalized_identifier} {reference.raw_identifier}".casefold()
+                or "महाराष्ट्र" in f"{reference.normalized_identifier} {reference.raw_identifier}".casefold()
+            )
+        )
+        return legal_open_scope or (
             reference.reference_kind in self.definition.supported_document_kinds
             and bool(expected)
             and reference.issuer.strip().casefold() == expected
@@ -494,8 +504,8 @@ class MaharashtraDepartmentSource:
     def build_queries(self, reference: ReferenceIdentity) -> list[str]:
         return generate_queries(reference)
 
-    def _search_url(self, reference: ReferenceIdentity) -> str:
-        query = urllib.parse.quote(reference.normalized_identifier, safe="")
+    def _search_url(self, query_text: str) -> str:
+        query = urllib.parse.quote(query_text, safe="")
         if self.definition.source_id == "maharashtra_it":
             return f"https://{self.definition.base_host}/search/node?keys={query}"
         return f"https://{self.definition.base_host}/?s={query}"
@@ -528,11 +538,44 @@ class MaharashtraDepartmentSource:
     def search(self, reference: ReferenceIdentity) -> list[SourceCandidate]:
         if not self.supports(reference):
             return []
-        search_url = self._search_url(reference)
-        try:
-            fetched = self.client.fetch(search_url)
-            links = self._links(fetched.body, fetched.final_url)
-        except NetworkSafetyError as error:
+        candidates = []
+        network_errors: list[str] = []
+        for query_text in self.build_queries(reference):
+            search_url = self._search_url(query_text)
+            try:
+                fetched = self.client.fetch(search_url)
+                links = self._links(fetched.body, fetched.final_url)
+            except NetworkSafetyError as error:
+                network_errors.append(str(error))
+                continue
+            for url, title in links:
+                direct_pdf = urllib.parse.urlparse(url).path.casefold().endswith(".pdf")
+                candidate = SourceCandidate(
+                    target_key=reference.target_key,
+                    source_adapter=self.definition.source_id,
+                    source_domain=urllib.parse.urlparse(url).hostname or "",
+                    source_authority=self.definition.authority_class.value,
+                    discovery_query=query_text,
+                    discovery_status="DISCOVERED",
+                    discovery_url=search_url,
+                    landing_url=fetched.final_url if direct_pdf else url,
+                    document_url=url if direct_pdf else "",
+                    redirect_chain=fetched.redirect_chain,
+                    discovered_title=title,
+                    discovered_issuer=reference.issuer,
+                    discovered_document_kind=reference.reference_kind,
+                    identity_match_status="NOT_EVALUATED",
+                    acquisition_status="DISCOVERED",
+                    raw_source_evidence={
+                        "identity_deferred_to_local_pdf": True,
+                        "official_department_search": fetched.final_url,
+                    },
+                )
+                if not any(item.document_url == candidate.document_url and item.landing_url == candidate.landing_url for item in candidates):
+                    candidates.append(candidate)
+            if candidates:
+                break
+        if network_errors and not candidates:
             return [SourceCandidate(
                 target_key=reference.target_key,
                 source_adapter=self.definition.source_id,
@@ -544,33 +587,9 @@ class MaharashtraDepartmentSource:
                 target_state=TargetState.NETWORK_FAILED.value,
                 raw_source_evidence={
                     "reason": "OFFICIAL_DEPARTMENT_SOURCE_UNAVAILABLE",
-                    "network_error": str(error),
+                    "network_error": "; ".join(network_errors),
                 },
             )]
-        candidates = []
-        for url, title in links:
-            direct_pdf = urllib.parse.urlparse(url).path.casefold().endswith(".pdf")
-            candidates.append(SourceCandidate(
-                target_key=reference.target_key,
-                source_adapter=self.definition.source_id,
-                source_domain=urllib.parse.urlparse(url).hostname or "",
-                source_authority=self.definition.authority_class.value,
-                discovery_query=reference.normalized_identifier,
-                discovery_status="DISCOVERED",
-                discovery_url=search_url,
-                landing_url=fetched.final_url if direct_pdf else url,
-                document_url=url if direct_pdf else "",
-                redirect_chain=fetched.redirect_chain,
-                discovered_title=title,
-                discovered_issuer=reference.issuer,
-                discovered_document_kind=reference.reference_kind,
-                identity_match_status="NOT_EVALUATED",
-                acquisition_status="DISCOVERED",
-                raw_source_evidence={
-                    "identity_deferred_to_local_pdf": True,
-                    "official_department_search": fetched.final_url,
-                },
-            ))
         if candidates:
             return candidates
         return [SourceCandidate(
