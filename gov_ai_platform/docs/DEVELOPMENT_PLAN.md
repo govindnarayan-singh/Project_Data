@@ -131,3 +131,43 @@ Next: expand reusable official Maharashtra indexes further, prioritizing the
 queryable-source gaps in `source_graph_value.csv`. Do not weaken identity or
 version rules, infer missing jurisdiction, bypass CAPTCHA/stateful controls, or
 ingest the empty manifest.
+
+## Completed: KG Brain V5
+
+1. Built and froze bounded-context deterministic reference parser V2 with a
+   120-row source-evidence regression corpus, including 15 negatives.
+2. Repaired 28 frozen identifiers without speculative characters, recovered
+   explicit issuer provenance for 12 targets, and raised quality-ready targets
+   from 18 to 38.
+3. Re-evaluated exact local availability, expanded the reusable registry to 12
+   source families, and raised queryable targets/routes from 6/6 to 18/21.
+4. Replayed the same live 50-target batch and rejected its sole local Incoming
+   PDF as a mismatch; the empty V5 manifest correctly skipped ingestion.
+5. Rebuilt the KG twice, froze V5 priority/benchmark artifacts, and verified
+   graph, archive, retrieval-fingerprint, backup, and native-runtime invariants.
+
+Next: continue official source expansion. Corrected identities are no longer
+the dominant top-50 bottleneck; executable historical Maharashtra publication
+and department routes are. Do not bypass CAPTCHA/stateful controls or lower
+identity/version gates.
+
+## Completed: KG Brain V6
+
+1. Froze 30 network targets from the V5 queue and scored eight required source
+   families using graph demand, identity completeness, historical likelihood,
+   and implementation effort.
+2. Added explicit historical-coverage/queryability semantics, a shared bounded
+   Maharashtra S3WaaS adapter, and migrated India Code to its official DSpace
+   9.1 discovery and ORIGINAL-bitstream APIs.
+3. Acquired, locally verified, permanently archived, and manifest-froze six
+   exact official Acts; rejected mismatched and absent records without lowering
+   version rules.
+4. Ingested the six-document manifest with dry-run and unchanged replay, then
+   ran the KG twice with zero second-run inserts.
+5. Produced V6 coverage, source-performance, government-source audit, closure,
+   topology, benchmark, integrity, and dense-retrieval artifacts.
+
+Next: expand official historical coverage further. Zero-route administrative
+targets and historically absent official indexes remain the dominant blocker;
+do not start graph-aware retrieval, UI, RAG, or strong-edge expansion in the
+next cycle.

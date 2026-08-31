@@ -40,6 +40,13 @@ class TargetState(StrEnum):
     ARCHIVE_FAILED = "ARCHIVE_FAILED"
 
 
+class HistoricalCoverage(StrEnum):
+    CONFIRMED = "HISTORICAL_COVERAGE_CONFIRMED"
+    PARTIAL = "HISTORICAL_COVERAGE_PARTIAL"
+    CURRENT_ONLY = "CURRENT_ONLY"
+    UNKNOWN = "UNKNOWN"
+
+
 @dataclass(frozen=True, slots=True)
 class RatePolicy:
     request_delay_seconds: float = 0.75
@@ -73,6 +80,10 @@ class SourceDefinition:
     search_executable: bool = True
     coverage_confirmed: bool = False
     coverage_evidence_url: str = ""
+    historical_coverage: HistoricalCoverage = HistoricalCoverage.UNKNOWN
+    listing_strategy: str = ""
+    listing_url: str = ""
+    listing_max_pages: int = 0
 
     # Compatibility names used by the V1 repository and reports.
     @property
@@ -163,6 +174,7 @@ class SourceCandidate:
 __all__ = [
     "AcquisitionStrategy",
     "AuthorityLevel",
+    "HistoricalCoverage",
     "RatePolicy",
     "ReferenceIdentity",
     "SourceCandidate",

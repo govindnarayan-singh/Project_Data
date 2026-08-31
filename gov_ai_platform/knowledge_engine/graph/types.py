@@ -57,6 +57,6 @@ class RelationType(StrEnum):
     EXTENDS = "EXTENDS"
 
 
-PARSER_VERSION = "reference-parser-v1.1.0"
+PARSER_VERSION = "reference-parser-v2.0.0"
 NORMALIZER_VERSION = "graph-normalizer-v1.0.0"
 RESOLVER_VERSION = "reference-resolver-v1.0.0"

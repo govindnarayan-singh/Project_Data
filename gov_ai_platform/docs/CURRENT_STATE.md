@@ -393,3 +393,58 @@ and closure 12/639. Benchmark V4 contains 85 evidence-derived cases with all
 applicable metrics passing. Native PostgreSQL 17.11/pgvector 0.8.6 remained the
 only runtime; Podman commands and database backups were both zero. Evidence is
 under `outputs/kg_brain_v4/`.
+
+## KG Brain V5 (2026-08-24)
+
+V5 replayed the same frozen 50-target V3 queue and introduced deterministic
+bounded-context parser version 2. The parser may use only the same sentence,
+an adjacent sentence, an attached list item, or a structurally attached
+heading. It does not use an LLM, embeddings, whole-page inference, or the
+citing department as authoritative issuer evidence.
+
+Quality-ready targets increased from 18 to 38. All 12 insufficient identities
+and all eight damaged/unparseable identities were deterministically repaired;
+five genuine version/identity ambiguities remain. Twelve targets have explicit
+issuer evidence (eight in-reference and four bounded-context), while 38
+citing-department values remain non-routing hints. The 120-row evidence-derived
+parser regression passes all six metrics at or above 98.10% and is explicitly
+not independent human ground truth.
+
+The official registry now has 12 reusable families, adding Social Justice and
+Special Assistance and Minority Development public document indexes. Eighteen
+targets have at least one queryable route (21 target/source pairs), up from six
+V4 identities/routes. The controlled live batch still produced only the same
+Finance mismatch: it was reopened from Incoming, rejected, and never promoted.
+The V5 manifest is empty, so ingestion was skipped.
+
+Two native-PostgreSQL KG runs were idempotent. Corpus counts remain 72 / 1,345 /
+1,267 / 1,267 and graph counts remain 1,501 candidates, 19 REFERENCES, 72
+ISSUED_BY, and zero strong edges. Parser normalization reduces unique unresolved
+targets from 627 to 622 without inventing a document closure. Topology remains
+24 connected, 48 isolated, 57 components, and largest component 7. The 85-case
+KG benchmark, archive integrity, database invariants, and retrieval fingerprint
+all pass. No Podman command or database backup was used.
+
+## KG Brain V6 (2026-08-25)
+
+V6 froze the 38 V5 READY rows into 31 unique corrected identities and 30
+network targets after exact local alias closure. Eight source families were
+needed. The 12-source official registry was upgraded with explicit historical
+coverage contracts, reusable Maharashtra S3WaaS document-index discovery, and
+the migrated India Code DSpace 9.1 discovery/item/ORIGINAL-bundle API.
+
+Six exact official Acts passed the local-first boundary and form the V6
+manifest: three Maharashtra Acts and three central Acts. Every download was
+written to `Government_Documents/Incoming` before PDF parsing, bounded local
+OCR where needed, SHA/identity/duplicate verification, and byte-identical
+promotion to `External_Official`. One officially indexed 2016 URL was rejected
+because its local PDF was a different ordinance. The manifest contains no
+ambiguous, mismatched, Incoming, remote, non-authoritative, or pre-ingested row.
+
+Controlled ingestion added 6 documents, 74 pages, and 118 BGE-M3 chunks/vectors,
+giving 78 / 1,419 / 1,385 / 1,385. KG run 1 added 175 candidates, 9 REFERENCES,
+6 ISSUED_BY, and 16 evidence links; run 2 added zero rows. Final graph state is
+1,676 candidates, 28 REFERENCES, 78 ISSUED_BY, 29 connected / 49 isolated
+documents, 58 components, and largest component 10. Native PostgreSQL
+17.11/pgvector 0.8.6 remained the only database runtime. Podman commands and
+new backups were both zero. Evidence is under `outputs/kg_brain_v6/`.

@@ -16,12 +16,17 @@ _LEGAL_CANONICAL_QUERIES = (
 
 
 def _public_legal_query(identity: ReferenceIdentity) -> str:
+    canonical = identity.normalized_identifier.strip().upper()
+    if "_AMENDMENT_" in canonical and re.search(r"_(?:ACT|RULES?)_(?:19|20)\d{2}$", canonical):
+        return canonical.replace("_", " ")
     for marker, title in _LEGAL_CANONICAL_QUERIES:
         if marker in identity.normalized_identifier.upper() or marker in identity.normalized_identifier:
             return title
-    canonical = identity.normalized_identifier.replace("_", " ")
-    canonical = re.sub(r"^\d+\s+", "", canonical)
-    return canonical
+    if re.search(r"_(?:ACT|RULES?)_(?:19|20)\d{2}$", canonical):
+        return canonical.replace("_", " ")
+    display = identity.normalized_identifier.replace("_", " ")
+    display = re.sub(r"^\d+\s+", "", display)
+    return display
 
 
 def generate_queries(identity: ReferenceIdentity) -> list[str]:

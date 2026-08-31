@@ -243,3 +243,49 @@ surface, but only registry-allowlisted government URLs can become candidates.
 The V4 campaign produced one locally staged Finance PDF and rejected it as an
 identity mismatch. No bytes were promoted to `External_Official`, the verified
 manifest is empty, and ingestion was skipped.
+
+## V5 corrected-identity source routing
+
+V5 routes the unchanged frozen 50 targets using parser-V2 identities and only
+explicit reference/context issuer states. A citing document's department is
+retained as `ISSUER_CITING_DOC_HINT_ONLY` and cannot satisfy an issuer gate.
+The operational matrix retains separate kind, issuer, jurisdiction, year,
+network, executable-search, queryable-identity, and confirmed-coverage fields.
+
+Two reusable official source families were added: the Maharashtra Social
+Justice and Special Assistance government-resolution index and the Maharashtra
+Minority Development documents index. Together with the existing ten families,
+the registry now offers 21 executable target/source pairs for 18 identities,
+compared with six V4 pairs/identities. CAPTCHA/stateful Maharashtra GR and
+gazette surfaces remain recorded but non-executable; no bypass is attempted.
+
+The same live batch yielded one Finance PDF from cache/network provenance. Its
+bytes existed under `Government_Documents/Incoming` before PDF parsing, SHA,
+identity, and duplicate checks. The local PDF did not contain the exact target
+identifier, so it remained `MISMATCH`, was not promoted, and did not enter the
+header-only V5 manifest. Remote-byte identity processing and ingestion are both
+zero.
+
+## V6 source-family and historical coverage
+
+V6 groups the 30 network targets by issuing/source family before adapter work.
+Operational routing requires kind, issuer, jurisdiction, year, historical
+coverage, executable public search, measured reachability, and exact public
+identity support. `CONFIRMED`, `PARTIAL`, `CURRENT_ONLY`, and `UNKNOWN` are
+distinct source contracts; unknown history never becomes queryable merely
+because a department site exists.
+
+The shared Maharashtra S3WaaS adapter uses bounded public document indexes and
+official source-side search, including pagination metadata and official-host
+PDF gates. It does not hardcode a one-document download path. The India Code
+adapter follows the migrated public DSpace 9.1 chain: discovery API, exact
+ACT/RULE collection and jurisdiction filtering, item metadata, ORIGINAL bundle,
+then the official PDF bitstream. Central amendments use the official
+`ACT_AMENDMENT` collection. English ORIGINAL bitstreams are selected by the
+source's stable `aYYYY-*.pdf` naming convention before local identity checks.
+
+All network bytes are transport-only until atomically persisted under
+`Incoming`. Embedded text or bounded first-three-page Tesseract OCR operates on
+that local path only. Six exact PDFs were promoted byte-identically to
+`External_Official`; the mislabeled 2016 official link remained a local
+`MISMATCH`. The V6 manifest contains only permanent archive paths.

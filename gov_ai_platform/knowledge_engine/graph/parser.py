@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import json
 import re
 from collections.abc import Iterable
 from typing import Any
@@ -92,6 +93,173 @@ RELATION_SIGNALS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"रद्द|निरस्त|cancel", re.IGNORECASE), "CANCELS"),
 )
 
+ISSUER_EXPLICIT_REFERENCE = "ISSUER_EXPLICIT_REFERENCE"
+ISSUER_EXPLICIT_CONTEXT = "ISSUER_EXPLICIT_CONTEXT"
+ISSUER_CONTROLLED_ALIAS = "ISSUER_CONTROLLED_ALIAS"
+ISSUER_CITING_DOC_HINT_ONLY = "ISSUER_CITING_DOC_HINT_ONLY"
+ISSUER_UNKNOWN = "ISSUER_UNKNOWN"
+
+DEPARTMENT_CONTEXT_RE = re.compile(
+    r"(?P<department>[\u0900-\u097fA-Za-z][\u0900-\u097fA-Za-z &.'()/-]{1,110}?(?:\s+विभाग|\s+Department))\s*$",
+    re.IGNORECASE,
+)
+LEGAL_REFERENCE_RE = re.compile(
+    r"(?P<title>[A-Za-z][A-Za-z0-9\s,.'&()\-/]{2,240}?\b(?:Act|Rules?))\s*,?\s*(?P<year>(?:19|20)\d{2})",
+    re.IGNORECASE,
+)
+COMBINED_MAHARASHTRA_LOCAL_ACT_RE = re.compile(
+    r"(?P<title>(?:"
+    r"Maharashtra\s+Zilla\s+Parishads?\s+and\s+Panchayat\s+Samitis?\s+and\s+(?:the\s+)?Bombay\s+Village\s+Panchayats?"
+    r"|Bombay\s+Village\s+Panchayats?\s*,?\s+and\s+(?:the\s+)?Maharashtra\s+Zilla\s+Parishads?\s+and\s+Panchayat\s+Samitis?)"
+    r"\s*\((?:Second\s+|Third\s+)?Amendment\)\s*Act)\s*,?\s*(?P<year>(?:19|20)\d{2})",
+    re.IGNORECASE,
+)
+LEGAL_LEADING_NOISE_RE = re.compile(
+    r"^.*?(?:may\s+be\s+called|commencement\s+of|under|omitted\s+by|amendments?\s+to)\s+(?:the\s+)?",
+    re.IGNORECASE,
+)
+MULTI_REFERENCE_BOUNDARY_RE = re.compile(
+    r"\s+(?:and|आणि)\s+(?=(?:Government\s+(?:Resolution|Circular|Order|Letter)|"
+    r"शासन\s+(?:निर्णय|परिपत्रक|आदेश|पत्र)))",
+    re.IGNORECASE,
+)
+
+
+def _bounded_lines(lines: list[str], index: int) -> tuple[list[str], list[str]]:
+    """Return only structurally adjacent context, never arbitrary page text."""
+    before = lines[max(0, index - 2):index]
+    after = lines[index + 1:min(len(lines), index + 3)]
+    return before, after
+
+
+def _trim_legal_title(value: str) -> str:
+    value = normalize_reference_whitespace(value).replace("\n", " ")
+    value = re.sub(r"\[?(?:19|20)\d{2}\s*:\s*Mah\.\s*[IVXLCDM]+\]?", " ", value, flags=re.IGNORECASE)
+    value = re.sub(r"\bPari\s*sha\s*ds\b", "Parishads", value, flags=re.IGNORECASE)
+    value = re.sub(r"\s+", " ", value).strip(" []{}.;:—–-")
+    value = LEGAL_LEADING_NOISE_RE.sub("", value)
+    value = re.sub(r"^(?:PART\s+[IVXLCDM]+\s+)?(?:THE\s+)?", "", value, flags=re.IGNORECASE)
+    value = re.sub(r"^\d+\s+(?:THE\s+)?", "", value, flags=re.IGNORECASE)
+    # Schedule headings describe an amendment operation; the cited identity is
+    # the enactment named after TO, not a fictitious "Amendment To" Act.
+    value = re.sub(r"^AMENDMENTS?\s+TO\s+(?:THE\s+)?", "", value, flags=re.IGNORECASE)
+    # Section prose before an embedded title is not part of the enactment.
+    marker_positions = []
+    for marker in (
+        "National Green Tribunal", "Environment (Protection)", "Water (Prevention",
+        "Air (Prevention", "Maharashtra Zilla", "Maharashtra (Urban Areas)",
+        "Maharashtra Slum Areas", "Scheduled Castes and Scheduled Tribes",
+        "Bombay Village Panchayats",
+    ):
+        position = value.casefold().find(marker.casefold())
+        if position >= 0:
+            marker_positions.append(position)
+    if marker_positions and min(marker_positions) > 0:
+        value = value[min(marker_positions):]
+    return value.strip(" []{}.;:—–-")
+
+
+def reconstruct_legal_identifier(evidence: str, context_text: str, kind: ReferenceKind) -> tuple[str, str, list[str]]:
+    """Recover a complete Act/Rule title from the same or adjacent source line."""
+    rules: list[str] = []
+    candidates: list[str] = []
+    evidence_candidates: list[str] = []
+    combined_candidates: list[str] = []
+    for source_index, source in enumerate((evidence, context_text)):
+        candidate_source = source.replace("\n", " ")
+        candidate_source = re.sub(r"(?<=\b20)\s+(?=\d{2}\b)", "", candidate_source)
+        candidate_source = re.sub(r"\b(Second|Third)Amendment\b", r"\1 Amendment", candidate_source, flags=re.IGNORECASE)
+        candidate_source = re.sub(r"\)\s*Act\b", ") Act", candidate_source, flags=re.IGNORECASE)
+        candidate_source = re.sub(
+            r"\[?(?:19|20)\d{2}\s*:\s*Mah\.\s*[IVXLCDM]+\]?",
+            " ", candidate_source, flags=re.IGNORECASE,
+        )
+        for match in COMBINED_MAHARASHTRA_LOCAL_ACT_RE.finditer(candidate_source):
+            title = _trim_legal_title(f"{match.group('title')}, {match.group('year')}")
+            if title and title not in candidates:
+                candidates.append(title)
+                combined_candidates.append(title)
+                if source_index == 0:
+                    evidence_candidates.append(title)
+        for match in LEGAL_REFERENCE_RE.finditer(candidate_source):
+            title = _trim_legal_title(f"{match.group('title')}, {match.group('year')}")
+            if title and title not in candidates:
+                candidates.append(title)
+                if source_index == 0:
+                    evidence_candidates.append(title)
+    if not candidates:
+        raw = evidence.strip(" .,:;-")
+        return raw, normalize_legal_reference(raw, kind.value), rules
+    incomplete = re.compile(
+        r"^(?:\(|and\b|samitis?\b|clearance\b|preservation\b|tribunal\b|green\b|"
+        r"pollution\b|protection\b|prevention\b|improvement\b|clearance\b|orders?\b|third\b|panchayat\b|parishads?\b|zilla\b|mah\b)",
+        re.IGNORECASE,
+    )
+    evidence_is_fragment = bool(incomplete.search(normalize_reference_whitespace(evidence).lstrip("[]{}.,;:—–- ")))
+    complete_evidence = [] if evidence_is_fragment else [item for item in evidence_candidates if not incomplete.search(item)]
+    # A complete title in the reference itself outranks nearby titles. Context
+    # is used only for an observed suffix/line-wrap fragment.
+    raw = (
+        max(combined_candidates, key=len) if combined_candidates
+        else max(complete_evidence, key=len) if complete_evidence
+        else max(candidates, key=len)
+    )
+    if normalize_reference_whitespace(raw).casefold() != normalize_reference_whitespace(evidence).casefold().strip(" .,:;-"):
+        rules.append("LEGAL_TITLE_FROM_BOUNDED_CONTEXT")
+    if re.search(r"^AMENDMENTS?\s+TO", evidence.strip(), re.IGNORECASE):
+        rules.append("LEGAL_SCHEDULE_HEADING_TO_BASE_ACT")
+    return raw, normalize_legal_reference(raw, kind.value), rules
+
+
+def recover_context_issuer(
+    evidence: str,
+    before: list[str],
+    *,
+    citing_department: str = "",
+) -> tuple[str, str, str, str, str, bool]:
+    """Return raw/canonical issuer plus evidence state, text and location."""
+    raw, normalized = extract_reference_department(evidence)
+    if raw:
+        return raw, normalized, ISSUER_EXPLICIT_REFERENCE, raw, "same_reference", normalized != normalize_reference_whitespace(raw).casefold()
+    for offset, line in enumerate(reversed(before), start=1):
+        match = DEPARTMENT_CONTEXT_RE.search(line)
+        if not match:
+            continue
+        raw = match.group("department").strip(" ,.-")
+        normalized = normalize_department_alias(raw)
+        return raw, normalized, ISSUER_EXPLICIT_CONTEXT, line, f"previous_line_{offset}", normalized != normalize_reference_whitespace(raw).casefold()
+    if citing_department:
+        return "", "", ISSUER_CITING_DOC_HINT_ONLY, citing_department, "citing_document_metadata", False
+    return "", "", ISSUER_UNKNOWN, "", "", False
+
+
+def context_recovery_metadata(
+    lines: list[str], index: int, evidence: str, kind: ReferenceKind, citing_department: str = "",
+) -> dict[str, Any]:
+    before, after = _bounded_lines(lines, index)
+    context_text = "\n".join([*before, evidence, *after])
+    raw_issuer, issuer, issuer_state, issuer_text, issuer_location, alias_applied = recover_context_issuer(
+        evidence, before, citing_department=citing_department,
+    )
+    raw_identifier = normalized_identifier = ""
+    rules: list[str] = []
+    if kind in {ReferenceKind.ACT, ReferenceKind.RULE}:
+        raw_identifier, normalized_identifier, rules = reconstruct_legal_identifier(evidence, context_text, kind)
+    return {
+        "context_before": "\n".join(before),
+        "context_after": "\n".join(after),
+        "context_text": context_text,
+        "raw_identifier": raw_identifier,
+        "normalized_identifier": normalized_identifier,
+        "identifier_rules": rules,
+        "raw_issuer": raw_issuer,
+        "normalized_issuer": issuer,
+        "issuer_state": issuer_state,
+        "issuer_evidence_text": issuer_text,
+        "issuer_evidence_location": issuer_location,
+        "issuer_alias_applied": alias_applied,
+    }
+
 
 def detect_reference_kind(text: str) -> ReferenceKind:
     normalized = normalize_reference_whitespace(text)
@@ -141,6 +309,7 @@ def _evidence_window(lines: list[str], index: int, in_section: bool) -> str:
 
 
 def _split_evidence(value: str) -> list[str]:
+    value = MULTI_REFERENCE_BOUNDARY_RE.sub("; ", value)
     parts = [part.strip() for part in re.split(r"\s*;\s*", value) if part.strip()]
     return parts if len(parts) > 1 and all(detect_reference_kind(part) != ReferenceKind.UNKNOWN for part in parts) else [value]
 
@@ -157,8 +326,10 @@ def _clean_identifier(value: str) -> str:
     return value.strip(" :;,.–—-")
 
 
-def _extract_identifier(text: str, kind: ReferenceKind) -> tuple[str, str]:
+def _extract_identifier(text: str, kind: ReferenceKind, context: dict[str, Any] | None = None) -> tuple[str, str]:
     if kind in {ReferenceKind.ACT, ReferenceKind.RULE}:
+        if context and context.get("normalized_identifier"):
+            return str(context["raw_identifier"]), str(context["normalized_identifier"])
         raw = text.strip(" .,:;-")
         canonical = normalize_legal_reference(raw, kind.value)
         return raw, canonical
@@ -230,9 +401,13 @@ class ReferenceParser:
                     continue
                 for evidence in _split_evidence(_evidence_window(lines, index, in_section)):
                     kind = detect_reference_kind(evidence)
-                    raw_number, normalized_number = _extract_identifier(evidence, kind)
+                    recovery = context_recovery_metadata(
+                        lines, index, evidence, kind, str(document.get("department") or ""),
+                    )
+                    raw_number, normalized_number = _extract_identifier(evidence, kind, recovery)
                     raw_date, normalized_date = _extract_date(evidence)
-                    raw_department, normalized_department = extract_reference_department(evidence)
+                    raw_department = str(recovery["raw_issuer"])
+                    normalized_department = str(recovery["normalized_issuer"])
                     signal, candidate_relation = _relation_signal(evidence)
                     if not normalized_number and not normalized_date.value:
                         continue
@@ -256,6 +431,13 @@ class ReferenceParser:
                     else:
                         status = ParserStatus.VALID
                         notes = ""
+                    recovery_note = {
+                        "issuer_state": recovery["issuer_state"],
+                        "issuer_evidence_location": recovery["issuer_evidence_location"],
+                        "issuer_alias_applied": recovery["issuer_alias_applied"],
+                        "identifier_rules": recovery["identifier_rules"],
+                    }
+                    notes = "; ".join(value for value in (notes, "V2=" + json.dumps(recovery_note, ensure_ascii=False, sort_keys=True)) if value)
                     evidence_hash = hashlib.sha256(evidence.encode("utf-8")).hexdigest()
                     fp = _fingerprint(int(document["id"]), int(page["page_number"]), kind.value, normalized_number, normalized_date.iso_date, evidence_hash)
                     if fp in seen:

@@ -61,6 +61,13 @@ class IdentityMatch:
 
 def expected_identifier(reference: ReferenceIdentity) -> str:
     if reference.reference_kind in {"ACT", "RULE"}:
+        # V5/V6 corrected identities already carry the complete title and
+        # version semantics.  Preserve those before consulting legacy repair
+        # aliases, which are only for damaged historical parser output.
+        valid, _reason = legal_identity_quality(reference.normalized_identifier)
+        damaged_prefixes = ("ACCORDING_TO_", "AS_PER_", "UNDER_", "SECTION_", "THE_SCHEDULE_")
+        if valid and not reference.normalized_identifier.upper().startswith(damaged_prefixes):
+            return reference.normalized_identifier
         marker_map = (
             ("RIGHTS_OF_PERSONS_WITH_DISABILITIES", "RIGHTS_OF_PERSONS_WITH_DISABILITIES_ACT_2016"),
             ("MAHARASHTRA_ZILLA_PARISHADS_AND_PANCHAYAT_SAMITIS", "MAHARASHTRA_ZILLA_PARISHADS_AND_PANCHAYAT_SAMITIS_ACT_1961"),

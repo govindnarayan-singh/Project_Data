@@ -1,5 +1,6 @@
 import hashlib
 import io
+import json
 import socket
 import urllib.error
 from datetime import date
@@ -324,24 +325,33 @@ def test_official_html_url_join_encodes_spaces_and_preserves_query_values():
     assert "handleid=123%2F4" in url
 
 
-def test_landing_page_metadata_selects_primary_official_pdf(tmp_path):
+def test_item_metadata_selects_primary_official_original_bundle_pdf(tmp_path):
     definition = next(item for item in SOURCE_REGISTRY if item.adapter == "india_code")
     adapter = IndiaCodeSource(definition, cache_dir=tmp_path)
-    adapter.client.fetch = lambda url, expected_pdf=False: FetchResult(
-        url,
-        "https://www.indiacode.nic.in/handle/123456789/2155",
-        "text/html",
-        (FIXTURES / "india_code_landing.html").read_bytes(),
-    )
+    def fetch(url, expected_pdf=False):
+        if "/bundles?" in url:
+            payload = {"_embedded": {"bundles": [{
+                "name": "ORIGINAL",
+                "_links": {"bitstreams": {"href": "https://indiacode.gov.in/server/api/core/bundles/b/bitstreams"}},
+            }]}}
+        elif "/items/" in url:
+            payload = {"_links": {"bundles": {"href": "https://indiacode.gov.in/server/api/core/items/x/bundles"}}}
+        else:
+            payload = {"_embedded": {"bitstreams": [{
+                "name": "a2016-49.pdf", "sizeBytes": 100,
+                "_links": {"content": {"href": "https://indiacode.gov.in/server/api/core/bitstreams/p/content"}},
+            }]}}
+        return FetchResult(url, url, "application/json", json.dumps(payload).encode())
+    adapter.client.fetch = fetch
     candidate = SourceCandidate(
-        target_key="ACT|x", source_adapter="india_code", source_domain="www.indiacode.nic.in",
+        target_key="ACT|x", source_adapter="india_code", source_domain="indiacode.gov.in",
         source_authority="OFFICIAL_PRIMARY", discovery_query="x", discovery_status="DISCOVERED",
-        landing_url="https://www.indiacode.nic.in/ViewSelectedActDetailsServlet?x=1",
+        landing_url="https://indiacode.gov.in/server/api/core/items/x",
         discovered_title="The Rights of Persons with Disabilities Act, 2016.",
     )
     result = adapter.fetch_candidate_metadata(candidate)
-    assert result.landing_url.endswith("/handle/123456789/2155")
-    assert result.document_url.endswith("/bitstream/123456789/2155/1/a2016-49.pdf")
+    assert result.document_url.endswith("/server/api/core/bitstreams/p/content")
+    assert result.raw_source_evidence["official_bundle"] == "ORIGINAL"
     assert adapter.verify_authority(result)
 
 

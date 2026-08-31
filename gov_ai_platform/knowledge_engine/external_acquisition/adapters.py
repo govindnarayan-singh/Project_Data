@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import html
+import json
 import re
 import urllib.parse
 from dataclasses import replace
@@ -9,7 +10,7 @@ from pathlib import Path
 from typing import Protocol
 
 from knowledge_engine.settings import settings
-from knowledge_engine.graph.normalization import normalize_document_number
+from knowledge_engine.graph.normalization import normalize_document_number, normalize_legal_reference
 
 from .identity import legal_identity_quality, verify_identity
 from .models import ReferenceIdentity, SourceCandidate, SourceDefinition, TargetState
@@ -114,7 +115,7 @@ def _official_urljoin(base_url: str, href: str) -> str:
     )
 
 class IndiaCodeSource:
-    SEARCH_ROOT = "https://www.indiacode.nic.in/handle/123456789/1362/simple-search"
+    SEARCH_ROOT = "https://indiacode.gov.in/server/api/discover/search/objects"
 
     def __init__(self, definition: SourceDefinition, *, cache_dir: Path):
         self.definition = definition
@@ -157,27 +158,61 @@ class IndiaCodeSource:
         seen: set[str] = set()
         network_errors: list[str] = []
         for query in self.build_queries(reference):
-            url = self.SEARCH_ROOT + "?" + urllib.parse.urlencode({"query": query, "searchradio": "all"})
+            state_named = bool(re.search(r"\b(?:MAHARASHTRA|BOMBAY)\b", reference.normalized_identifier))
+            collection = (
+                "ACT_AMENDMENT"
+                if reference.reference_kind == "ACT" and "_AMENDMENT_ACT_" in reference.normalized_identifier and not state_named
+                else "ACT" if reference.reference_kind == "ACT" else "RULE"
+            )
+            url = self.SEARCH_ROOT + "?" + urllib.parse.urlencode({
+                "query": query,
+                "size": 100,
+                "dsoType": "ITEM",
+                "f.identifier_collection": f"{collection},equals",
+                "embed": ["objects", "objects.indexableObject"],
+            }, doseq=True)
             try:
                 fetched = self.client.fetch(url)
             except NetworkSafetyError as error:
                 network_errors.append(str(error))
                 continue
-            parser = _LinkParser()
-            parser.feed(fetched.body.decode("utf-8", errors="replace"))
-            for href, title, attrs in parser.links:
-                css_class = attrs.get("class", "").casefold()
-                if not title or not (
-                    "viewselectedactdetailsservlet" in href.casefold()
-                    or "allacts" in css_class
-                ):
+            try:
+                payload = json.loads(fetched.body)
+                objects = payload.get("_embedded", {}).get("searchResult", {}).get("_embedded", {}).get("objects", [])
+            except (TypeError, ValueError) as error:
+                network_errors.append(f"Official India Code search response was not JSON: {error}")
+                continue
+            expected_jurisdiction = "MAHARASHTRA" if state_named else "CENTRAL"
+            for result in objects:
+                item = result.get("_embedded", {}).get("indexableObject", {})
+                title = str(item.get("name") or "").strip()
+                metadata = item.get("metadata") or {}
+                state_values = {
+                    str(value.get("value") or "").strip().upper()
+                    for value in metadata.get("dc.identifier.state_name", [])
+                }
+                collection_values = {
+                    str(value.get("value") or "").strip().upper()
+                    for value in metadata.get("dc.identifier.collection", [])
+                }
+                item_id = str(item.get("uuid") or item.get("id") or "").strip()
+                if not title or not item_id or collection not in collection_values:
                     continue
-                landing_url = _official_urljoin(fetched.final_url, href)
-                identity_key = title.casefold().strip().rstrip(".")
+                match = verify_identity(reference, discovered_title=title)
+                if match.status not in {"MATCH_EXACT", "MATCH_STRONG", "MATCH_EXACT_VERSION"}:
+                    continue
+                central_amendment_collection = (
+                    expected_jurisdiction == "CENTRAL"
+                    and collection == "ACT_AMENDMENT"
+                    and not state_values
+                )
+                if expected_jurisdiction not in state_values and not central_amendment_collection:
+                    continue
+                landing_url = f"https://indiacode.gov.in/server/api/core/items/{item_id}"
+                identity_key = f"{title.casefold().strip().rstrip('.')}|{expected_jurisdiction}"
                 if identity_key in seen:
                     continue
                 seen.add(identity_key)
-                match = verify_identity(reference, discovered_title=title)
                 candidates.append(
                     SourceCandidate(
                         target_key=reference.target_key,
@@ -206,6 +241,11 @@ class IndiaCodeSource:
                             "search_url": url,
                             "search_final_url": fetched.final_url,
                             "search_from_cache": fetched.from_cache,
+                            "official_item_uuid": item_id,
+                            "official_handle": item.get("handle", ""),
+                            "official_jurisdiction": sorted(state_values),
+                            "official_collection": sorted(collection_values),
+                            "api_version": "DSpace_9.1",
                         },
                     )
                 )
@@ -246,16 +286,37 @@ class IndiaCodeSource:
         if candidate.discovery_status != "DISCOVERED" or not candidate.landing_url:
             return candidate
         fetched = self.client.fetch(candidate.landing_url)
-        parser = _LinkParser()
-        parser.feed(fetched.body.decode("utf-8", errors="replace"))
-        bitstreams: list[tuple[int, str, str]] = []
-        for href, title, _ in parser.links:
-            clean_href = html.unescape(href).strip()
-            if "/bitstream/" not in clean_href.casefold() or not clean_href.casefold().endswith(".pdf"):
-                continue
-            url = _official_urljoin(fetched.final_url, clean_href)
-            title_match = int(title.casefold().rstrip(".") == candidate.discovered_title.casefold().rstrip("."))
-            bitstreams.append((title_match, url, title))
+        try:
+            item = json.loads(fetched.body)
+            bundles_url = item.get("_links", {}).get("bundles", {}).get("href", "")
+            if not bundles_url:
+                raise ValueError("item has no bundles link")
+            bundle_response = self.client.fetch(bundles_url + "?size=20")
+            bundles = json.loads(bundle_response.body).get("_embedded", {}).get("bundles", [])
+            bitstreams: list[tuple[int, int, str, str]] = []
+            for bundle in bundles:
+                if str(bundle.get("name") or "").upper() != "ORIGINAL":
+                    continue
+                bits_url = bundle.get("_links", {}).get("bitstreams", {}).get("href", "")
+                if not bits_url:
+                    continue
+                bits_response = self.client.fetch(bits_url + "?size=20")
+                bits = json.loads(bits_response.body).get("_embedded", {}).get("bitstreams", [])
+                for bitstream in bits:
+                    name = str(bitstream.get("name") or "")
+                    content_url = bitstream.get("_links", {}).get("content", {}).get("href", "")
+                    if content_url and name.casefold().endswith(".pdf"):
+                        # India Code's conventional ORIGINAL names use an
+                        # `aYYYY-` prefix for the English Act and `h...` for
+                        # Hindi.  Prefer English because legal identity
+                        # matching is against the frozen English target.
+                        english_name = int(bool(re.match(r"(?i)^a(?:18|19|20)\d{2}[-_]", name)))
+                        bitstreams.append((english_name, int(bitstream.get("sizeBytes") or 0), content_url, name))
+        except (NetworkSafetyError, TypeError, ValueError) as error:
+            bitstreams = []
+            metadata_error = str(error)
+        else:
+            metadata_error = ""
         if not bitstreams:
             return replace(
                 candidate,
@@ -265,11 +326,11 @@ class IndiaCodeSource:
                 target_state=TargetState.DOWNLOAD_FAILED.value,
                 raw_source_evidence={
                     **candidate.raw_source_evidence,
-                    "metadata_error": "No official primary /bitstream/ PDF link found",
+                    "metadata_error": metadata_error or "No PDF found in the official ORIGINAL bundle",
                 },
             )
-        bitstreams.sort(key=lambda row: (-row[0], row[1]))
-        _, document_url, link_title = bitstreams[0]
+        bitstreams.sort(key=lambda row: (-row[0], -row[1], row[2]))
+        _, _, document_url, link_title = bitstreams[0]
         return replace(
             candidate,
             landing_url=fetched.final_url,
@@ -280,6 +341,7 @@ class IndiaCodeSource:
                 "landing_from_cache": fetched.from_cache,
                 "primary_pdf_link_title": link_title,
                 "official_pdf_links_found": len(bitstreams),
+                "official_bundle": "ORIGINAL",
             },
         )
 
@@ -464,6 +526,8 @@ class MaharashtraDepartmentSource:
         "maharashtra_marathi_language": "marathi language department",
         "maharashtra_it": "electronics, information technology and artificial intelligence department",
         "maharashtra_law_judiciary": "law and judiciary department",
+        "maharashtra_social_justice": "persons with disabilities welfare department",
+        "maharashtra_minority_development": "minorities development department",
     }
 
     def __init__(self, definition: SourceDefinition, *, cache_dir: Path):
@@ -508,6 +572,8 @@ class MaharashtraDepartmentSource:
         query = urllib.parse.quote(query_text, safe="")
         if self.definition.source_id == "maharashtra_it":
             return f"https://{self.definition.base_host}/search/node?keys={query}"
+        if self.definition.listing_strategy.startswith("PUBLIC_S3WAAS"):
+            return f"https://{self.definition.base_host}/en/?s={query}"
         return f"https://{self.definition.base_host}/?s={query}"
 
     def _links(self, body: bytes, base_url: str) -> list[tuple[str, str]]:
@@ -645,8 +711,196 @@ class MaharashtraDepartmentSource:
         ) and candidate.source_authority == self.definition.authority_class.value
 
 
+_S3WAAS_LISTING_CACHE: dict[str, list[tuple[str, str, int]]] = {}
+
+
+class MaharashtraS3WaaSDocumentSource(MaharashtraDepartmentSource):
+    """Reusable bounded reader for public Maharashtra S3WaaS document indexes.
+
+    Discovery uses only public HTML pagination and official PDF links.  Titles
+    are a coarse discovery filter; trust remains deferred to the locally
+    persisted Incoming PDF gate in the acquisition service.
+    """
+
+    _GENERIC_LEGAL_TOKENS = {
+        "THE", "MAHARASHTRA", "BOMBAY", "ACT", "OF", "AND", "TO",
+        "AMENDMENT",
+    }
+
+    @staticmethod
+    def _page_url(listing_url: str, page: int) -> str:
+        root = listing_url.rstrip("/") + "/"
+        return root if page == 1 else urllib.parse.urljoin(root, f"page/{page}/")
+
+    def build_queries(self, reference: ReferenceIdentity) -> list[str]:
+        queries = super().build_queries(reference)
+        if reference.reference_kind in {"ACT", "RULE"}:
+            for query in list(queries):
+                without_state = re.sub(r"\b(?:THE\s+)?MAHARASHTRA\s+", "", query, flags=re.IGNORECASE)
+                if without_state and without_state not in queries:
+                    queries.append(without_state)
+            # The official Law and Judiciary archive contains an observed
+            # "Parishands" index-title spelling.  This is a source-level
+            # search alias only; local PDF identity still requires PARISHADS.
+            # Prefer the archive's unprefixed observed title inside the bounded
+            # query budget.  The canonical identity is still attempted first.
+            for query in reversed(list(queries)):
+                observed_spelling = re.sub(r"\bPARISHADS\b", "PARISHANDS", query, flags=re.IGNORECASE)
+                if observed_spelling and observed_spelling not in queries:
+                    queries.append(observed_spelling)
+        return queries[:3]
+
+    @classmethod
+    def _legal_title_score(cls, expected: str, title: str, kind: str) -> float:
+        if kind == "ACT" and not re.search(r"\bact\b", title, re.IGNORECASE):
+            return 0.0
+        if kind == "RULE" and not re.search(r"\brules?\b", title, re.IGNORECASE):
+            return 0.0
+        discovered = normalize_legal_reference(title, kind)
+        expected = expected.removeprefix("THE_")
+        discovered = discovered.removeprefix("THE_")
+        expected_year = re.search(r"_(?:19|20)\d{2}$", expected)
+        discovered_year = re.search(r"_(?:19|20)\d{2}$", discovered)
+        if not expected_year or not discovered_year or expected_year.group() != discovered_year.group():
+            return 0.0
+        expected_tokens = {
+            token for token in expected[:expected_year.start()].split("_")
+            if token and token not in cls._GENERIC_LEGAL_TOKENS
+        }
+        discovered_tokens = {
+            token for token in discovered[:discovered_year.start()].split("_")
+            if token and token not in cls._GENERIC_LEGAL_TOKENS
+        }
+        for ordinal in ("SECOND", "THIRD"):
+            if (ordinal in expected_tokens) != (ordinal in discovered_tokens):
+                return 0.0
+        if "AMENDMENT" in expected and "AMENDMENT" not in discovered:
+            return 0.0
+        if not expected_tokens:
+            return 0.0
+        overlap = len(expected_tokens & discovered_tokens) / len(expected_tokens)
+        return overlap if overlap >= 0.75 else 0.0
+
+    def _listing_entries(self) -> tuple[list[tuple[str, str, int]], list[str]]:
+        cached = _S3WAAS_LISTING_CACHE.get(self.definition.source_id)
+        if cached is not None:
+            return cached, []
+        listing_url = self.definition.listing_url
+        max_pages = self.definition.listing_max_pages
+        if not listing_url or max_pages < 1:
+            return [], []
+        entries: list[tuple[str, str, int]] = []
+        errors: list[str] = []
+        first_body: bytes | None = None
+        first_final = listing_url
+        try:
+            first = self.client.fetch(self._page_url(listing_url, 1))
+            first_body, first_final = first.body, first.final_url
+            links = _LinkParser()
+            links.feed(first.body.decode("utf-8", errors="replace"))
+            observed_pages = [
+                int(match.group(1))
+                for href, _title, _attrs in links.links
+                if (match := re.search(r"/page/(\d+)/?", href))
+            ]
+            page_limit = min(max_pages, max(observed_pages, default=1))
+        except NetworkSafetyError as error:
+            return [], [str(error)]
+        for page in range(1, page_limit + 1):
+            try:
+                if page == 1 and first_body is not None:
+                    body, final_url = first_body, first_final
+                else:
+                    fetched = self.client.fetch(self._page_url(listing_url, page))
+                    body, final_url = fetched.body, fetched.final_url
+                parser = _OfficialIndexParser()
+                parser.feed(body.decode("utf-8", errors="replace"))
+                for href, title, _date in parser.rows:
+                    url = _official_urljoin(final_url, href)
+                    if (url, title, page) not in entries:
+                        entries.append((url, title, page))
+            except NetworkSafetyError as error:
+                errors.append(f"page {page}: {error}")
+        _S3WAAS_LISTING_CACHE[self.definition.source_id] = entries
+        return entries, errors
+
+    def search(self, reference: ReferenceIdentity) -> list[SourceCandidate]:
+        if not self.supports(reference):
+            return []
+        if reference.reference_kind not in {"ACT", "RULE"}:
+            return super().search(reference)
+        expected = reference.normalized_identifier
+        entries: list[tuple[str, str, int]] = []
+        errors: list[str] = []
+        for query in self.build_queries(reference):
+            search_url = self._search_url(query)
+            try:
+                fetched = self.client.fetch(search_url)
+                entries.extend((url, title, 0) for url, title in self._links(fetched.body, fetched.final_url))
+            except NetworkSafetyError as error:
+                errors.append(str(error))
+            if entries:
+                break
+        ranked = sorted(
+            (
+                (self._legal_title_score(expected, title, reference.reference_kind), url, title, page)
+                for url, title, page in entries
+            ),
+            key=lambda item: (-item[0], item[3], item[1]),
+        )
+        candidates: list[SourceCandidate] = []
+        for score, url, title, page in ranked:
+            if score <= 0:
+                break
+            candidates.append(SourceCandidate(
+                target_key=reference.target_key,
+                source_adapter=self.definition.source_id,
+                source_domain=urllib.parse.urlparse(url).hostname or "",
+                source_authority=self.definition.authority_class.value,
+                discovery_query=(self.build_queries(reference) or [expected])[0],
+                discovery_status="DISCOVERED",
+                discovery_url=self._search_url((self.build_queries(reference) or [expected])[0]),
+                landing_url=(self._search_url((self.build_queries(reference) or [expected])[0])
+                             if urllib.parse.urlparse(url).path.casefold().endswith(".pdf") else url),
+                document_url=url,
+                discovered_title=title,
+                discovered_issuer=reference.issuer,
+                discovered_document_kind=reference.reference_kind,
+                identity_match_status="NOT_EVALUATED",
+                acquisition_status="DISCOVERED",
+                raw_source_evidence={
+                    "identity_deferred_to_local_pdf": True,
+                    "listing_strategy": self.definition.listing_strategy,
+                    "listing_page": page or "OFFICIAL_SEARCH",
+                    "discovery_title_score": score,
+                },
+            ))
+            if len(candidates) >= 5:
+                break
+        if candidates:
+            return candidates
+        status = "NETWORK_FAILED" if errors and not entries else "NOT_FOUND"
+        return [SourceCandidate(
+            target_key=reference.target_key,
+            source_adapter=self.definition.source_id,
+            source_domain=self.definition.base_host,
+            source_authority=self.definition.authority_class.value,
+            discovery_query=(self.build_queries(reference) or [expected])[0],
+            discovery_status=status,
+            acquisition_status="BLOCKED" if status == "NETWORK_FAILED" else "NOT_FOUND",
+            verification_status="BLOCKED" if status == "NETWORK_FAILED" else "UNVERIFIED",
+            target_state=(TargetState.NETWORK_FAILED.value if status == "NETWORK_FAILED"
+                          else TargetState.NOT_FOUND_AUTHORITATIVE.value),
+            raw_source_evidence={
+                "reason": "OFFICIAL_PUBLIC_INDEX_NO_EXACT_TITLE",
+                "listing_entries_examined": len(entries),
+                "network_errors": errors,
+            },
+        )]
+
+
 __all__ = [
     "BlockedOfficialSource", "DivyangSahayakSource", "ExternalDocumentSource", "IndiaCodeSource",
-    "MaharashtraDepartmentSource",
+    "MaharashtraDepartmentSource", "MaharashtraS3WaaSDocumentSource",
     "_LinkParser", "_OfficialIndexParser", "_official_urljoin",
 ]

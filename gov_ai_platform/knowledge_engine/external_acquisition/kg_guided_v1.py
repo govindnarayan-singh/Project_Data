@@ -15,6 +15,7 @@ from typing import Any
 from knowledge_engine.graph.brain_v2 import closure_snapshot, database_snapshot
 from knowledge_engine.graph.normalization import normalize_legal_reference
 from knowledge_engine.graph.validation import KnowledgeGraphValidationPolicy
+from knowledge_engine.extraction.pdf import _ocr_page, _tesseract_available
 from knowledge_engine.settings import PROJECT_ROOT, settings
 
 from .adapters import BlockedOfficialSource, DivyangSahayakSource, IndiaCodeSource, MaharashtraDepartmentSource
@@ -367,9 +368,29 @@ class KgGuidedAcquisitionV1Service:
             probe = validate_pdf(local_body)
             if reference.reference_kind in {"ACT", "RULE"}:
                 corroborates, identity_evidence = legal_pdf_corroborates(reference, probe.probe_text)
+                identity_probe_text = probe.probe_text
+                identity_extraction_method = "embedded_text"
+                if not corroborates and _tesseract_available():
+                    # OCR is deliberately local and bounded: bytes are already
+                    # durable in Incoming, and only the first three pages are
+                    # used to recover an identity heading.  Remote response
+                    # bodies never enter the OCR/identity path.
+                    import pypdfium2 as pdfium
+
+                    pdfium_document = pdfium.PdfDocument(str(incoming_path))
+                    ocr_text = "\n".join(
+                        _ocr_page(pdfium_document, page_index, try_rotations=False)
+                        for page_index in range(min(probe.page_count, 3))
+                    )
+                    ocr_corroborates, ocr_evidence = legal_pdf_corroborates(reference, ocr_text)
+                    if ocr_corroborates:
+                        corroborates = True
+                        identity_probe_text = ocr_text
+                        identity_evidence = {**ocr_evidence, "embedded_text_corroboration": identity_evidence}
+                        identity_extraction_method = "local_ocr_first_3_pages"
                 expected = expected_identifier(reference)
                 expected_year = expected.rsplit("_", 1)[-1]
-                lines = [line.strip() for line in probe.probe_text.splitlines()[:120] if line.strip()]
+                lines = [line.strip() for line in identity_probe_text.splitlines()[:120] if line.strip()]
                 options: list[tuple[int, str, str]] = []
                 expected_tokens = set(expected.split("_")[:-2])
                 for index in range(len(lines)):
@@ -389,7 +410,8 @@ class KgGuidedAcquisitionV1Service:
                     status = "AMBIGUOUS_VERSION"
                 identity_evidence = {**identity_evidence, "version_semantics": semantics,
                                      "local_pdf_extracted_identity": discovered,
-                                     "local_pdf_identity_evidence": options[0][2][:500] if options else ""}
+                                     "local_pdf_identity_evidence": options[0][2][:500] if options else "",
+                                     "identity_extraction_method": identity_extraction_method}
             else:
                 discovered, identity_evidence = administrative_pdf_identifier(reference, probe.probe_text)
                 match = verify_identity(
@@ -436,7 +458,7 @@ class KgGuidedAcquisitionV1Service:
     def _promote(reference: ReferenceIdentity, candidate: SourceCandidate) -> SourceCandidate:
         if candidate.verification_status != "AUTO_VERIFIED":
             return candidate
-        if candidate.duplicate_status != "NEW_DOCUMENT":
+        if candidate.duplicate_status not in {"NEW_DOCUMENT", "SAME_DOCUMENT_DUPLICATE_SOURCE"}:
             state = candidate.duplicate_status or candidate.target_state
             return replace(candidate, target_state=state)
         try:

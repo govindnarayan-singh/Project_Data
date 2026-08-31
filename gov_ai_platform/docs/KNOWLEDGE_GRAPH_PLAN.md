@@ -327,3 +327,38 @@ candidates, relations, or evidence on the second run. The graph and closure are
 unchanged because no new target entered the corpus. Benchmark V4 retains 85
 source-evidence cases, uses `KGB4-*` identifiers, and remains explicitly not
 independent human ground truth.
+
+## V5 parser identity and closure result
+
+Reference parser V2 preserves raw evidence and candidate fingerprints while
+recording versioned recovery provenance in parser notes. Deterministic rules
+repair wrapped legal titles, attached schedule headings, amendment-version
+semantics, split years, OCR punctuation/spacing, and multi-reference sentence
+boundaries. Issuer states distinguish explicit reference/context evidence from
+controlled aliases and rejected citing-document hints.
+
+The top-50 replay moved quality-ready targets from 18 to 38 and exact source
+queryability from 6 targets/routes to 18 targets and 21 routes. The all-corpus
+versioned rerun preserves 1,501 candidates and 91 edges on both passes. It
+normalizes the closure denominator from 639 to 634 unique parseable identities
+and unresolved identities from 627 to 622; it creates no new graph edge because
+no authoritative document entered the corpus. Benchmark V5 starts with all 85
+V4 evidence cases and passes unchanged. Parser behavior is measured separately
+on 120 evidence-derived cases, not represented as independent human labels.
+
+## V6 graph-closure result
+
+V6 freezes `kg_graph_completion_priority_v6.csv` from the same 30-target
+network subset used for acquisition. Six verified official target documents
+were ingested. The first KG run added 175 candidates, 9 REFERENCES, 6 ISSUED_BY,
+and 16 evidence links; the second run added none. Three acquired targets gained
+four incoming REFERENCES, while five further REFERENCES originate in the new
+documents and resolve existing corpus targets.
+
+Closure must be read with its changing denominator: mention closure moved from
+41/937 to 57/1,103 and referenced-target closure from 12/634 to 15/709 because
+the new Acts introduce additional reference candidates. Unique unresolved
+targets therefore moved from 622 to 694 even as exact resolved targets rose
+from 12 to 15. This is corpus expansion, not a claim that discovery regressed.
+No vector similarity created a relation and no `HUMAN_CONFIRMED` state was
+fabricated.

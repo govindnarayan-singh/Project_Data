@@ -22,7 +22,7 @@ def test_operational_semantics_do_not_equate_kind_support_with_queryability():
     assert row["TARGET_QUERYABLE"] == "NO"
 
 
-def test_department_queryability_requires_matching_explicit_issuer():
+def test_matching_explicit_issuer_does_not_override_unknown_history():
     reference = ReferenceIdentity(
         target_key="GOVERNMENT_RESOLUTION|अभियान-2021/1",
         reference_kind="GOVERNMENT_RESOLUTION",
@@ -32,10 +32,11 @@ def test_department_queryability_requires_matching_explicit_issuer():
     )
     row = coverage_row(source("maharashtra_environment"), reference, quality_state="READY_FOR_DISCOVERY")
     assert row["ADAPTER_ISSUER_SUPPORT"] == YES
-    assert row["TARGET_QUERYABLE"] == YES
+    assert row["HISTORICAL_COVERAGE"] == "UNKNOWN"
+    assert row["TARGET_QUERYABLE"] == "NO"
 
 
-def test_law_and_judiciary_is_a_reusable_legal_source_family():
+def test_law_and_judiciary_partial_history_excludes_out_of_range_act():
     reference = ReferenceIdentity(
         target_key="ACT|MAHARASHTRA_SLUM_AREAS_ACT_1971",
         reference_kind="ACT",
@@ -43,8 +44,20 @@ def test_law_and_judiciary_is_a_reusable_legal_source_family():
         normalized_identifier="MAHARASHTRA_SLUM_AREAS_ACT_1971",
     )
     row = coverage_row(source("maharashtra_law_judiciary"), reference, quality_state="READY_FOR_DISCOVERY")
+    assert row["HISTORICAL_COVERAGE"] == "HISTORICAL_COVERAGE_PARTIAL"
+    assert row["TARGET_QUERYABLE"] == "NO"
+    assert row["SOURCE_COVERAGE_CONFIRMED"] == "NO"
+
+
+def test_law_and_judiciary_partial_history_accepts_in_range_act():
+    reference = ReferenceIdentity(
+        target_key="ACT|MAHARASHTRA_SLUM_AREAS_AMENDMENT_ACT_2014",
+        reference_kind="ACT",
+        raw_identifier="The Maharashtra Slum Areas Amendment Act, 2014",
+        normalized_identifier="MAHARASHTRA_SLUM_AREAS_AMENDMENT_ACT_2014",
+    )
+    row = coverage_row(source("maharashtra_law_judiciary"), reference, quality_state="READY_FOR_DISCOVERY")
     assert row["TARGET_QUERYABLE"] == YES
-    assert row["SOURCE_COVERAGE_CONFIRMED"] == YES
 
 
 def test_state_law_source_does_not_claim_central_act_jurisdiction():

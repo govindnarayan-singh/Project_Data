@@ -88,6 +88,7 @@ def normalize_department_alias(value: str) -> str:
         "सामाजिक न्याय व विशेष सहाय्य विभाग": "persons with disabilities welfare department",
         "दिव्यांग कल्याण विभाग": "persons with disabilities welfare department",
         "सामान्य प्रशासन विभाग": "general administration department",
+        "अल्पसंख्याक विकास विभाग": "minorities development department",
     }
     return aliases.get(text, text)
 
@@ -154,10 +155,26 @@ def normalize_legal_reference(value: str, kind: str) -> str:
             (r"construction.*demolition\s+waste\s+management\s+rules", "CONSTRUCTION_AND_DEMOLITION_WASTE_MANAGEMENT_RULES"),
             (r"development\s+control.*(?:rules|regulations)|विकास\s+नियंत्रण\s+नियमावली", "DEVELOPMENT_CONTROL_REGULATIONS"),
         )
+    combined_local_act = bool(
+        kind == "ACT"
+        and re.search(r"Bombay\s+Village\s+Panchayats?", text, re.IGNORECASE)
+        and re.search(r"Maharashtra\s+Zilla\s+Parishads?.*Panchayat\s+Samitis?", text, re.IGNORECASE)
+    )
     for pattern, canonical in known:
+        if combined_local_act:
+            break
         if re.search(pattern, text, re.IGNORECASE):
+            if kind == "ACT" and re.search(r"\bamendment\b", text, re.IGNORECASE):
+                if re.search(r"\bsecond\s+amendment\b", text, re.IGNORECASE):
+                    qualifier = "SECOND_AMENDMENT"
+                elif re.search(r"\bthird\s+amendment\b", text, re.IGNORECASE):
+                    qualifier = "THIRD_AMENDMENT"
+                else:
+                    qualifier = "AMENDMENT"
+                canonical = canonical.removesuffix("_ACT") + f"_{qualifier}_ACT"
             return f"{canonical}_{year}" if year else canonical
     before_kind = LEGAL_KIND_RE.split(text, maxsplit=1)[0]
+    before_kind = re.sub(r"\b(Second|Third)Amendment\b", r"\1 Amendment", before_kind, flags=re.IGNORECASE)
     base = before_kind if len(before_kind.strip()) >= 4 else text
     base = re.sub(r"[^0-9A-Za-z\u0900-\u097f]+", "_", base).strip("_").upper()
     suffix = "ACT" if kind == "ACT" else "RULE"

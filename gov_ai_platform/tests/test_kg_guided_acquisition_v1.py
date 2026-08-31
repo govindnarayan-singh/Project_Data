@@ -106,7 +106,10 @@ def test_local_first_download_stages_before_pdf_identity_processing(tmp_path):
             return True
 
     fake_settings = SimpleNamespace(external_incoming_root=tmp_path)
-    with patch("knowledge_engine.external_acquisition.kg_guided_v1.settings", fake_settings):
+    with (
+        patch("knowledge_engine.external_acquisition.kg_guided_v1.settings", fake_settings),
+        patch("knowledge_engine.external_acquisition.kg_guided_v1._tesseract_available", return_value=False),
+    ):
         result = KgGuidedAcquisitionV1Service._download_local_first(reference, Adapter(), candidate, set(), set(), set())
     assert (tmp_path / result.local_acquired_path).read_bytes() == body
     assert result.identity_evidence["identity_source"] == "LOCAL_INCOMING_PDF"
@@ -126,4 +129,3 @@ def test_manifest_validator_policy_names_only_permanent_archive_fields():
     assert "ARCHIVE_ROOT_IDENTITY" in source
     assert "incoming_paths" in source
     assert "remote_source_paths" in source
-

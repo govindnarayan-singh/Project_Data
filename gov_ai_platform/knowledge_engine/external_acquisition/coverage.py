@@ -8,7 +8,7 @@ from typing import Any, Iterable
 from knowledge_engine.graph.normalization import normalize_department_alias
 from knowledge_engine.graph.parser import extract_reference_department
 
-from .models import ReferenceIdentity, SourceDefinition
+from .models import HistoricalCoverage, ReferenceIdentity, SourceDefinition
 from .registry import SOURCE_REGISTRY
 
 
@@ -55,6 +55,14 @@ def coverage_row(
         (source.coverage_start_year is None or year is None or year >= source.coverage_start_year)
         and (source.coverage_end_year is None or year is None or year <= source.coverage_end_year)
     )
+    historical_supported = (
+        source.historical_coverage == HistoricalCoverage.CONFIRMED
+        or (source.historical_coverage == HistoricalCoverage.PARTIAL and year_supported)
+        or (
+            source.historical_coverage == HistoricalCoverage.CURRENT_ONLY
+            and year is not None and year >= 2020
+        )
+    )
     search = bool(source.enabled and source.automated_discovery and source.search_executable)
     network_gate = network_reachable is not False
     queryable = bool(
@@ -64,11 +72,15 @@ def coverage_row(
         and issuer
         and jurisdiction
         and year_supported
+        and historical_supported
         and search
         and network_gate
     )
     reachable = UNKNOWN if network_reachable is None else (YES if network_reachable else NO)
-    confirmed = bool(source.coverage_confirmed and kind and issuer and jurisdiction and year_supported)
+    confirmed = bool(
+        source.coverage_confirmed and kind and issuer and jurisdiction
+        and year_supported and historical_supported
+    )
     return {
         "target": reference.target_key,
         "target_kind": reference.reference_kind,
@@ -82,7 +94,9 @@ def coverage_row(
         "ADAPTER_KIND_SUPPORT": YES if kind else NO,
         "ADAPTER_ISSUER_SUPPORT": YES if issuer else NO,
         "ADAPTER_JURISDICTION_SUPPORT": YES if jurisdiction else NO,
+        "JURISDICTION_SUPPORT": YES if jurisdiction else NO,
         "ADAPTER_YEAR_SUPPORT": YES if year_supported else NO,
+        "HISTORICAL_COVERAGE": source.historical_coverage.value,
         "ADAPTER_NETWORK_REACHABLE": reachable,
         "ADAPTER_SEARCH_EXECUTABLE": YES if search else NO,
         "TARGET_QUERYABLE": YES if queryable else NO,

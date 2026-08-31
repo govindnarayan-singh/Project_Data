@@ -295,3 +295,31 @@ Act List is a reusable state-law adapter with `lj.maharashtra.gov.in` and
 official `cdnbbsr.s3waas.gov.in` PDF delivery. Central Acts remain routed to
 India Code. CAPTCHA/stateful sources remain registered official coverage but
 are not executable adapters, and no bypass or private endpoint is used.
+
+## KG Brain V6 official-source architecture
+
+```text
+frozen graph targets
+  -> source-family graph value
+  -> historical + operational coverage gates
+  -> reusable official adapter
+  -> Government_Documents/Incoming
+  -> local PDF / bounded OCR / exact identity / SHA / duplicate gates
+  -> Government_Documents/External_Official
+  -> verified V6 manifest
+  -> controlled native-PostgreSQL ingestion
+  -> deterministic KG rerun and closure audit
+```
+
+Maharashtra S3WaaS sources share allowlisted public-index discovery and title,
+kind, ordinal, year, and version filters. India Code uses its public DSpace 9.1
+REST surface and ORIGINAL bundle rather than the retired `.nic.in`
+`simple-search` HTML endpoint. Source metadata remains provisional: the local
+Incoming PDF is always the identity authority. OCR is bounded and local, and
+archive promotion is byte-identical and idempotent.
+
+V6 does not alter the runtime boundary: PostgreSQL 17/pgvector is native on
+Windows, no Podman fallback is invoked, no routine database backup is created,
+and graph relations are deterministic database facts rather than embedding
+similarity. UI, RAG, hybrid retrieval, reranking, Neo4j, and agent orchestration
+remain outside this work package.

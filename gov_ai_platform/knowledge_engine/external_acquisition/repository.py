@@ -87,7 +87,8 @@ class ExternalAcquisitionRepository:
                        archive_status=EXCLUDED.archive_status,archived_at=EXCLUDED.archived_at,
                        downloaded_at=EXCLUDED.downloaded_at,updated_at=now()
                    WHERE external_acquisition_candidates.verification_status<>'AUTO_VERIFIED'
-                      OR EXCLUDED.verification_status='AUTO_VERIFIED'
+                      OR EXCLUDED.acquisition_status IN ('READY_FOR_INGESTION','INGESTED')
+                      OR external_acquisition_candidates.acquisition_status NOT IN ('READY_FOR_INGESTION','INGESTED')
                    RETURNING id,(xmax=0) AS inserted""",
                 (
                     run_id, reference.target_key, reference.reference_kind, reference.raw_identifier,
