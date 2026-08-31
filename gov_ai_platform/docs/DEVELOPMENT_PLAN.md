@@ -190,3 +190,29 @@ Next: run exactly one more bounded anchor-corpus closure cycle, prioritized to
 the 22 high-value operationally reachable unresolved targets. Do not acquire
 the second-hop queue, expand the denominator, loosen identity rules, or begin
 graph-aware retrieval until that cycle re-evaluates the engineering gate.
+
+## Completed: KG Brain V8 final bounded closure
+
+1. Froze the 22 high-value reachable unresolved first-hop targets without
+   changing the 78 / 1,103 / 709 anchor denominator.
+2. Closed three exact official documents through local-first verification and
+   permanent-source ingestion; acquired zero second-hop documents.
+3. Exhausted or explicitly invalidated the remaining 19 routes. The final gate
+   supersedes V7's provisional threshold and moves work to retrieval.
+
+## Completed: Graph-aware retrieval V1 measurement
+
+1. Froze 87 documents, 1,666 vectors, and the 137-relation KG by three
+   fingerprints; before and after match exactly.
+2. Preserved the dense BGE-M3 baseline and production default.
+3. Added an experimental one-hop, validated-`REFERENCES` service with separate
+   incoming/outgoing/bidirectional Top-1/3/5 variants, deterministic limits,
+   duplicate corroboration, and complete edge provenance.
+4. Froze a 40-case source-evidence benchmark. Best bidirectional Top-1 recovered
+   9/9 eligible cases with 100% provenance and acceptable local latency, but
+   only 9/63 additions matched the single useful-document labels.
+
+Next: keep dense retrieval as production and run a retrieval-only precision
+hardening phase. Investigate query intent/direction selection and evidence-set
+presentation without score fusion, corpus expansion, RAG, LLMs, or graph
+mutation. Proceed to RAG only after graph-addition precision is defensibly safe.

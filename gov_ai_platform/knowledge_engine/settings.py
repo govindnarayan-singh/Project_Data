@@ -32,6 +32,7 @@ class Settings:
     chunk_overlap_tokens: int = int(os.getenv("CHUNK_OVERLAP_TOKENS", "100"))
     embed_batch_size: int = int(os.getenv("EMBED_BATCH_SIZE", "8"))
     kg_review_mode: str = os.getenv("KG_REVIEW_MODE", "auto")
+    retrieval_mode: str = os.getenv("RETRIEVAL_MODE", "dense").strip().casefold()
     kg_auto_ingest_resolved: bool = os.getenv("KG_AUTO_INGEST_RESOLVED", "false").strip().casefold() in {"1", "true", "yes", "on"}
     # Compatibility name retained for existing catalogue/provenance code. New
     # acquisition writes land in a durable local Incoming directory first.

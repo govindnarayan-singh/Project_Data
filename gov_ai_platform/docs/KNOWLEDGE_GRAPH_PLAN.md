@@ -384,3 +384,24 @@ The readiness gate remains below the approximately 80% engineering threshold:
 27/258 operationally reachable targets are closed and 22 high-value reachable
 targets remain unresolved. One further bounded first-hop closure cycle is
 therefore justified; recursive graph expansion is not.
+
+## V8 reconciliation and retrieval use
+
+The final V8 bounded gate replaces that provisional V7 conclusion. Three of 22
+primary targets closed and the remaining 19 have explicit exhausted or invalid
+identity outcomes; zero has a material untried operational route. The frozen
+78-document, 1,103-mention, 709-target denominator remains unchanged, and all
+18 newly observed V8 second-hop targets are deferred.
+
+Graph Retrieval V1 consumes but never changes the KG. Its primary expansion
+surface is exactly one hop of `REFERENCES` in `AUTO_VERIFIED` or genuine
+`HUMAN_CONFIRMED` state. `ISSUED_BY`, unresolved candidates, candidate strong
+signals, and vectors are not relations for retrieval. Incoming and outgoing
+semantics are evaluated separately before their explicit bidirectional union.
+No graph score exists: dense rank/similarity belongs to the seed, while graph
+documents retain edge provenance and an optional separate document-restricted
+dense content page.
+
+The measured graph benchmark proves recovery but also exposes low single-label
+addition precision. The current plan is therefore to harden experimental graph
+retrieval while production remains dense; RAG is not yet authorized.

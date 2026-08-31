@@ -344,3 +344,18 @@ facts, while frozen CSV membership prevents support-document references from
 changing V7 success metrics. The graph-aware retrieval decision is a readiness
 output only; retrieval implementation, RAG, LLMs, agents, hybrid ranking,
 reranking, UI changes, and Neo4j remain outside V7.
+
+## Graph-aware retrieval V1 boundary
+
+Graph Retrieval V1 is a read-only experimental layer after the unchanged dense
+retriever. `GraphAwareRetrievalService` obtains dense chunks first, selects
+unique Top-1/3/5 seed documents, and queries PostgreSQL for exactly one hop of
+validated document-to-document `REFERENCES`. Incoming, outgoing, and
+bidirectional modes remain explicit. Graph SQL is outside Django views and is
+not mixed into pgvector similarity SQL.
+
+Graph additions carry complete seed, edge, direction, validation, evidence-page,
+candidate, and source/target provenance. Existing dense documents become
+corroborations rather than duplicates. There is no score fusion, reranking,
+graph mutation, Neo4j, LLM, RAG, agent, or UI change. The default remains
+`RETRIEVAL_MODE=dense`. See `docs/GRAPH_RETRIEVAL_V1.md`.

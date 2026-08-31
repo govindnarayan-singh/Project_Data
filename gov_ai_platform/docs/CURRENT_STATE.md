@@ -474,4 +474,25 @@ metrics are exactly unchanged. The readiness gate recommends one more bounded
 anchor-closure cycle because 22 high-value operationally reachable targets
 remain unresolved. Native PostgreSQL was the only runtime; no Podman command
 or database backup was used. Evidence is under `outputs/kg_brain_v7/`.
-'
+
+## V8 closure and Graph Retrieval V1 (2026-08-31)
+
+V8 supersedes the older V7 next-step recommendation. It closed 3/22 bounded
+high-value primary targets, moved high-value operational closure from 13/35 to
+16/35, and assigned explicit exhausted, ambiguous, historical-gap, or mismatch
+reasons to the remaining 19. No material untried official route remains, so the
+authoritative recommendation is `MOVE_TO_GRAPH_AWARE_RETRIEVAL`; the old
+approximately-80% threshold is not the final bounded policy.
+
+The fixed retrieval experiment corpus is 87 documents, 1,588 pages, and 1,666
+chunks/vectors. The KG has 2,631 candidates, 50 validated `REFERENCES`, 87
+`ISSUED_BY`, and no strong document edge. Before/after document, retrieval-corpus,
+and relation fingerprints are identical.
+
+The unchanged frozen 29-query dense benchmark passes with document Recall@1
+82.76%, Recall@3/5/10 96.55%, MRR 0.8966; page Recall@1 68.97%, Recall@3 93.10%,
+Recall@5/10 96.55%, MRR 0.8190. The 40-row graph-specific source-evidence
+benchmark found measurable one-hop recovery, but best-variant precision was
+9/63 (14.29%). Production remains dense and the next recommendation is to
+harden graph-aware retrieval before RAG. No acquisition, corpus/KG mutation,
+Podman command, or backup occurred.

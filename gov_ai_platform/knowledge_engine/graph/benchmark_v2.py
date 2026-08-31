@@ -76,6 +76,13 @@ def build_benchmark(repository: GraphRepository | None = None, *, target_size: i
             path = tuple(item["document_ids"])
             if item["cycle"] or len(path) not in {3, 4} or path in seen_paths:
                 continue
+            shortest = service.paths(source, path[-1], len(path) - 1)
+            if shortest["status"] != "PATH_FOUND" or shortest["path_length"] not in {2, 3}:
+                continue
+            path = tuple(shortest["document_ids"])
+            item = shortest
+            if path in seen_paths:
+                continue
             seen_paths.add(path)
             path_kind = "SHORTEST_PATH" if not any(row["query_type"] == "SHORTEST_PATH" for row in rows) else (
                 "TWO_HOP_REFERENCE_CHAIN" if len(path) == 3 else "THREE_HOP_REFERENCE_CHAIN"
