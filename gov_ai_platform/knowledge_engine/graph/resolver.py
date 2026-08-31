@@ -39,11 +39,22 @@ class ReferenceResolver:
                 normalized = normalize_document_number(raw)
             if not normalized:
                 continue
-            key = (kind if kind in {"ACT", "RULE"} else "", normalized)
-            if quality_policy.field_blocks_resolution(int(document["id"]), "gr_number"):
-                self.blocked_by_number[key].append(document)
-            else:
-                self.by_number[key].append(document)
+            keys = {(kind if kind in {"ACT", "RULE"} else "", normalized)}
+            if kind in {"ACT", "RULE"}:
+                # V6 acquisition already treats a leading English article as
+                # an exact legal-title alias. Apply the same narrow,
+                # deterministic rule during graph resolution so an ingested
+                # official title such as THE_* can close an otherwise exact
+                # frozen *_ACT_YEAR citation. Distinct documents still remain
+                # multiple matches and therefore become ambiguous.
+                without_article = normalized.removeprefix("THE_")
+                keys.add((kind, without_article))
+                keys.add((kind, "THE_" + without_article))
+            for key in keys:
+                if quality_policy.field_blocks_resolution(int(document["id"]), "gr_number"):
+                    self.blocked_by_number[key].append(document)
+                else:
+                    self.by_number[key].append(document)
 
     def _validation(self, candidate: ReferenceCandidate, status: ResolutionStatus, *, blocked_page: bool, blocked_target: bool) -> ValidationStatus:
         if status in {ResolutionStatus.NOT_IN_CORPUS, ResolutionStatus.UNPARSEABLE}:

@@ -448,3 +448,30 @@ giving 78 / 1,419 / 1,385 / 1,385. KG run 1 added 175 candidates, 9 REFERENCES,
 documents, 58 components, and largest component 10. Native PostgreSQL
 17.11/pgvector 0.8.6 remained the only database runtime. Podman commands and
 new backups were both zero. Evidence is under `outputs/kg_brain_v6/`.
+'
+## KG Brain V7 frozen-anchor closure (2026-08-31)
+
+V7 freezes the pre-ingestion 78 searchable documents as the anchor corpus.
+The immutable first-hop denominator is 1,103 eligible parser-V2 mentions and
+709 exact canonical target identities. Six support documents were ingested
+only because they close frozen anchor targets: five verified official Acts
+from `External_Official` and one exact local original. The final searchable
+corpus is 84 documents, 1,575 pages, and 1,647 BGE-M3 chunks/vectors at 1,024
+dimensions.
+
+Anchor target closure moved from 18/709 to 27/709 and anchor mention closure
+from 86/1,103 to 171/1,103 under the documented exact-alias and local-SHA
+rules. Operationally reachable closure is 27/258; high-value closure is
+13/79. The global denominator expands normally to 1,947 mentions and 1,344
+targets, but those new support-document references do not change the frozen
+anchor denominator. They are reported separately as 841 mentions and 635
+unique second-hop targets; acquisition of all second-hop targets was zero.
+
+The KG now contains 2,588 candidates, 44 REFERENCES, and 84 ISSUED_BY edges.
+Run two inserted zero candidates, relations, and evidence links. The 144-case
+source-evidence KG benchmark and frozen 29-query dense benchmark pass; dense
+metrics are exactly unchanged. The readiness gate recommends one more bounded
+anchor-closure cycle because 22 high-value operationally reachable targets
+remain unresolved. Native PostgreSQL was the only runtime; no Podman command
+or database backup was used. Evidence is under `outputs/kg_brain_v7/`.
+'

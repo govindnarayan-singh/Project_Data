@@ -323,3 +323,24 @@ Windows, no Podman fallback is invoked, no routine database backup is created,
 and graph relations are deterministic database facts rather than embedding
 similarity. UI, RAG, hybrid retrieval, reranking, Neo4j, and agent orchestration
 remain outside this work package.
+
+## KG Brain V7 frozen-anchor boundary
+
+```text
+78 anchor documents
+  -> frozen parser-V2 first-hop mentions and exact targets
+  -> local catalogue/archive closure
+  -> READY frozen targets only -> official acquisition -> Incoming
+  -> local identity/SHA gates -> permanent source root
+  -> anchor-only manifest -> support-document ingestion
+  -> KG rerun -> frozen-anchor closure evaluation
+
+support-document references -> second-hop report only -> no V7 acquisition
+```
+
+Anchor and support semantics are artifact-level evaluation roles; no schema
+field is required. All post-ingestion graph candidates remain normal database
+facts, while frozen CSV membership prevents support-document references from
+changing V7 success metrics. The graph-aware retrieval decision is a readiness
+output only; retrieval implementation, RAG, LLMs, agents, hybrid ranking,
+reranking, UI changes, and Neo4j remain outside V7.

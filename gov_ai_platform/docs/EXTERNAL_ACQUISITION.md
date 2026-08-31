@@ -289,3 +289,20 @@ All network bytes are transport-only until atomically persisted under
 that local path only. Six exact PDFs were promoted byte-identically to
 `External_Official`; the mislabeled 2016 official link remained a local
 `MISMATCH`. The V6 manifest contains only permanent archive paths.
+
+## V7 frozen first-hop acquisition
+
+V7 routes only identities present in the frozen 709-target anchor artifact.
+Of 244 safe READY identities attempted, official adapters returned 11 document
+candidates/downloads: six exact and five mismatches. All 11 were written and
+closed under Incoming before PDF parsing, identity processing, OCR, SHA, or
+duplicate analysis. The six exact files were promoted byte-identically; one
+National Green Tribunal file was then excluded from ingestion as an
+already-ingested exact `THE_` title alias.
+
+The final anchor-closure manifest contains five new `EXTERNAL_OFFICIAL` Acts
+and one exact `LOCAL_ORIGINAL` circular. It contains no Incoming or remote path,
+ambiguous identity, mismatch, or pre-ingested document. Support-document
+references are explicitly second hop: they are measured after KG extraction
+but never sent to discovery during V7. CAPTCHA and stateful sources remain
+blocked and no access control was bypassed.

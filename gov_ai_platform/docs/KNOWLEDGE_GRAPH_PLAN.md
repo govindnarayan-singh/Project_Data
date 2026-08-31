@@ -362,3 +362,25 @@ targets therefore moved from 622 to 694 even as exact resolved targets rose
 from 12 to 15. This is corpus expansion, not a claim that discovery regressed.
 No vector similarity created a relation and no `HUMAN_CONFIRMED` state was
 fabricated.
+
+## V7 frozen anchor-reference semantics
+
+`anchor_corpus_v1.csv` fixes the 78-document evaluation population.
+`anchor_reference_universe_v1.csv` fixes every eligible parser-V2 mention
+originating from those document IDs, and `anchor_reference_targets_v1.csv`
+consolidates them by exact canonical kind and identity. Support documents may
+be ordinary graph nodes after ingestion, but their references never enter the
+V7 denominator or acquisition queue.
+
+Anchor mention, target, known-availability, operationally reachable, and
+high-value closure are read-model metrics; existing global closure definitions
+remain unchanged. `ANCHOR_REFERENCE_COMPLETENESS` is a transparent descriptive
+score, not legal completeness. V7 records 635 unique new second-hop targets
+without acquiring any of them. Strong-signal evaluation is filtered to the
+original 78 sources, preserves every deterministic promotion gate, and creates
+no fabricated `HUMAN_CONFIRMED` edge.
+
+The readiness gate remains below the approximately 80% engineering threshold:
+27/258 operationally reachable targets are closed and 22 high-value reachable
+targets remain unresolved. One further bounded first-hop closure cycle is
+therefore justified; recursive graph expansion is not.

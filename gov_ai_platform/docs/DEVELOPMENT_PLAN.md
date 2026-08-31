@@ -171,3 +171,22 @@ Next: expand official historical coverage further. Zero-route administrative
 targets and historically absent official indexes remain the dominant blocker;
 do not start graph-aware retrieval, UI, RAG, or strong-edge expansion in the
 next cycle.
+
+## Completed: KG Brain V7
+
+1. Froze exactly 78 anchor documents plus the complete 1,103-mention,
+   709-target first-hop reference universe before ingestion.
+2. Classified every frozen target with deterministic local/archive/source
+   availability and explicit parser, access, CAPTCHA, or acquisition outcomes.
+3. Ran the official-source batch only for frozen READY targets; all network
+   PDFs entered Incoming before local identity, SHA, OCR, and archive gates.
+4. Ingested a six-document anchor-only manifest, replayed it unchanged, and ran
+   the KG twice with zero second-run inserts.
+5. Measured frozen anchor closure, 78 document histories,
+   `ANCHOR_REFERENCE_COMPLETENESS`, global topology, and a separately deferred
+   635-target second hop.
+
+Next: run exactly one more bounded anchor-corpus closure cycle, prioritized to
+the 22 high-value operationally reachable unresolved targets. Do not acquire
+the second-hop queue, expand the denominator, loosen identity rules, or begin
+graph-aware retrieval until that cycle re-evaluates the engineering gate.
