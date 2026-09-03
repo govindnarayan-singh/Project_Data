@@ -151,6 +151,11 @@ class GraphExplorerServiceTests(SimpleTestCase):
         self.assertEqual(summary["top_cited"][0]["count"], 1)
         self.assertEqual(summary["top_citing"][0]["count"], 1)
         self.assertEqual(len(summary["graph_fingerprint"]), 64)
+        self.assertEqual(summary["total_documents"], 4)
+        self.assertEqual(summary["total_department_registry"], 2)
+        self.assertEqual(summary["active_departments"], 2)
+        self.assertEqual(summary["total_graph_nodes"], 6)
+        self.assertEqual(summary["total_validated_edges"], 6)
 
     def test_full_graph_has_document_department_and_directed_edges(self):
         graph = self.service.get_full_graph()
@@ -162,6 +167,51 @@ class GraphExplorerServiceTests(SimpleTestCase):
         self.assertEqual((issued["source"], issued["target"]), ("document:1", "department:10"))
         self.assertFalse(graph["candidate_edges_included"])
         self.assertNotIn("relation:107", {edge["id"] for edge in graph["edges"]})
+        self.assertEqual(graph["counts"]["displayed_nodes"], 6)
+        self.assertEqual(graph["counts"]["displayed_edges"], 6)
+        self.assertEqual(graph["node_role_counts"], {
+            "ISOLATED_DOCUMENT": 1,
+            "REFERENCED_DOCUMENT": 1,
+            "CITING_DOCUMENT": 1,
+            "REFERENCED_AND_CITING_DOCUMENT": 1,
+            "DEPARTMENT": 2,
+            "CANDIDATE_OR_UNRESOLVED": 0,
+        })
+
+    def test_document_roles_use_only_validated_references(self):
+        graph = self.service.get_full_graph()
+        roles = {node["id"]: node.get("graph_role") for node in graph["nodes"]}
+        self.assertEqual(roles["document:1"], "CITING_DOCUMENT")
+        self.assertEqual(roles["document:2"], "REFERENCED_AND_CITING_DOCUMENT")
+        self.assertEqual(roles["document:3"], "REFERENCED_DOCUMENT")
+        self.assertEqual(roles["document:4"], "ISOLATED_DOCUMENT")
+        self.assertIsNone(roles["department:10"])
+        document_two = next(node for node in graph["nodes"] if node["id"] == "document:2")
+        self.assertEqual(document_two["reference_degree"], {"incoming": 1, "outgoing": 1, "degree": 2})
+
+        self.repository.state["relations"].append(_relation(108, 4, "AMENDS", target=1))
+        refreshed = self.service.get_full_graph()
+        refreshed_roles = {node["id"]: node.get("graph_role") for node in refreshed["nodes"]}
+        self.assertEqual(refreshed_roles["document:4"], "ISOLATED_DOCUMENT")
+        self.assertEqual(refreshed_roles["document:1"], "CITING_DOCUMENT")
+
+    def test_documents_only_scope_excludes_administrative_nodes_and_edges(self):
+        graph = self.service.get_full_graph(GraphFilters(graph_scope="documents"))
+        self.assertEqual(graph["returned"], {"nodes": 4, "documents": 4, "departments": 0, "edges": 2})
+        self.assertEqual({node["type"] for node in graph["nodes"]}, {"DOCUMENT"})
+        self.assertEqual({edge["relation_type"] for edge in graph["edges"]}, {"REFERENCES"})
+        self.assertEqual(graph["counts"]["displayed_references"], 2)
+        self.assertEqual(graph["counts"]["displayed_issued_by"], 0)
+        self.assertEqual(graph["counts"]["total_graph_nodes"], 6)
+
+    def test_display_labels_are_human_readable_but_identity_is_preserved(self):
+        document = deepcopy(DOCUMENTS[2])
+        document["gr_number"] = ""
+        document["subject"] = "The Environment (Protection) Act, 1986"
+        document["canonical_identity"] = "ENVIRONMENT_PROTECTION_ACT_1986"
+        node = self.service._document_node(document, {"incoming": 0, "outgoing": 0, "degree": 0})
+        self.assertEqual(node["label"], "Environment Protection Act, 1986")
+        self.assertEqual(node["metadata"]["canonical_identity"], "ENVIRONMENT_PROTECTION_ACT_1986")
 
     def test_neighborhood_depth_and_direction(self):
         one = self.service.get_document_neighborhood(1, direction="outgoing", depth=1)
@@ -201,6 +251,8 @@ class GraphExplorerServiceTests(SimpleTestCase):
         department = self.service.get_node_details("department:10")
         edge = self.service.get_edge_details(101)
         self.assertEqual(document["type"], "DOCUMENT")
+        self.assertEqual(document["graph_role"], "CITING_DOCUMENT")
+        self.assertEqual(document["reference_degree"], {"incoming": 0, "outgoing": 1, "degree": 1})
         self.assertEqual(len(document["outgoing_relations"]), 2)
         self.assertEqual(document["connected_departments"], ["Finance"])
         self.assertEqual(department["department"]["aliases"], ["FD"])
@@ -229,6 +281,8 @@ class GraphExplorerServiceTests(SimpleTestCase):
         with self.assertRaises(ExplorerValidationError):
             GraphFilters(relation_types=("INVENTED",)).normalized()
         with self.assertRaises(ExplorerValidationError):
+            GraphFilters(graph_scope="invented").normalized()
+        with self.assertRaises(ExplorerValidationError):
             self.service.get_document_neighborhood(1, direction="sideways", depth=1)
 
 
@@ -242,7 +296,9 @@ class GraphExplorerApiTests(SimpleTestCase):
     def test_page_and_get_only_api_contract(self):
         page = self.client.get(reverse("knowledge_graph_ui:overview"))
         self.assertContains(page, "Knowledge graph explorer")
-        self.assertContains(page, "Refresh graph")
+        self.assertContains(page, "Fullscreen")
+        self.assertContains(page, "Documents")
+        self.assertContains(page, "Administrative")
         self.assertContains(page, "cytoscape-3.34.2.min.js")
         for name, args in (
             ("api_summary", ()), ("api_graph", ()), ("api_search", ()),
@@ -260,6 +316,9 @@ class GraphExplorerApiTests(SimpleTestCase):
         response = self.client.get(reverse("knowledge_graph_ui:api_graph"), {"download": "1"})
         self.assertIn("attachment", response["Content-Disposition"])
         self.assertTrue(response.json()["read_only"])
+        documents = self.client.get(reverse("knowledge_graph_ui:api_graph"), {"scope": "documents"}).json()
+        self.assertEqual(documents["filters"]["graph_scope"], "documents")
+        self.assertEqual(documents["returned"]["departments"], 0)
 
     def test_no_visualization_write_route_exists(self):
         from apps.knowledge_graph_ui.urls import urlpatterns
@@ -277,6 +336,65 @@ class GraphExplorerApiTests(SimpleTestCase):
         self.assertNotIn("http://", template + script + stylesheet)
         self.assertTrue((project / "static/vendor/cytoscape/cytoscape-3.34.2.min.js").is_file())
         self.assertTrue((project / "static/vendor/cytoscape/LICENSE").is_file())
+
+    def test_production_ui_controls_and_states_are_present(self):
+        project = Path(__file__).resolve().parents[1]
+        template = (project / "templates/knowledge_graph/overview.html").read_text(encoding="utf-8")
+        script = (project / "static/knowledge_graph/explorer.js").read_text(encoding="utf-8")
+        stylesheet = (project / "static/knowledge_graph/explorer.css").read_text(encoding="utf-8")
+        for marker in (
+            "data-focus-mode", "data-fullscreen", "data-filter-toggle", "data-inspector-toggle",
+            "data-export-png", "data-edge-labels", "data-layout", "data-connectivity",
+            "data-neighborhood", "data-legend", 'data-state="LOADING"',
+        ):
+            self.assertIn(marker, template)
+        for behavior in (
+            "requestFullscreen", "document.exitFullscreen", "state.graphScope", "state.activeFilters",
+            "state.selectedId", "state.refreshSeconds", "Selection removed", "No graph elements match",
+            "Graph API unavailable", "Database or graph service unavailable", ".png(",
+            "validateDomContract", "CLIENT_RENDER_ERROR", "FILTERED_TO_ZERO", "EMPTY_GRAPH",
+            "window.__kgExplorerReady", "OPTIONAL_SUMMARY_ERROR",
+        ):
+            self.assertIn(behavior, script)
+        self.assertNotIn("radial-gradient", stylesheet)
+        self.assertIn("background-image:none!important", stylesheet)
+        self.assertIn("explorer.css' %}?v=2.2.0", template)
+        self.assertIn("explorer.js' %}?v=2.2.0", template)
+        self.assertIn("Referenced + citing", template)
+        self.assertIn("role-referenced-and-citing-document", script)
+        self.assertIn("validated REFERENCES only", script)
+        self.assertIn("<span data-visible-nodes>—</span>", template)
+        self.assertIn("<span data-visible-edges>—</span>", template)
+
+    def test_v21_critical_dom_contract_matches_javascript(self):
+        project = Path(__file__).resolve().parents[1]
+        template = (project / "templates/knowledge_graph/overview.html").read_text(encoding="utf-8")
+        base = (project / "templates/base.html").read_text(encoding="utf-8")
+        script = (project / "static/knowledge_graph/explorer.js").read_text(encoding="utf-8")
+        critical = (
+            'id="knowledge-graph-canvas"', "data-visible-nodes", "data-visible-edges",
+            "data-graph-message", "data-graph-shell", "data-refresh", "data-summary-panel",
+            "data-filter-panel", "data-inspector", "data-focus-mode",
+            "data-fullscreen", "data-legend",
+        )
+        for marker in critical:
+            self.assertIn(marker, template)
+        self.assertIn("data-sidebar-toggle", base)
+        self.assertNotIn("data-sidebar-toggle", template)
+        for selector in (
+            "#knowledge-graph-canvas", "[data-visible-nodes]", "[data-visible-edges]",
+            "[data-graph-message]", "[data-graph-shell]",
+        ):
+            self.assertIn(selector, script)
+
+    def test_v21_browser_harness_is_development_only(self):
+        project = Path(__file__).resolve().parents[1]
+        development_requirements = (project / "requirements-dev.txt").read_text(encoding="utf-8")
+        production_requirements = (project / "requirements.txt").read_text(encoding="utf-8")
+        harness = (project / "tests/browser/test_knowledge_graph_explorer.py").read_text(encoding="utf-8")
+        self.assertIn("playwright==1.62.0", development_requirements)
+        self.assertNotIn("playwright", production_requirements.lower())
+        self.assertIn("RUN_BROWSER_E2E", harness)
 
 
 @pytest.mark.skipif(

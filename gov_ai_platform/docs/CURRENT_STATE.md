@@ -512,3 +512,61 @@ is 38 connected / 49 isolated, 58 components, and largest component 15. The
 stopped Recent-GR holdout package remains stopped: six partial output files
 were preserved, with no partial code, manifest, selection, ingestion, or
 database mutation. Evidence is under `outputs/kg_visualization_v1/`.
+
+## Dynamic Knowledge Graph Explorer V2.1 recovery (2026-09-03)
+
+The explorer is now a production-oriented graph-first workspace. It supports
+collapsible application navigation, filters, summary, analytics, and inspector;
+focus and true fullscreen modes; built-in Auto/Force/Hierarchy layouts;
+zoom-aware labels; neighborhood emphasis; human-first inspection; documents-only
+and administrative scopes; all/connected/isolated quick views; explicit
+component selection; PNG and JSON export; and distinct empty, unavailable,
+removed-selection, and truncation states. Cytoscape remains local and edge labels
+remain off by default for the full graph.
+
+The V1 node-count ambiguity is closed: 98 visible administrative nodes means 87
+documents plus 11 active departments. The twelfth department registry row,
+`www.indiacode.nic.in`, has no validated edge and is not materialized. The live
+database remains 87 documents, 1,588 pages, 1,666 chunks/vectors, 2,631 KG
+candidates, and 137 relations (50 `REFERENCES`, 87 `ISSUED_BY`). Document
+topology remains 38 connected / 49 isolated, 58 components, largest 15.
+
+V2 initially regressed in real browsers because unchanged static URLs allowed
+cached V1 JavaScript and CSS to run against V2 HTML. The stale V1 script first
+failed on the removed `[data-neighborhood]` control and then reproduced the
+reported null `textContent` write to the removed `[data-generated-at]` widget;
+the stale V1 CSS supplied the radial dot grid. V2.1 uses deterministic
+`?v=2.1.0` explorer assets, restores the Neighborhood control, validates the
+critical DOM contract, and isolates optional widgets from core graph loading.
+
+Real Playwright/Chromium validation now loads 87 document nodes / 50 edges by
+default and 98 administrative nodes / 137 edges, with zero `pageerror` or
+`console.error` events. It physically exercises every panel and mode toggle,
+1/2/3-hop directions, component/search/filter paths, node/edge provenance,
+manual/auto refresh, exports, focus, fullscreen, Fit, Re-layout, and all five
+loading/error states. Screenshots pass at 1366×768, 1440×900, and 1920×1080
+without horizontal overflow; computed canvas, pseudo-element, and parent
+background images are `none`.
+
+All database, corpus, vector, candidate, relation, retrieval, ingestion, Podman,
+and backup mutation counts are zero. The stopped Recent-GR holdout package was
+not resumed. V2.1 evidence is under `outputs/kg_visualization_v21/`.
+
+## Knowledge Graph Explorer V2.2 surgical UI patch (2026-09-03)
+
+The application sidebar toggle now lives beside the Government Administrative
+AI Copilot brand in the shared shell. It works on Knowledge Graph, Documents,
+Unresolved, Corpus Health, Evaluation, and other shell-backed pages, preserves
+state across navigation, and collapses to a usable 76-pixel icon rail. The
+redundant graph-page toggle was removed; all V2.1 graph controls and behavior
+remain otherwise unchanged.
+
+Document nodes now derive a display-only role from trusted validated
+`REFERENCES`: 49 isolated, 9 referenced-only, 11 citing-only, and 18 both.
+The 11 active departments remain distinct diamond nodes. Candidate/unresolved
+targets remain relation/evidence records and are not graph nodes. Shape plus
+color communicates role, while tooltip, inspector, and legend explain the
+same live contract. Playwright/Chromium cross-page and semantic-node acceptance
+passes with zero page or console errors. The corpus/KG fingerprints and all
+87 / 1,588 / 1,666 / 1,666 production counts remain unchanged. Evidence is
+under `outputs/kg_visualization_v22/`; the Recent-GR benchmark remains stopped.

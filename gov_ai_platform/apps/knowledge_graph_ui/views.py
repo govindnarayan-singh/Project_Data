@@ -22,6 +22,7 @@ def get_explorer_service():
 @require_GET
 def overview(request):
     summary = get_explorer_service().get_graph_summary()
+    summary["graph_coverage_percent"] = summary["graph_coverage"] * 100
     return render(request, "knowledge_graph/overview.html", {
         "graph": summary,
         "api": {
@@ -66,6 +67,7 @@ def _filters(request) -> GraphFilters:
         connectivity=request.GET.get("connectivity", "all"),
         relationship_presence=request.GET.get("presence", "any"),
         component_id=request.GET.get("component", "").strip(),
+        graph_scope=request.GET.get("scope", "administrative").strip(),
         max_nodes=_integer(request, "max_nodes", 500) or 500,
         max_edges=_integer(request, "max_edges", 2_000) or 2_000,
     )

@@ -238,3 +238,32 @@ Next: resume the separately frozen Recent-GR holdout benchmark. Keep its support
 documents outside PostgreSQL until the benchmark package's own gates explicitly
 authorize controlled ingestion; do not change this explorer or retrieval while
 constructing the holdout.
+
+## Completed: Dynamic Knowledge Graph Explorer V2.1 recovery
+
+1. Reconciled the V1 98-node count as 87 documents plus 11 active department
+   nodes, separately preserving the 12-row department registry count.
+2. Hardened the explorer into a graph-first responsive workspace with
+   collapsible panels, focus/fullscreen modes, explicit total/displayed counts,
+   stable human labels, selection emphasis, and production empty/error states.
+3. Added documents-only and administrative graph scopes, connected/isolated and
+   component controls, built-in layout choices, zoom-aware label behavior, and
+   local PNG/JSON export without a new graph engine or remote dependency.
+4. Preserved the read-only GET API, evidence provenance, candidate exclusion,
+   native PostgreSQL runtime, dense retrieval default, and every production
+   corpus/KG fingerprint.
+5. Reproduced and fixed the mixed cached-V1-assets/V2-DOM regression using
+   deterministic V2.1 static URLs, a documented critical DOM contract, and a
+   core-render-first initialization sequence that isolates optional widgets.
+6. Added development-only Playwright acceptance against the real Django page
+   and native read-only API. The full interaction matrix, console capture,
+   error states, exports, provenance, and required desktop viewports pass with
+   real screenshots under `outputs/kg_visualization_v21/`.
+7. Recalculated native PostgreSQL counts and corpus/KG/retrieval fingerprints;
+   all are unchanged and no index, schema, corpus, KG, Podman, acquisition, or
+   backup operation occurred.
+
+Next: **A. Accept KG Explorer V2.1 and resume the separately frozen Recent-GR
+holdout benchmark.** Do not
+ingest its support documents unless that work package's own gates authorize it;
+do not alter dense retrieval or the production KG while constructing it.

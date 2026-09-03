@@ -96,6 +96,9 @@ class PortalShellAndSearchTests(SimpleTestCase):
         for text in ("Government Administrative AI Copilot", "Documents", "Knowledge graph", "Corpus health",
                      "does not generate an AI answer", "Ctrl / ⌘ + Enter"):
             self.assertContains(response, text)
+        self.assertContains(response, "data-sidebar-toggle")
+        self.assertContains(response, "Collapse application navigation")
+        self.assertContains(response, "portal/sidebar.css")
 
     @patch("apps.search_ui.views.get_portal_repository", return_value=FakePortalRepository())
     @patch("apps.search_ui.views.get_retrieval_service")

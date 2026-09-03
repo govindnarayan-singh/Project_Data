@@ -1,0 +1,114 @@
+/* Shared application-shell sidebar state. Loaded after app.css intentionally. */
+.sidebar-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 2px 28px;
+}
+
+.sidebar-brand-row .brand {
+  min-width: 0;
+  flex: 1;
+  gap: 10px;
+  padding: 0;
+}
+
+.brand-mark {
+  flex: 0 0 38px;
+}
+
+.sidebar-toggle {
+  display: grid;
+  place-items: center;
+  flex: 0 0 28px;
+  width: 28px;
+  height: 28px;
+  border: 1px solid #3a5148;
+  border-radius: 7px;
+  background: #1a342a;
+  color: #dce9e3;
+  font-size: 21px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sidebar-toggle:hover,
+.sidebar-toggle:focus-visible {
+  border-color: #577066;
+  background: #26493b;
+  color: #fff;
+}
+
+.sidebar-collapsed .app-shell {
+  grid-template-columns: 76px minmax(0, 1fr) 330px;
+}
+
+.sidebar-collapsed.context-collapsed .app-shell {
+  grid-template-columns: 76px minmax(0, 1fr) 0;
+}
+
+.sidebar-collapsed .sidebar {
+  padding: 20px 10px;
+}
+
+.sidebar-collapsed .sidebar-brand-row {
+  flex-direction: column;
+  gap: 9px;
+  padding: 0 0 20px;
+}
+
+.sidebar-collapsed .brand {
+  justify-content: center;
+  padding: 0;
+}
+
+.sidebar-collapsed .brand-copy,
+.sidebar-collapsed .nav-link span:last-child,
+.sidebar-collapsed .nav-label,
+.sidebar-collapsed .sidebar-foot span:last-child {
+  display: none;
+}
+
+.sidebar-collapsed .nav-link {
+  justify-content: center;
+}
+
+.sidebar-collapsed .sidebar-foot {
+  justify-content: center;
+  padding-right: 0;
+  padding-left: 0;
+}
+
+@media (max-width: 820px) {
+  .sidebar-collapsed .sidebar {
+    width: 240px;
+    padding: 24px 16px;
+  }
+
+  .sidebar-collapsed .sidebar-brand-row {
+    flex-direction: row;
+    gap: 6px;
+    padding: 0 2px 28px;
+  }
+
+  .sidebar-collapsed .brand {
+    justify-content: flex-start;
+  }
+
+  .sidebar-collapsed .brand-copy,
+  .sidebar-collapsed .nav-link span:last-child,
+  .sidebar-collapsed .nav-label,
+  .sidebar-collapsed .sidebar-foot span:last-child {
+    display: block;
+  }
+
+  .sidebar-collapsed .nav-link {
+    justify-content: flex-start;
+  }
+
+  .sidebar-collapsed .sidebar-foot {
+    justify-content: flex-start;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+}

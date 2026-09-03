@@ -5,15 +5,19 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Government Administrative AI Copilot{% endblock %}</title>
-  <link rel="stylesheet" href="{% static 'portal/app.css' %}">
+  <link rel="stylesheet" href="{% static 'portal/app.css' %}?v=2.2.0">
+  <link rel="stylesheet" href="{% static 'portal/sidebar.css' %}?v=2.2.0">
   {% block extra_head %}{% endblock %}
-  <script src="{% static 'portal/app.js' %}" defer></script>
+  <script src="{% static 'portal/app.js' %}?v=2.2.0" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
   <div class="app-shell">
     <aside class="sidebar" id="primary-navigation" aria-label="Primary navigation">
-      <div class="brand"><span class="brand-mark" aria-hidden="true">GA</span><div><strong>Government Administrative</strong><span>AI Copilot</span></div></div>
+      <div class="sidebar-brand-row">
+        <div class="brand"><span class="brand-mark" aria-hidden="true">GA</span><div class="brand-copy"><strong>Government Administrative</strong><span>AI Copilot</span></div></div>
+        <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="primary-navigation" aria-expanded="true" aria-label="Collapse application navigation" title="Collapse application navigation"><span aria-hidden="true" data-sidebar-toggle-icon>‹</span></button>
+      </div>
       <nav>
         <a class="nav-link {% if active_section == 'copilot' %}active{% endif %}" href="{% url 'search_ui:search' %}"><span aria-hidden="true">⌕</span><span>Copilot</span></a>
         <a class="nav-link {% if active_section == 'documents' %}active{% endif %}" href="{% url 'documents:list' %}"><span aria-hidden="true">▤</span><span>Documents</span></a>

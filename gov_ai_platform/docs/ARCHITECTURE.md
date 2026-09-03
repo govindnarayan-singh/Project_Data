@@ -360,7 +360,7 @@ corroborations rather than duplicates. There is no score fusion, reranking,
 graph mutation, Neo4j, LLM, RAG, agent, or UI change. The default remains
 `RETRIEVAL_MODE=dense`. See `docs/GRAPH_RETRIEVAL_V1.md`.
 
-## Dynamic Knowledge Graph Explorer V1 boundary
+## Dynamic Knowledge Graph Explorer V2.1 boundary
 
 The server-rendered `/knowledge-graph/` workspace queries native PostgreSQL
 through `GraphExplorerRepository` and `GraphExplorerService`. Repository
@@ -374,3 +374,29 @@ the MIT license. Full graph, filtered loading, explicit truncation, and 1/2/3
 hop modes support future corpus growth. Candidate relations remain excluded;
 validated relation direction and full evidence provenance remain intact. See
 `docs/KNOWLEDGE_GRAPH_VISUALIZATION.md`.
+
+V2 keeps the repository and GET-only boundary, but adds an explicit graph scope
+contract. `documents` returns document nodes and validated document-to-document
+relations; `administrative` also materializes only departments targeted by a
+displayed validated relation. Summary totals distinguish 87 corpus documents,
+12 department registry rows, 11 active departments, 98 total administrative
+nodes, 50 document relations, and 137 total validated edges. Each graph response
+also reports the corresponding displayed counts after filters, component scope,
+and response bounds. Display labels are a deterministic projection; canonical
+identity and provenance fields are never changed.
+
+Frontend state for scope, filters, panels, layout, focus/fullscreen, refresh,
+and selection is centralized in the explorer module. The graph workspace owns
+its filter drawer and inspector, allowing Fullscreen API presentation without
+losing controls or provenance. No new persistence, graph engine, layout plugin,
+remote asset, retrieval integration, or write endpoint is introduced.
+
+V2.1 adds a frontend release boundary after a V2 regression exposed cached V1
+JavaScript/CSS running against the refactored DOM. The explorer CSS and
+JavaScript now use the deterministic `v=2.1.0` static query version. Startup
+validates a small critical DOM contract, renders the API graph before updating
+optional summary/analytics widgets, and binds optional controls independently.
+The browser distinguishes loading, empty, filtered-to-zero, API failure, and
+client-render failure; none is allowed to masquerade as a valid zero-node
+graph. Playwright remains a development-only acceptance dependency and drives
+the real server-rendered page and read-only API.

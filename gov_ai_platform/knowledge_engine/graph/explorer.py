@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from collections import Counter, defaultdict, deque
 from contextlib import contextmanager
 from dataclasses import dataclass
@@ -21,6 +22,24 @@ DEFAULT_MAX_NODES = 500
 DEFAULT_MAX_EDGES = 2_000
 HARD_MAX_NODES = 5_000
 HARD_MAX_EDGES = 10_000
+DOCUMENT_GRAPH_ROLES = (
+    "ISOLATED_DOCUMENT",
+    "REFERENCED_DOCUMENT",
+    "CITING_DOCUMENT",
+    "REFERENCED_AND_CITING_DOCUMENT",
+)
+
+
+def _document_graph_role(reference_degree: dict[str, int]) -> str:
+    incoming = int(reference_degree.get("incoming") or 0)
+    outgoing = int(reference_degree.get("outgoing") or 0)
+    if incoming and outgoing:
+        return "REFERENCED_AND_CITING_DOCUMENT"
+    if incoming:
+        return "REFERENCED_DOCUMENT"
+    if outgoing:
+        return "CITING_DOCUMENT"
+    return "ISOLATED_DOCUMENT"
 
 
 class ExplorerValidationError(ValueError):
@@ -39,6 +58,7 @@ class GraphFilters:
     connectivity: str = "all"
     relationship_presence: str = "any"
     component_id: str = ""
+    graph_scope: str = "administrative"
     max_nodes: int = DEFAULT_MAX_NODES
     max_edges: int = DEFAULT_MAX_EDGES
 
@@ -54,6 +74,8 @@ class GraphFilters:
             raise ExplorerValidationError("connectivity must be all, connected, or isolated")
         if self.relationship_presence not in {"any", "incoming", "outgoing", "both"}:
             raise ExplorerValidationError("relationship_presence must be any, incoming, outgoing, or both")
+        if self.graph_scope not in {"administrative", "documents"}:
+            raise ExplorerValidationError("graph_scope must be administrative or documents")
         if self.year_min is not None and self.year_max is not None and self.year_min > self.year_max:
             raise ExplorerValidationError("year_min cannot be greater than year_max")
         return GraphFilters(
@@ -67,6 +89,7 @@ class GraphFilters:
             connectivity=self.connectivity,
             relationship_presence=self.relationship_presence,
             component_id=self.component_id,
+            graph_scope=self.graph_scope,
             max_nodes=min(max(1, int(self.max_nodes)), HARD_MAX_NODES),
             max_edges=min(max(1, int(self.max_edges)), HARD_MAX_EDGES),
         )
@@ -231,6 +254,25 @@ def _document_year(document: dict[str, Any]) -> int | None:
     return int(value.year) if value else None
 
 
+def _document_display_label(document: dict[str, Any]) -> str:
+    """Return a deterministic human label without changing canonical identity."""
+    number = str(document.get("gr_number") or "").strip()
+    if number:
+        return re.sub(r"\s+", " ", number)[:120]
+    subject = str(document.get("subject") or "").strip()
+    if subject:
+        label = re.sub(r"[()]", "", subject)
+        label = re.sub(r"\s+", " ", label).strip()
+        if label.casefold().startswith("the "):
+            label = label[4:]
+        return label[:120]
+    canonical = str(document.get("canonical_identity") or "").strip()
+    if canonical:
+        label = re.sub(r"[_:]+", " ", canonical)
+        return re.sub(r"\s+", " ", label).strip().title()[:120]
+    return str(document.get("file_name") or f"Document {document.get('id', '')}")[:120]
+
+
 def _component_rows(document_ids: Iterable[int], relations: Iterable[dict[str, Any]]) -> list[dict[str, Any]]:
     ids = sorted(set(int(value) for value in document_ids))
     parent = {value: value for value in ids}
@@ -267,7 +309,9 @@ def _component_rows(document_ids: Iterable[int], relations: Iterable[dict[str, A
         "component_id": f"component:{min(values)}",
         "document_ids": values,
         "document_count": len(values),
+        "node_count": len(values),
         "edge_count": edge_counts[root],
+        "relation_count": edge_counts[root],
         "isolated": len(values) == 1 and edge_counts[root] == 0,
     } for root, values in members.items()]
     rows.sort(key=lambda row: (-row["document_count"], -row["edge_count"], row["document_ids"][0]))
@@ -341,7 +385,21 @@ class GraphExplorerService:
         top_citing = sorted(documents, key=lambda row: (-degrees[int(row["id"])]["outgoing"], int(row["id"])))[:5]
         most_connected = sorted(documents, key=lambda row: (-degrees[int(row["id"])]["degree"], int(row["id"])))[:5]
         department_counts = Counter(row.get("department") or "Unknown" for row in documents)
+        active_department_ids = {
+            int(row["target_department_id"]) for row in relations
+            if row.get("target_department_id") is not None and row["relation_type"] == "ISSUED_BY"
+        }
+        references = relation_counts.get("REFERENCES", 0)
+        issued_by = relation_counts.get("ISSUED_BY", 0)
         return {
+            "total_documents": len(documents),
+            "total_department_registry": len(departments),
+            "active_departments": len(active_department_ids),
+            "total_graph_nodes": len(documents) + len(active_department_ids),
+            "references": references,
+            "issued_by": issued_by,
+            "document_relations": len(document_edges),
+            "total_validated_edges": len(relations),
             "documents": len(documents),
             "departments": len(departments),
             "validated_relations": len(relations),
@@ -374,7 +432,7 @@ class GraphExplorerService:
     def _rank_item(document: dict[str, Any], count: int) -> dict[str, Any]:
         return {
             "document_id": int(document["id"]),
-            "label": document.get("gr_number") or document.get("canonical_identity") or document["file_name"],
+            "label": _document_display_label(document),
             "subject": document.get("subject") or "",
             "count": count,
         }
@@ -453,7 +511,11 @@ class GraphExplorerService:
     ) -> dict[str, Any]:
         documents, departments, all_relations = state["documents"], state["departments"], state["relations"]
         document_edges = [row for row in all_relations if row.get("target_document_id") is not None]
+        reference_edges = [row for row in document_edges if row["relation_type"] == "REFERENCES"]
         degrees = self._degrees([int(row["id"]) for row in documents], document_edges)
+        reference_degrees = self._degrees([int(row["id"]) for row in documents], reference_edges)
+        for value in reference_degrees.values():
+            value["degree"] = value["incoming"] + value["outgoing"]
         component_rows = _component_rows([int(row["id"]) for row in documents], document_edges)
         component_members = {row["component_id"]: set(row["document_ids"]) for row in component_rows}
         allowed_component = component_members.get(filters.component_id) if filters.component_id else None
@@ -496,6 +558,8 @@ class GraphExplorerService:
         selected_documents = matching_documents[:filters.max_nodes]
         selected_ids = {int(row["id"]) for row in selected_documents}
         relation_types = set(filters.relation_types or SUPPORTED_RELATION_TYPES)
+        if filters.graph_scope == "documents":
+            relation_types.discard("ISSUED_BY")
         validation_states = set(filters.validation_states or TRUSTED_VALIDATION_STATES)
         candidate_relations = [
             row for row in all_relations
@@ -516,9 +580,15 @@ class GraphExplorerService:
         ]
         total_matching_edges = len(candidate_relations)
         selected_relations = candidate_relations[:filters.max_edges]
-        nodes = [self._document_node(row, degrees[int(row["id"])]) for row in selected_documents]
+        nodes = [
+            self._document_node(row, degrees[int(row["id"])], reference_degrees[int(row["id"])])
+            for row in selected_documents
+        ]
         nodes.extend(self._department_node(row, all_relations) for row in selected_departments)
         edges = [self._edge(row) for row in selected_relations]
+        node_role_counts = Counter(node.get("graph_role") or node["type"] for node in nodes)
+        displayed_relation_counts = Counter(row["relation_type"] for row in selected_relations)
+        summary = self.get_graph_summary(state)
         reasons = []
         if total_matching_documents > len(selected_documents):
             reasons.append(f"document limit {filters.max_nodes} reached")
@@ -529,13 +599,34 @@ class GraphExplorerService:
         return {
             "nodes": nodes,
             "edges": edges,
-            "summary": self.get_graph_summary(state),
+            "summary": summary,
+            "counts": {
+                "total_documents": summary["total_documents"],
+                "total_department_registry": summary["total_department_registry"],
+                "active_departments": summary["active_departments"],
+                "total_graph_nodes": summary["total_graph_nodes"],
+                "references": summary["references"],
+                "issued_by": summary["issued_by"],
+                "document_relations": summary["document_relations"],
+                "total_validated_edges": summary["total_validated_edges"],
+                "displayed_documents": len(selected_documents),
+                "displayed_departments": len(selected_departments),
+                "displayed_other_nodes": 0,
+                "displayed_nodes": len(nodes),
+                "displayed_references": displayed_relation_counts.get("REFERENCES", 0),
+                "displayed_issued_by": displayed_relation_counts.get("ISSUED_BY", 0),
+                "displayed_document_relations": sum(
+                    1 for row in selected_relations if row.get("target_document_id") is not None
+                ),
+                "displayed_edges": len(edges),
+            },
             "filters": {
                 "relation_types": list(filters.relation_types), "document_kinds": list(filters.document_kinds),
                 "departments": list(filters.departments), "validation_states": list(filters.validation_states),
                 "source_origins": list(filters.source_origins), "year_min": filters.year_min,
                 "year_max": filters.year_max, "connectivity": filters.connectivity,
                 "relationship_presence": filters.relationship_presence, "component_id": filters.component_id,
+                "graph_scope": filters.graph_scope,
                 "max_nodes": filters.max_nodes, "max_edges": filters.max_edges,
             },
             "mode": mode,
@@ -547,19 +638,31 @@ class GraphExplorerService:
             "available": {"documents": total_matching_documents, "edges": total_matching_edges},
             "returned": {"nodes": len(nodes), "documents": len(selected_documents), "departments": len(selected_departments), "edges": len(edges)},
             "candidate_edges_included": False,
+            "node_role_counts": {
+                **{role: node_role_counts.get(role, 0) for role in DOCUMENT_GRAPH_ROLES},
+                "DEPARTMENT": node_role_counts.get("DEPARTMENT", 0),
+                "CANDIDATE_OR_UNRESOLVED": 0,
+            },
             "read_only": True,
         }
 
     @staticmethod
-    def _document_node(document: dict[str, Any], degree: dict[str, int]) -> dict[str, Any]:
-        label = document.get("gr_number") or document.get("canonical_identity") or document.get("subject") or document["file_name"]
+    def _document_node(
+        document: dict[str, Any], degree: dict[str, int], reference_degree: dict[str, int] | None = None,
+    ) -> dict[str, Any]:
+        label = _document_display_label(document)
+        reference_degree = reference_degree or degree
         return {
             "id": f"document:{document['id']}", "type": "DOCUMENT", "label": str(label)[:120],
+            "graph_role": _document_graph_role(reference_degree),
+            "reference_degree": dict(reference_degree),
             "metadata": {
                 "document_id": int(document["id"]), "file_name": document["file_name"],
                 "file_path": document["file_path"], "sha256": document["sha256"],
                 "document_kind": document.get("document_kind") or document.get("document_type") or "UNKNOWN",
                 "document_number": document.get("gr_number") or document.get("canonical_identity") or "",
+                "canonical_identity": document.get("canonical_identity") or "",
+                "display_label": label,
                 "subject": document.get("subject") or "", "date": document.get("gr_date"),
                 "year": _document_year(document), "department": document.get("department") or "",
                 "source_origin": document.get("source_origin") or "UNKNOWN", "page_count": document.get("page_count") or 0,
@@ -638,6 +741,13 @@ class GraphExplorerService:
             ]
             incoming = [row for row in relations if row.get("target_document_id") == numeric_id]
             outgoing = [row for row in relations if int(row["source_document_id"]) == numeric_id]
+            incoming_references = [row for row in incoming if row["relation_type"] == "REFERENCES"]
+            outgoing_references = [row for row in outgoing if row["relation_type"] == "REFERENCES"]
+            reference_degree = {
+                "incoming": len(incoming_references),
+                "outgoing": len(outgoing_references),
+                "degree": len(incoming_references) + len(outgoing_references),
+            }
             neighboring_ids = sorted({
                 int(value) for row in relations
                 for value in (row.get("source_document_id"), row.get("target_document_id"))
@@ -646,6 +756,8 @@ class GraphExplorerService:
             documents = {int(row["id"]): row for row in state["documents"]}
             return {
                 "id": node_id, "type": "DOCUMENT", "document": document,
+                "graph_role": _document_graph_role(reference_degree),
+                "reference_degree": reference_degree,
                 "incoming_relations": [self._edge(row) for row in incoming],
                 "outgoing_relations": [self._edge(row) for row in outgoing],
                 "relation_counts": dict(Counter(row["relation_type"] for row in relations)),
