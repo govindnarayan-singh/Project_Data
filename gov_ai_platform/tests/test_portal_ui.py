@@ -50,6 +50,24 @@ class FakeGraphService:
                 "outgoing_references": [], "incoming_references": [], "unresolved_references": [], "relation_signals": []}
 
 
+class FakeExplorerService:
+    def get_graph_summary(self):
+        return {
+            "documents": 87, "departments": 12, "validated_relations": 137,
+            "validated_document_relations": 50, "relation_counts": {
+                "REFERENCES": 50, "ISSUED_BY": 87, "AMENDS": 0, "CORRECTS": 0,
+                "SUPERSEDES": 0, "PARTIALLY_SUPERSEDES": 0, "CANCELS": 0, "EXTENDS": 0,
+            },
+            "connected_documents": 35, "isolated_documents": 52, "graph_coverage": 35 / 87,
+            "components": 54, "largest_component": 14, "top_cited": [], "top_citing": [],
+            "most_connected": [], "department_document_counts": [],
+            "filter_options": {"relation_types": [], "document_kinds": [], "departments": [],
+                               "years": [], "validation_states": [], "source_origins": []},
+            "runtime": {"postgresql_version": "17.11"}, "graph_fingerprint": "a" * 64,
+            "generated_at": "2026-09-02T00:00:00+00:00", "read_only": True,
+        }
+
+
 class FakePortalService:
     def corpus_dashboard(self):
         return {"summary": {"documents": 61, "pages": 1022, "chunks": 740, "embeddings": 740,
@@ -123,11 +141,11 @@ class DocumentWorkspaceTests(SimpleTestCase):
 
 
 class GraphAndSystemWorkspaceTests(SimpleTestCase):
-    @patch("apps.knowledge_graph_ui.views.get_graph_service", return_value=FakeGraphService())
+    @patch("apps.knowledge_graph_ui.views.get_explorer_service", return_value=FakeExplorerService())
     def test_graph_overview(self, _service):
         response = self.client.get(reverse("knowledge_graph_ui:overview"))
-        self.assertContains(response, "729")
-        self.assertContains(response, "Candidate")
+        self.assertContains(response, "Knowledge graph explorer")
+        self.assertContains(response, "Candidate edges are excluded")
 
     @patch("apps.knowledge_graph_ui.views.get_portal_repository", return_value=FakePortalRepository())
     def test_unresolved_list_and_detail(self, _repository):

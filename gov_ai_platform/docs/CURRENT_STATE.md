@@ -496,3 +496,19 @@ benchmark found measurable one-hop recovery, but best-variant precision was
 9/63 (14.29%). Production remains dense and the next recommendation is to
 harden graph-aware retrieval before RAG. No acquisition, corpus/KG mutation,
 Podman command, or backup occurred.
+
+## Dynamic Knowledge Graph Explorer V1 (2026-09-02)
+
+The `/knowledge-graph/` route is a live, read-only explorer backed by native
+PostgreSQL. Its GET-only API exposes current summary counts, a bounded full
+graph, validated 1/2/3-hop neighborhoods, deterministic search, document and
+department details, component topology, and complete edge evidence. Manual
+refresh is mandatory and optional polling defaults off. Cytoscape.js 3.34.2 is
+bundled locally under MIT; no runtime CDN or remote graph service is required.
+
+The verified baseline remains 87 documents, 1,588 pages, 1,666 chunks/vectors,
+2,631 candidates, 50 `REFERENCES`, and 87 `ISSUED_BY`. Live document topology
+is 38 connected / 49 isolated, 58 components, and largest component 15. The
+stopped Recent-GR holdout package remains stopped: six partial output files
+were preserved, with no partial code, manifest, selection, ingestion, or
+database mutation. Evidence is under `outputs/kg_visualization_v1/`.

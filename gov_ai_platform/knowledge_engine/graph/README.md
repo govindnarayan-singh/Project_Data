@@ -57,3 +57,10 @@ provenance, `analytics.py` for effects/topology/completion priority/performance,
 `brain_v2.py` for reproducible orchestration. Use `python -m cli.graph --help`
 for inspection. PostgreSQL remains the graph system of record; Neo4j is not
 required.
+
+`explorer.py` is the Dynamic Knowledge Graph Explorer V1 read projection. It
+opens every repository transaction with `SET TRANSACTION READ ONLY`, admits
+only `AUTO_VERIFIED` and genuine `HUMAN_CONFIRMED` relations, and supplies live
+summary, bounded full-graph, neighborhood, search, component, node-detail, and
+edge-evidence operations to the Django GET API. It does not persist graph state
+or alter graph-aware retrieval. See `docs/KNOWLEDGE_GRAPH_VISUALIZATION.md`.

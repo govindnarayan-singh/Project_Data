@@ -216,3 +216,25 @@ Next: keep dense retrieval as production and run a retrieval-only precision
 hardening phase. Investigate query intent/direction selection and evidence-set
 presentation without score fusion, corpus expansion, RAG, LLMs, or graph
 mutation. Proceed to RAG only after graph-addition precision is defensibly safe.
+
+## Completed: Dynamic Knowledge Graph Explorer V1
+
+1. Audited and preserved the six stopped Recent-GR benchmark outputs without
+   resuming selection, questions, acquisition, merge, ingestion, or retrieval
+   evaluation.
+2. Added an explicitly read-only PostgreSQL graph projection and stable GET API
+   for live summary, full graph, bounded neighborhoods, deterministic search,
+   node/edge inspection, component topology, and safe logical JSON export.
+3. Replaced the static graph overview with a filterable Cytoscape.js explorer,
+   manual refresh, optional polling off by default, visible direction and trust
+   semantics, analytics, isolation/component views, and first-class provenance.
+4. Bundled Cytoscape.js 3.34.2 and its MIT license locally, added growth bounds
+   and explicit truncation, and validated dynamic refresh through an in-memory
+   replay of a copied live snapshot without production mutation.
+5. Preserved all production corpus, vector, KG, retrieval-source, native-runtime,
+   and no-backup/no-Podman invariants.
+
+Next: resume the separately frozen Recent-GR holdout benchmark. Keep its support
+documents outside PostgreSQL until the benchmark package's own gates explicitly
+authorize controlled ingestion; do not change this explorer or retrieval while
+constructing the holdout.

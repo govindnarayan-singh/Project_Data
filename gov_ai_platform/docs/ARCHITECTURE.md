@@ -359,3 +359,18 @@ candidate, and source/target provenance. Existing dense documents become
 corroborations rather than duplicates. There is no score fusion, reranking,
 graph mutation, Neo4j, LLM, RAG, agent, or UI change. The default remains
 `RETRIEVAL_MODE=dense`. See `docs/GRAPH_RETRIEVAL_V1.md`.
+
+## Dynamic Knowledge Graph Explorer V1 boundary
+
+The server-rendered `/knowledge-graph/` workspace queries native PostgreSQL
+through `GraphExplorerRepository` and `GraphExplorerService`. Repository
+transactions are explicitly read-only; Django exposes only bounded GET routes
+for summary, graph, neighborhood, search, node detail, edge provenance, and
+components. The graph is refreshed from current database rows and is never a
+frozen browser copy or a second persistence layer.
+
+Cytoscape.js 3.34.2 is pinned and served from local Django static assets under
+the MIT license. Full graph, filtered loading, explicit truncation, and 1/2/3
+hop modes support future corpus growth. Candidate relations remain excluded;
+validated relation direction and full evidence provenance remain intact. See
+`docs/KNOWLEDGE_GRAPH_VISUALIZATION.md`.

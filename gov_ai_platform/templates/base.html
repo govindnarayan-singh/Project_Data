@@ -6,6 +6,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Government Administrative AI Copilot{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'portal/app.css' %}">
+  {% block extra_head %}{% endblock %}
   <script src="{% static 'portal/app.js' %}" defer></script>
 </head>
 <body>
@@ -39,5 +40,6 @@
       <div class="context-body">{% block context_panel %}<p class="muted">Choose an item to inspect its evidence and metadata.</p>{% endblock %}</div>
     </aside>
   </div>
+  {% block extra_scripts %}{% endblock %}
 </body>
 </html>

@@ -1,5 +1,121 @@
 {% extends "base.html" %}
-{% block title %}Knowledge graph · Government Administrative AI Copilot{% endblock %}
-{% block breadcrumb %}Knowledge graph / Overview{% endblock %}
-{% block content %}<section class="page-intro compact"><span class="eyebrow">Relationship intelligence</span><h1>Knowledge graph</h1><p>Validated document and department edges, with candidate references kept visibly separate from verified relationships.</p></section><section class="metric-grid"><article class="metric-card"><span>Documents represented</span><strong>{{ graph.documents_represented }}</strong></article><article class="metric-card"><span>Departments</span><strong>{{ graph.departments_represented }}</strong></article><article class="metric-card"><span>Reference candidates</span><strong>{{ graph.reference_candidates }}</strong></article><article class="metric-card"><span>Verified edges</span><strong>{{ graph.references_edges|add:graph.issued_by_edges }}</strong></article></section><section class="split-section"><article class="card"><span class="eyebrow">Verified graph</span><h2>Administrative relationships</h2><dl class="fact-list"><div><dt>REFERENCES edges</dt><dd>{{ graph.references_edges }}</dd></div><div><dt>ISSUED_BY edges</dt><dd>{{ graph.issued_by_edges }}</dd></div><div><dt>Auto-verified candidates</dt><dd>{{ graph.auto_verified_candidates }}</dd></div></dl><p class="muted">Edges shown as verified have stored validation provenance.</p></article><article class="card"><span class="eyebrow">Review surface</span><h2>Unresolved evidence</h2><dl class="fact-list"><div><dt>Not in corpus</dt><dd>{{ graph.unresolved_candidates }}</dd></div><div><dt>Ambiguous</dt><dd>{{ graph.ambiguous_candidates }}</dd></div><div><dt>Unparseable</dt><dd>{{ graph.unparseable_candidates }}</dd></div></dl><a class="button primary" href="{% url 'knowledge_graph_ui:unresolved' %}">Open unresolved targets</a></article></section>{% endblock %}
-{% block context_title %}Graph semantics{% endblock %}{% block context_panel %}<ol class="protocol"><li><strong>REFERENCES</strong><span>A validated source-to-document reference.</span></li><li><strong>ISSUED_BY</strong><span>A validated document-to-department relationship.</span></li><li><strong>Candidate</strong><span>Extracted evidence awaiting resolution or review; never presented as fact.</span></li></ol>{% endblock %}
+{% load static %}
+{% block title %}Live knowledge graph explorer · Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Knowledge graph / Live explorer{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'knowledge_graph/explorer.css' %}">{% endblock %}
+{% block content %}
+<div class="graph-explorer" data-graph-explorer>
+  <section class="graph-hero">
+    <div>
+      <span class="eyebrow">Live PostgreSQL · read only</span>
+      <h1>Knowledge graph explorer</h1>
+      <p>Inspect validated administrative relationships, graph topology, and the stored evidence behind every edge. The graph reloads from PostgreSQL; graph relations are not vector similarity.</p>
+    </div>
+    <div class="graph-runtime" aria-label="Current graph status">
+      <span><i class="status-dot" aria-hidden="true"></i>Native PostgreSQL</span>
+      <span>Generated <strong data-generated-at>—</strong></span>
+      <span>Fingerprint <code data-fingerprint>—</code></span>
+    </div>
+  </section>
+
+  <section class="graph-metrics" aria-label="Live graph summary" aria-live="polite">
+    <article><span>Documents</span><strong data-metric="documents">{{ graph.documents }}</strong></article>
+    <article><span>Departments</span><strong data-metric="departments">{{ graph.departments }}</strong></article>
+    <article><span>Document relations</span><strong data-metric="validated_document_relations">{{ graph.validated_document_relations }}</strong></article>
+    <article><span>References</span><strong data-relation-count="REFERENCES">{{ graph.relation_counts.REFERENCES }}</strong></article>
+    <article><span>Connected</span><strong data-metric="connected_documents">{{ graph.connected_documents }}</strong></article>
+    <article><span>Isolated</span><strong data-metric="isolated_documents">{{ graph.isolated_documents }}</strong></article>
+    <article><span>Coverage</span><strong data-coverage>{{ graph.graph_coverage|floatformat:1 }}</strong></article>
+    <article><span>Components</span><strong data-metric="components">{{ graph.components }}</strong></article>
+  </section>
+
+  <section class="graph-toolbar" aria-label="Graph controls">
+    <button class="button primary" type="button" data-refresh>Refresh graph</button>
+    <label>Auto refresh
+      <select data-auto-refresh><option value="0">Off</option><option value="30">30 seconds</option><option value="60">60 seconds</option><option value="300">5 minutes</option></select>
+    </label>
+    <button class="button" type="button" data-full-graph>Full graph</button>
+    <label>Depth <select data-depth><option value="1">1 hop</option><option value="2">2 hops</option><option value="3">3 hops</option></select></label>
+    <label>Direction <select data-direction><option value="both">Both</option><option value="incoming">Incoming</option><option value="outgoing">Outgoing</option></select></label>
+    <button class="button" type="button" data-neighborhood disabled>Focus neighborhood</button>
+    <button class="button" type="button" data-export>Export filtered JSON</button>
+  </section>
+
+  <div class="graph-workbench">
+    <aside class="graph-filters" aria-label="Graph filters">
+      <div class="filter-heading"><h2>Find and filter</h2><button type="button" class="text-button" data-reset>Reset</button></div>
+      <label class="graph-search-label">Search documents
+        <span class="search-row"><input type="search" data-search placeholder="ID, GR number, title, year…"><button type="button" data-search-button aria-label="Search graph">Search</button></span>
+      </label>
+      <div class="search-results" data-search-results hidden></div>
+      <fieldset>
+        <legend>Relations</legend>
+        <div class="relation-toggles" data-relation-toggles>
+          {% for relation, count in graph.relation_counts.items %}
+          <label><input type="checkbox" name="relation" value="{{ relation }}" checked><span>{{ relation }}</span><b data-filter-relation-count="{{ relation }}">{{ count }}</b></label>
+          {% endfor %}
+        </div>
+      </fieldset>
+      <label>Document kind<select data-filter="kind"><option value="">All kinds</option></select></label>
+      <label>Department<select data-filter="department"><option value="">All departments</option></select></label>
+      <div class="filter-pair"><label>From year<input type="number" data-filter="year_min" min="1900" max="2100" placeholder="Any"></label><label>To year<input type="number" data-filter="year_max" min="1900" max="2100" placeholder="Any"></label></div>
+      <label>Validation<select data-filter="validation"><option value="">All trusted states</option></select></label>
+      <label>Source origin<select data-filter="source_origin"><option value="">All origins</option></select></label>
+      <label>Connectivity<select data-filter="connectivity"><option value="all">Connected + isolated</option><option value="connected">Connected only</option><option value="isolated">Isolated only</option></select></label>
+      <label>Relationship presence<select data-filter="presence"><option value="any">Any</option><option value="incoming">Has incoming</option><option value="outgoing">Has outgoing</option><option value="both">Has both</option></select></label>
+      <label>Component<select data-component><option value="">All components</option></select></label>
+      <details><summary>Response bounds</summary><div class="filter-pair"><label>Max nodes<input type="number" data-filter="max_nodes" min="1" max="5000" value="500"></label><label>Max edges<input type="number" data-filter="max_edges" min="1" max="10000" value="2000"></label></div></details>
+      <button class="button full" type="button" data-apply>Apply filters</button>
+      <p class="candidate-note"><span aria-hidden="true">◇</span> Candidate edges are excluded. Only <code>AUTO_VERIFIED</code> and genuine <code>HUMAN_CONFIRMED</code> relations are eligible.</p>
+    </aside>
+
+    <section class="graph-stage-card" aria-label="Interactive graph">
+      <div class="graph-stage-head">
+        <div><span class="eyebrow" data-mode-label>Full graph</span><h2><span data-visible-nodes>0</span> nodes · <span data-visible-edges>0</span> edges</h2></div>
+        <div class="graph-stage-actions"><button type="button" class="text-button" data-fit>Fit</button><button type="button" class="text-button" data-relayout>Re-layout</button></div>
+      </div>
+      <div class="graph-message" data-graph-message role="status">Loading current graph…</div>
+      <div id="knowledge-graph-canvas" class="graph-canvas" role="application" aria-label="Directed knowledge graph. Select nodes or edges for details." tabindex="0"></div>
+      <div class="graph-tooltip" data-tooltip role="status" hidden></div>
+      <div class="truncation-warning" data-truncation hidden></div>
+      <div class="graph-legend" aria-label="Graph legend">
+        <span><i class="legend-node document"></i>Document</span><span><i class="legend-node department"></i>Department</span>
+        <span><i class="legend-edge references"></i>REFERENCES →</span><span><i class="legend-edge issued"></i>ISSUED_BY →</span>
+        <span><i class="legend-node isolated"></i>Isolated document</span>
+      </div>
+    </section>
+  </div>
+
+  <section class="analytics-grid" aria-label="Live graph analytics">
+    <article class="card"><span class="eyebrow">Incoming</span><h2>Top referenced</h2><ol data-top-cited></ol></article>
+    <article class="card"><span class="eyebrow">Outgoing</span><h2>Top citing</h2><ol data-top-citing></ol></article>
+    <article class="card"><span class="eyebrow">Total degree</span><h2>Most connected</h2><ol data-most-connected></ol></article>
+    <article class="card"><span class="eyebrow">Topology</span><h2>Components</h2><dl class="fact-list"><div><dt>Largest component</dt><dd data-metric="largest_component">{{ graph.largest_component }}</dd></div><div><dt>Graph coverage</dt><dd data-coverage-long>—</dd></div><div><dt>Validated relations</dt><dd data-metric="validated_relations">{{ graph.validated_relations }}</dd></div></dl></article>
+    <article class="card"><span class="eyebrow">Issuers</span><h2>Department counts</h2><ol data-department-counts></ol></article>
+  </section>
+</div>
+{{ api|json_script:"kg-explorer-api" }}
+{{ graph|json_script:"kg-explorer-initial-summary" }}
+{% endblock %}
+{% block context_title %}Graph inspection{% endblock %}
+{% block context_panel %}
+<div data-graph-detail>
+  <p class="muted">Select a document, department, or directed edge to inspect its live metadata and provenance.</p>
+  <ol class="protocol">
+    <li><strong>DOCUMENT</strong><span>Stored administrative document. Rounded rectangle.</span></li>
+    <li><strong>DEPARTMENT</strong><span>Validated issuer. Diamond.</span></li>
+    <li><strong>REFERENCES →</strong><span>Citing document points to cited document.</span></li>
+    <li><strong>ISSUED_BY →</strong><span>Document points to its validated department.</span></li>
+    <li><strong>AUTO_VERIFIED</strong><span>Machine-accepted relation that passed the existing evidence policy.</span></li>
+    <li><strong>HUMAN_CONFIRMED</strong><span>Genuine stored human-confirmed relation, when present.</span></li>
+    <li><strong>Candidate</strong><span>Unresolved candidate relations are hidden and never mixed with graph truth.</span></li>
+    <li><strong>Isolated</strong><span>Dotted document node with no validated document-to-document relation.</span></li>
+    <li><strong>Graph depth</strong><span>Number of validated relation hops from the focused document.</span></li>
+  </ol>
+  <p class="context-note">A graph relation is an evidence-backed administrative link. It is not vector similarity and does not change retrieval ranking.</p>
+</div>
+{% endblock %}
+{% block extra_scripts %}
+<script src="{% static 'vendor/cytoscape/cytoscape-3.34.2.min.js' %}"></script>
+<script src="{% static 'knowledge_graph/explorer.js' %}"></script>
+{% endblock %}
