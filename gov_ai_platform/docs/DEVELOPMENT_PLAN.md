@@ -267,3 +267,20 @@ Next: **A. Accept KG Explorer V2.1 and resume the separately frozen Recent-GR
 holdout benchmark.** Do not
 ingest its support documents unless that work package's own gates authorize it;
 do not alter dense retrieval or the production KG while constructing it.
+
+## Current priority: Graph Retrieval V2 gate (2026-09-20)
+
+This supersedes the older suggestion to resume Recent-GR: that workstream
+remains STOPPED, and the accepted Explorer is out of scope. V2 independently
+implements deterministic intent, seed/content gates, one-hop trusted expansion,
+full diagnostics and a frozen 28/12 development/test protocol. The locked run
+improved labeled precision to 40% but lost one of three recoverable targets to
+ID-ordered fan-out truncation; no safe discriminative content threshold emerged.
+
+Next recommendation: **B. ONE MORE RETRIEVAL-ONLY HARDENING PHASE**. A separately
+authorized experiment should test binary relevance against validated relation
+page/context and frozen multi-label candidate judgments. It must demonstrate
+useful recovery and noise reduction due to relevance evidence, not ID truncation.
+Do not tune on the completed V2 locked test, mutate the corpus/KG, resume
+acquisition/Recent-GR/UI work, or implement RAG. Keep production dense and V1
+reproducible. See `docs/GRAPH_RETRIEVAL_V2.md`.

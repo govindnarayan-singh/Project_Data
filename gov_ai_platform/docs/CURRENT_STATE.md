@@ -570,3 +570,21 @@ same live contract. Playwright/Chromium cross-page and semantic-node acceptance
 passes with zero page or console errors. The corpus/KG fingerprints and all
 87 / 1,588 / 1,666 / 1,666 production counts remain unchanged. Evidence is
 under `outputs/kg_visualization_v22/`; the Recent-GR benchmark remains stopped.
+
+## Graph Retrieval V2 bounded hardening (2026-09-20)
+
+The independent V2 service and 28-development/12-locked experiment are complete.
+V1 reproduced 9/9 recoveries and 9/63 labeled addition precision. V2 development
+retained 6/6 recoveries while reducing additions 46 to 14; its frozen one-shot
+locked run recovered 2/3 and improved precision 3/17 to 2/5. Eleven unmatched
+locked additions were removed, but one useful target was suppressed by the
+document-ID-ordered one-addition cap. All accepted evidence has full relation
+and separate content-page/chunk provenance. Locked P95 was 370.9 ms.
+
+Recommendation: `ONE_MORE_RETRIEVAL_HARDENING_PHASE`, specifically a measured
+relation-context relevance gate with frozen multi-label evidence judgments.
+No post-test retuning, RAG, LLM, UI, acquisition or Recent-GR work occurred.
+Dense remains production default; all 29 dense ranks/scores and the 87 / 1,588 /
+1,666 / 1,666 corpus and 2,631-candidate / 137-relation KG fingerprints are
+unchanged. Native PostgreSQL only; backups and Podman commands zero. Details:
+`docs/GRAPH_RETRIEVAL_V2.md`, `outputs/graph_retrieval_v2/final_report.md`.

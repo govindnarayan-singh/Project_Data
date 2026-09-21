@@ -400,3 +400,18 @@ The browser distinguishes loading, empty, filtered-to-zero, API failure, and
 client-render failure; none is allowed to masquerade as a valid zero-node
 graph. Playwright remains a development-only acceptance dependency and drives
 the real server-rendered page and read-only API.
+
+## Graph Retrieval V2 experimental boundary
+
+`GraphAwareRetrievalV2` is a separate read-only service after unchanged dense
+retrieval. It selects NO_GRAPH/outgoing/incoming/explicit lineage, expands one
+hop of trusted REFERENCES, validates restricted content provenance, and returns
+separate supplemental evidence, corroborations and rejection diagnostics. There
+is no score fusion, reranking or production/UI wiring. V1 remains untouched.
+
+Its frozen 28/12 development/locked experiment improved labeled locked precision
+from 17.65% to 40%, but the ID-ordered one-document cap lost one of three useful
+recoveries. Content-similarity thresholds did not provide a recovery-preserving
+relevance discriminator. The RAG gate is therefore
+`ONE_MORE_RETRIEVAL_HARDENING_PHASE`; production remains dense. See
+`docs/GRAPH_RETRIEVAL_V2.md` for the service, immutable ledger and label limits.
