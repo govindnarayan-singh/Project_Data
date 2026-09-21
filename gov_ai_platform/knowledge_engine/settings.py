@@ -56,6 +56,9 @@ class Settings:
     postgres_data: Path = _resolve_path(
         os.getenv("POSTGRES_DATA", "../PostgreSQL/data17")
     )
+    postgres_logs: Path = _resolve_path(
+        os.getenv("POSTGRES_LOGS", "../PostgreSQL/logs")
+    )
     postgres_container: str = os.getenv("POSTGRES_CONTAINER", "gr-postgres")
     external_http_timeout_seconds: float = float(os.getenv("EXTERNAL_HTTP_TIMEOUT_SECONDS", "15"))
     external_http_max_bytes: int = int(os.getenv("EXTERNAL_HTTP_MAX_BYTES", str(25 * 1024 * 1024)))

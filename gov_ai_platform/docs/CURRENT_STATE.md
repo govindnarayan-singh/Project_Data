@@ -588,3 +588,21 @@ Dense remains production default; all 29 dense ranks/scores and the 87 / 1,588 /
 1,666 / 1,666 corpus and 2,631-candidate / 137-relation KG fingerprints are
 unchanged. Native PostgreSQL only; backups and Podman commands zero. Details:
 `docs/GRAPH_RETRIEVAL_V2.md`, `outputs/graph_retrieval_v2/final_report.md`.
+
+## Developer runtime hardening V1 (2026-09-21)
+
+Local `python manage.py runserver` now ensures the existing native PostgreSQL
+17 cluster before starting Django. `python -m cli.native_postgres ensure` uses
+the same idempotent helper; status stays read-only and start aliases ensure.
+Identity checks pin PostgreSQL 17 / 127.0.0.1:5434 / grdb / data17, with a
+bounded startup deadline and cross-process lock. `AUTO_START_POSTGRES=false`
+opts out; unset defaults off in CI or non-debug environments. Other Django
+commands and production WSGI/ASGI entrypoints do not autostart the database.
+
+The project-write root remains gov_ai_platform inside the parent Git repository.
+AGENTS.md now explicitly permits normal existing-cluster runtime writes to
+PostgreSQL/data17 and PostgreSQL/logs and defines scoped, non-repetitive task
+validation. `cli.dev_preflight` provides the cheap reusable workspace/runtime
+check. No installation, service registration, migration, backup, corpus or KG
+mutation was performed. Graph Retrieval V3 remains stopped and was not resumed.
+See `docs/DEVELOPER_RUNTIME.md` and `outputs/runtime_hardening_v1/final_report.md`.

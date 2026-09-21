@@ -10,21 +10,31 @@ DATABASE_URL=postgresql://gr_user:<local-secret>@127.0.0.1:5434/grdb
 POSTGRES_BACKUP_MODE=native
 POSTGRES_BIN=D:/LLM_Project_data/PostgreSQL/17/pgsql/bin
 POSTGRES_DATA=D:/LLM_Project_data/PostgreSQL/data17
+POSTGRES_LOGS=D:/LLM_Project_data/PostgreSQL/logs
 ```
 
 Podman is rollback-only. Do not start, stop, restore, or back up the normal
 database through the old `gr-postgres` container.
 
-Use the project command after a Windows restart:
+Development `python manage.py runserver` now ensures this cluster automatically,
+including after a Windows restart. For standalone CLI tasks use the same helper:
 
 ```powershell
 cd D:\LLM_Project_data\gov_ai_platform
 & D:\LLM_Project_data\venv\Scripts\python.exe -m cli.native_postgres status
-& D:\LLM_Project_data\venv\Scripts\python.exe -m cli.native_postgres start
+& D:\LLM_Project_data\venv\Scripts\python.exe -m cli.native_postgres ensure
 ```
 
 `stop` performs a PostgreSQL fast, waited shutdown. It must be used only for a
 planned local maintenance window.
+
+`start` is an idempotent alias of `ensure`; neither restarts a healthy server.
+Readiness verifies PostgreSQL 17, database `grdb`, port 5434 and the existing
+data directory (SQL where visible, otherwise expected-cluster `pg_ctl status`).
+Wrong-server and login failures never trigger a kill or fallback to port 5432.
+Normal runtime writes to existing `data17` and `logs` are authorized separately
+from the application-only project write boundary. No initialization, restore,
+backup or schema operation is part of ensure. See `DEVELOPER_RUNTIME.md`.
 
 ## Proven backup boundary
 

@@ -9,8 +9,14 @@ It does not generate answers with an LLM.
 
 1. Use `D:\LLM_Project_data\venv`; do not create another environment.
 2. Copy `.env.example` to `.env` and replace the Django secret for local use.
-3. Verify the existing `gr-postgres` container is running on port 5433.
-4. Run `python manage.py runserver` from this directory.
+3. Run `python manage.py runserver` from this directory. It automatically ensures
+   the existing native PostgreSQL 17 instance at `127.0.0.1:5434/grdb` is ready.
+4. For standalone CLI work, run `python -m cli.native_postgres ensure` first.
+
+Podman is rollback-only; port 5432 belongs to an unrelated PostgreSQL 13 service.
+Set `AUTO_START_POSTGRES=false` to disable runserver autostart explicitly. When
+unset, autostart defaults off in CI and with `DJANGO_DEBUG=false`. See
+`docs/DEVELOPER_RUNTIME.md` for the concise preflight and runtime safety boundary.
 
 Search from the CLI with:
 
