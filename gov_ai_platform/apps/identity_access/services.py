@@ -200,6 +200,14 @@ def submit_access_request(cleaned_data: dict, request) -> SubmittedAccessRequest
     organization = cleaned_data["organization"]
     normalized_email = normalize_email(cleaned_data["official_email"])
     normalized_identity = normalize_identity(cleaned_data["employee_identifier"])
+    requester_user = request.user if getattr(request.user, "is_authenticated", False) else None
+    if requester_user is not None:
+        requester_email = normalize_email(requester_user.email) if requester_user.email else ""
+        if requester_email != normalized_email:
+            raise AccessWorkflowError(
+                ValidationOutcome.REJECT_INVALID,
+                "An authenticated access request must be for the signed-in identity.",
+            )
     source = client_source(request)
     window = settings.ACCESS_REQUEST_WINDOW_SECONDS
     checks = (
@@ -259,14 +267,14 @@ def submit_access_request(cleaned_data: dict, request) -> SubmittedAccessRequest
                 risk_flags=risk_flags,
                 source_fingerprint=_digest("source", source),
                 status_token_digest=_digest("status", status_token),
-                requester_user=request.user if getattr(request.user, "is_authenticated", False) else None,
+                requester_user=requester_user,
                 expires_at=now + timedelta(days=settings.ACCESS_REQUEST_EXPIRY_DAYS),
             )
             AccessRequestTransition.objects.create(
                 request=access_request,
                 old_state="",
                 new_state=AccessRequestState.REQUESTED,
-                actor=access_request.requester_user,
+                actor=requester_user,
                 reason="Public access request received",
                 version=1,
             )
@@ -288,6 +296,13 @@ def lookup_request_status(request_id, token: str) -> AccessRequest | None:
     return access_request
 
 
+def _get_locked_access_request(request_id) -> AccessRequest:
+    """Lock only the request row; callers must already be inside transaction.atomic."""
+    if not transaction.get_connection().in_atomic_block:
+        raise RuntimeError("AccessRequest row locks require transaction.atomic().")
+    return AccessRequest.objects.select_for_update(of=("self",)).get(pk=request_id)
+
+
 def expire_stale_requests(*, batch_size: int = 200) -> int:
     now = timezone.now()
     expired = 0
@@ -298,7 +313,7 @@ def expire_stale_requests(*, batch_size: int = 200) -> int:
     )
     for request_id in ids:
         with transaction.atomic():
-            access_request = AccessRequest.objects.select_for_update().get(pk=request_id)
+            access_request = _get_locked_access_request(request_id)
             if access_request.state == AccessRequestState.PENDING_IAS_APPROVAL and access_request.expires_at <= now:
                 _transition_request(access_request, AccessRequestState.EXPIRED, reason="Request expired before decision")
                 expired += 1
@@ -307,10 +322,12 @@ def expire_stale_requests(*, batch_size: int = 200) -> int:
 
 def _expire_request_if_stale(request_id) -> bool:
     with transaction.atomic():
-        access_request = AccessRequest.objects.select_for_update().filter(pk=request_id).first()
+        try:
+            access_request = _get_locked_access_request(request_id)
+        except AccessRequest.DoesNotExist:
+            return False
         if (
-            access_request
-            and access_request.state == AccessRequestState.PENDING_IAS_APPROVAL
+            access_request.state == AccessRequestState.PENDING_IAS_APPROVAL
             and access_request.expires_at <= timezone.now()
         ):
             _transition_request(access_request, AccessRequestState.EXPIRED, reason="Request expired before decision")
@@ -342,7 +359,7 @@ def approve_access_request(actor, request_id, *, expected_version: int, reason: 
     if _expire_request_if_stale(request_id):
         raise AccessDecisionError("EXPIRED", "The request has expired.")
     with transaction.atomic():
-        access_request = AccessRequest.objects.select_for_update().select_related("organization", "requester_user").get(pk=request_id)
+        access_request = _get_locked_access_request(request_id)
         if access_request.version != expected_version:
             raise AccessDecisionError("STALE_VERSION", "The request changed; refresh before deciding.")
         if access_request.state != AccessRequestState.PENDING_IAS_APPROVAL:
@@ -402,7 +419,7 @@ def reject_access_request(actor, request_id, *, expected_version: int, reason: s
     if _expire_request_if_stale(request_id):
         raise AccessDecisionError("EXPIRED", "The request has expired.")
     with transaction.atomic():
-        access_request = AccessRequest.objects.select_for_update().get(pk=request_id)
+        access_request = _get_locked_access_request(request_id)
         if access_request.version != expected_version:
             raise AccessDecisionError("STALE_VERSION", "The request changed; refresh before deciding.")
         if access_request.state != AccessRequestState.PENDING_IAS_APPROVAL:

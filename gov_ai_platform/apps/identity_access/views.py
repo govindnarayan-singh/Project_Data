@@ -65,6 +65,13 @@ def logout_view(request: HttpRequest) -> HttpResponse:
 
 @require_http_methods(["GET", "POST"])
 def request_access(request: HttpRequest) -> HttpResponse:
+    if request.user.is_authenticated and has_application_access(request.user):
+        return render(
+            request,
+            "identity_access/access_denied.html",
+            {"authorized_request_blocked": True},
+            status=403,
+        )
     form = AccessRequestForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         if form.cleaned_data.get("website"):

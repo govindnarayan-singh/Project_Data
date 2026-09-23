@@ -53,6 +53,22 @@ verify pending state, compare the submitted version, check current scope, and
 reject self-decision. There is no bulk approval. Approval creates or reactivates
 only an `OFFICER` grant and produces a one-time activation handoff.
 
+### PostgreSQL approval/rejection locking
+
+The concurrency object is the `AccessRequest` base row. Approval, rejection,
+and expiry enter `transaction.atomic()` and use one shared helper with
+`select_for_update(of=("self",))`. The lock query does not join nullable
+`requester_user`; separation-of-duties uses the already-loaded
+`requester_user_id`, and organization scope is checked by ID. This avoids
+PostgreSQL's invalid `FOR UPDATE` over the nullable side of an outer join while
+preserving the row lock, version check, state check, and IAS scope check.
+
+`requester_user` means an existing authenticated identity requesting access on
+its own behalf. Anonymous pre-activation officer requests leave it null.
+Already-authorized users are blocked from the public request form, and an
+authenticated unprivileged user's submitted email must match the signed-in
+identity. Genuine self-approval and self-rejection remain prohibited.
+
 ## Queue and abuse resistance
 
 Request fields are bounded by model/form limits. Email and official identity
@@ -93,6 +109,10 @@ defaults to eight hours and browser-close expiry. `Secure` cookies and HTTPS
 redirects are environment settings so local HTTP remains usable. Production
 must set a strong `DJANGO_SECRET_KEY`, explicit hosts, TLS termination,
 `DJANGO_SECURE_COOKIES=true`, and `DJANGO_SECURE_SSL_REDIRECT=true`.
+`DJANGO_DEBUG=true` is for local development only; production must set
+`DJANGO_DEBUG=false`. Logs and task reports must not copy database credentials,
+session or CSRF secrets, activation secrets, the Django secret key, or full
+environment dumps.
 
 Suspension, revocation, grant expiry, scope expiry, and inactive users are read
 from PostgreSQL for each protected request. Existing sessions therefore lose

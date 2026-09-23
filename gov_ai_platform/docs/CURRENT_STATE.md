@@ -625,11 +625,38 @@ Retrieval V1/V2/V3 artifact directories. No production IAS/officer test account
 was created. See `docs/STAGE_01_IDENTITY_ACCESS.md` and
 `outputs/stage_01_identity_access/final_report.md`.
 
+## Stage 1.1 — live approval/rejection hardening (2026-09-23)
+
+The PostgreSQL approval failure was caused by `select_for_update()` combined
+with `select_related("requester_user")`: nullable `requester_user` introduced a
+left outer join that PostgreSQL refused to lock. Approval, rejection, and expiry
+now share a base-row-only `FOR UPDATE OF identity_access_accessrequest` helper
+inside their existing transactions. PostgreSQL integration coverage verifies
+nullable and non-null requesters, genuine self-decision denial, stale/repeat and
+scope failures, activation, rejection side-effect absence, and a real competing
+connection lock.
+
+The live request was an authenticated-session requester-linking defect, not a
+genuine self-request. A validated, dry-run-first management command cleared only
+that bad link, incremented the request version, and recorded a same-state repair
+transition; the request remains pending and undecided. Authorized users are now
+blocked from the public request form, while authenticated unprivileged requests
+must match the signed-in email.
+
+Code, SQLite, native-PostgreSQL service, and PostgreSQL HTTP-stack validation
+pass. A real browser workflow could not run because this execution environment
+reported no available browser. Stage 1.1 is therefore **CONDITIONAL PASS** and
+Stage 2 remains blocked until the bounded browser approval/activation/login and
+rejection workflow is completed. Evidence is under
+`outputs/stage_01_1_access_workflow_fix/`.
+
 Stage 0 — Runtime & Developer Infrastructure Hardening: **DONE**
 
 Stage 1 — Identity & Access Foundation: **DONE**
 
-Stage 2 — Approval Governance & Immutable Audit: **NEXT**
+Stage 1.1 — Live Approval / Rejection Hardening: **CONDITIONAL PASS — BROWSER VALIDATION PENDING**
+
+Stage 2 — Approval Governance & Immutable Audit: **BLOCKED**
 
 Stage 3 — Secure Document Intake & IAS Corpus Approval: **WAITING**
 

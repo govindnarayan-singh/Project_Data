@@ -4,7 +4,11 @@
 <section class="access-card access-card-narrow">
   <span class="eyebrow">Authorization required</span>
   <h1>Access unavailable</h1>
+  {% if authorized_request_blocked %}
+  <p>Already-authorized users cannot use the public access-request form. Sign out and use a private browser session for the officer's own request.</p>
+  {% else %}
   <p>Your identity has no current active grant. Pending, suspended, revoked, and expired access cannot enter the protected application.</p>
+  {% endif %}
   <form method="post" action="{% url 'identity_access:logout' %}">{% csrf_token %}<button class="primary-button" type="submit">Sign out</button></form>
 </section>
 {% endblock %}

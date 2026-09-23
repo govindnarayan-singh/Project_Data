@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import hashlib
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
@@ -212,6 +213,113 @@ class IdentityAccessSecurityTests(TestCase):
         self.assertEqual(submitted.request.state, AccessRequestState.PENDING_IAS_APPROVAL)
         self.assertEqual(submitted.request.transitions.count(), 3)
         self.assertFalse(self.User.objects.filter(email="new@example.gov").exists())
+
+    def test_authorized_user_cannot_use_public_request_form(self):
+        self.client.force_login(self.ias)
+        url = reverse("identity_access:request_access")
+        self.assertEqual(self.client.get(url).status_code, 403)
+        response = self.client.post(url, {
+            "full_name": "Another Officer",
+            "official_email": "another@example.gov",
+            "employee_identifier": "ANOTHER-1",
+            "organization": self.org_a.pk,
+            "reason": "On behalf submission",
+        })
+        self.assertEqual(response.status_code, 403)
+        self.assertContains(response, "Already-authorized users", status_code=403)
+        self.assertFalse(AccessRequest.objects.filter(official_email="another@example.gov").exists())
+
+    def test_authenticated_self_request_must_match_signed_in_email(self):
+        pending = self.User.objects.create_user("pending-self", "pending-self@example.gov", "SafePass-9321")
+        request = self.factory.post("/access/request/", REMOTE_ADDR="198.51.100.45")
+        request.user = pending
+        cleaned = {
+            "full_name": "Pending Officer",
+            "official_email": "different@example.gov",
+            "employee_identifier": "PENDING-1",
+            "organization": self.org_a,
+            "designation": "Officer",
+            "reason": "Official duties",
+        }
+        with self.assertRaisesMessage(AccessWorkflowError, "signed-in identity"):
+            submit_access_request(cleaned, request)
+        cleaned["official_email"] = pending.email
+        submitted = submit_access_request(cleaned, request)
+        self.assertEqual(submitted.request.requester_user_id, pending.pk)
+
+    def test_self_decision_views_return_controlled_messages(self):
+        self_request = self.make_access_request(
+            requester=self.ias,
+            email=self.ias.email,
+            employee_id="IAS-SELF-1",
+        )
+        self.client.force_login(self.ias)
+        approve = self.client.post(
+            reverse("identity_access:ias_approve_request", args=[self_request.pk]),
+            {"expected_version": 3, "decision_reason": "self"},
+            follow=True,
+        )
+        self.assertEqual(approve.status_code, 200)
+        self.assertContains(approve, "Self-approval is prohibited")
+        reject = self.client.post(
+            reverse("identity_access:ias_reject_request", args=[self_request.pk]),
+            {"expected_version": 3, "decision_reason": "self"},
+            follow=True,
+        )
+        self.assertEqual(reject.status_code, 200)
+        self.assertContains(reject, "Self-decision is prohibited")
+        self_request.refresh_from_db()
+        self.assertEqual(self_request.state, AccessRequestState.PENDING_IAS_APPROVAL)
+
+    def test_validated_requester_link_repair_is_explicit_and_versioned(self):
+        bad_request = self.make_access_request(
+            requester=self.ias,
+            email="different-person@example.gov",
+            employee_id="BAD-LINK-1",
+        )
+        digest = hashlib.sha256(bad_request.normalized_email.encode("utf-8")).hexdigest()
+        dry_output = io.StringIO()
+        call_command(
+            "repair_access_request_requester",
+            request_id=str(bad_request.pk),
+            expected_requester_user_id=self.ias.pk,
+            expected_email_sha256=digest,
+            stdout=dry_output,
+        )
+        bad_request.refresh_from_db()
+        self.assertEqual(bad_request.requester_user_id, self.ias.pk)
+        self.assertIn('"applied": false', dry_output.getvalue())
+
+        apply_output = io.StringIO()
+        call_command(
+            "repair_access_request_requester",
+            request_id=str(bad_request.pk),
+            expected_requester_user_id=self.ias.pk,
+            expected_email_sha256=digest,
+            apply=True,
+            stdout=apply_output,
+        )
+        bad_request.refresh_from_db()
+        self.assertIsNone(bad_request.requester_user_id)
+        self.assertEqual(bad_request.version, 4)
+        self.assertTrue(bad_request.transitions.filter(version=4, old_state=bad_request.state, new_state=bad_request.state).exists())
+        self.assertIn('"applied": true', apply_output.getvalue())
+
+    def test_requester_link_repair_refuses_genuine_self_request(self):
+        self_request = self.make_access_request(
+            requester=self.ias,
+            email=self.ias.email,
+            employee_id="IAS-SELF-REPAIR",
+        )
+        digest = hashlib.sha256(self_request.normalized_email.encode("utf-8")).hexdigest()
+        with self.assertRaisesMessage(CommandError, "genuine self-request"):
+            call_command(
+                "repair_access_request_requester",
+                request_id=str(self_request.pk),
+                expected_requester_user_id=self.ias.pk,
+                expected_email_sha256=digest,
+                apply=True,
+            )
 
     def test_activation_token_is_single_use_hashed_and_expiring(self):
         user = self.User.objects.create_user("activate", "activate@example.gov")
