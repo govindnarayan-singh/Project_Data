@@ -16,6 +16,7 @@ from knowledge_engine.graph.explorer import (
     GraphExplorerService,
     GraphFilters,
 )
+from tests.access_test_helpers import AuthorizedViewTestCase
 
 
 def _document(document_id, *, kind, year, department, origin="LOCAL_CONTROLLED"):
@@ -286,8 +287,9 @@ class GraphExplorerServiceTests(SimpleTestCase):
             self.service.get_document_neighborhood(1, direction="sideways", depth=1)
 
 
-class GraphExplorerApiTests(SimpleTestCase):
+class GraphExplorerApiTests(AuthorizedViewTestCase):
     def setUp(self):
+        super().setUp()
         self.service = GraphExplorerService(FakeExplorerRepository())
         self.patcher = patch("apps.knowledge_graph_ui.views.get_explorer_service", return_value=self.service)
         self.patcher.start()

@@ -1,0 +1,17 @@
+{% extends "identity_access/public_base.html" %}
+{% block title %}Request submitted | Government Administrative AI Copilot{% endblock %}
+{% block content %}
+<section class="access-card access-card-narrow">
+  <span class="eyebrow">Submission received</span>
+  <h1>Request submitted</h1>
+  <p>If the supplied details are eligible, the request will be reviewed by an IAS authority. No active account has been created.</p>
+  {% if access_request %}
+  <div class="credential-box">
+    <p><strong>Save these once.</strong> The private status key is stored only as a digest and cannot be recovered.</p>
+    <label>Request ID</label><code>{{ access_request.id }}</code>
+    <label>Private status key</label><code>{{ status_token }}</code>
+  </div>
+  {% endif %}
+  <p><a class="primary-button" href="{% url 'identity_access:request_status' %}">Check request status</a></p>
+</section>
+{% endblock %}

@@ -1,0 +1,17 @@
+{% extends "identity_access/public_base.html" %}
+{% block title %}Sign in | Government Administrative AI Copilot{% endblock %}
+{% block content %}
+<section class="access-card access-card-narrow">
+  <span class="eyebrow">Authorized personnel</span>
+  <h1>Sign in</h1>
+  <p class="muted">Use the credentials created through an approved access or IAS bootstrap workflow.</p>
+  <form method="post" class="access-form" novalidate>{% csrf_token %}
+    {{ form.non_field_errors }}
+    <label for="{{ form.identifier.id_for_label }}">{{ form.identifier.label }}</label>{{ form.identifier }}{{ form.identifier.errors }}
+    <label for="{{ form.password.id_for_label }}">Password</label>{{ form.password }}{{ form.password.errors }}
+    {{ form.next }}
+    <button class="primary-button" type="submit">Sign in</button>
+  </form>
+  <p class="access-help"><a href="{% url 'identity_access:request_access' %}">Request officer access</a></p>
+</section>
+{% endblock %}

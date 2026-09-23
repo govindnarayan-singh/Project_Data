@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}Activation handoff | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Access administration / Activation handoff{% endblock %}
+{% block content %}
+<section class="panel activation-handoff"><span class="eyebrow">One-time secure handoff</span><h1>Officer approved</h1><p>Transfer this activation link to the approved officer through an authorized secure channel. It expires and is stored only as a digest. This page is the only display.</p><label for="activation-url">Activation URL</label><textarea id="activation-url" readonly rows="4">{{ activation_url }}</textarea><p><a class="primary-button" href="{% url 'identity_access:ias_queue' %}">Return to queue</a></p></section>
+{% endblock %}

@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Access requests | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Access administration / Request queue{% endblock %}
+{% block content %}
+<header class="page-heading"><div><span class="eyebrow">IAS scoped queue</span><h1>Access requests</h1><p>Only requests inside your current organizational authority are shown.</p></div></header>
+{% if messages %}{% for message in messages %}<p class="notice {{ message.tags }}">{{ message }}</p>{% endfor %}{% endif %}
+<form method="get" class="queue-filters">
+  <label>Search<input name="q" maxlength="100" value="{{ filters.q }}"></label>
+  <label>State<select name="state">{% for value,label in states %}<option value="{{ value }}" {% if filters.state == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Organization<select name="organization"><option value="">All authorized units</option>{% for org in organizations %}<option value="{{ org.id }}" {% if filters.organization == org.id|stringformat:'s' %}selected{% endif %}>{{ org.name }}</option>{% endfor %}</select></label>
+  <label>Age<select name="age"><option value="">Any age</option><option value="1" {% if filters.age == '1' %}selected{% endif %}>Older than 1 day</option><option value="7" {% if filters.age == '7' %}selected{% endif %}>Older than 7 days</option><option value="30" {% if filters.age == '30' %}selected{% endif %}>Older than 30 days</option></select></label>
+  <button class="primary-button" type="submit">Apply</button>
+</form>
+<div class="access-table-wrap"><table class="access-table"><thead><tr><th>Requester</th><th>Unit</th><th>State</th><th>Submitted</th><th>Risk indicators</th><th></th></tr></thead><tbody>
+{% for item in page_obj %}<tr><td><strong>{{ item.full_name }}</strong><br><span class="muted">{{ item.official_email }}</span></td><td>{{ item.organization.name }}</td><td><span class="badge">{{ item.get_state_display }}</span></td><td>{{ item.created_at|timesince }} ago</td><td>{% if item.risk_flags %}{{ item.risk_flags|join:", " }}{% else %}None{% endif %}</td><td><a href="{% url 'identity_access:ias_request_detail' item.id %}">Inspect</a></td></tr>{% empty %}<tr><td colspan="6">No matching requests.</td></tr>{% endfor %}
+</tbody></table></div>
+{% include "identity_access/pagination.html" %}
+{% endblock %}
+{% block context_title %}Approval boundaries{% endblock %}
+{% block context_panel %}<p>Every approval is individual, version-checked, transactional, and limited to your explicit organizational scope.</p><p class="muted">There is no bulk approval.</p>{% endblock %}

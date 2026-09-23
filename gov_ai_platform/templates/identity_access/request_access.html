@@ -1,0 +1,22 @@
+{% extends "identity_access/public_base.html" %}
+{% block title %}Request access | Government Administrative AI Copilot{% endblock %}
+{% block content %}
+<section class="access-card">
+  <span class="eyebrow">Officer onboarding</span>
+  <h1>Request access</h1>
+  <p>Submission does not create an account. An IAS authority for the selected unit must explicitly approve the request.</p>
+  {% if submission_error %}<p class="notice error" role="alert">{{ submission_error }}</p>{% endif %}
+  <form method="post" class="access-form access-form-grid" novalidate>{% csrf_token %}
+    {{ form.non_field_errors }}
+    <div><label for="{{ form.full_name.id_for_label }}">Official name</label>{{ form.full_name }}{{ form.full_name.errors }}</div>
+    <div><label for="{{ form.official_email.id_for_label }}">Official email</label>{{ form.official_email }}{{ form.official_email.errors }}</div>
+    <div><label for="{{ form.employee_identifier.id_for_label }}">{{ form.employee_identifier.label }}</label>{{ form.employee_identifier }}{{ form.employee_identifier.errors }}</div>
+    <div><label for="{{ form.organization.id_for_label }}">{{ form.organization.label }}</label>{{ form.organization }}{{ form.organization.errors }}</div>
+    <div class="span-two"><label for="{{ form.designation.id_for_label }}">Designation (optional)</label>{{ form.designation }}{{ form.designation.errors }}</div>
+    <div class="span-two"><label for="{{ form.reason.id_for_label }}">{{ form.reason.label }}</label>{{ form.reason }}{{ form.reason.errors }}</div>
+    {{ form.website }}
+    <div class="span-two"><button class="primary-button" type="submit">Submit for IAS review</button></div>
+  </form>
+  <p class="access-help">IAS privileges cannot be requested through this form.</p>
+</section>
+{% endblock %}

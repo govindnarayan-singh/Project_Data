@@ -1,0 +1,18 @@
+{% extends "identity_access/public_base.html" %}
+{% block title %}Request status | Government Administrative AI Copilot{% endblock %}
+{% block content %}
+<section class="access-card access-card-narrow">
+  <span class="eyebrow">Private lookup</span>
+  <h1>Access request status</h1>
+  <form method="post" class="access-form" novalidate>{% csrf_token %}
+    {{ form.non_field_errors }}
+    <label for="{{ form.request_id.id_for_label }}">{{ form.request_id.label }}</label>{{ form.request_id }}{{ form.request_id.errors }}
+    <label for="{{ form.status_token.id_for_label }}">{{ form.status_token.label }}</label>{{ form.status_token }}{{ form.status_token.errors }}
+    <button class="primary-button" type="submit">Check status</button>
+  </form>
+  {% if lookup_failed %}<p class="notice error" role="alert">The request credentials are invalid or unavailable.</p>{% endif %}
+  {% if access_request %}
+  <dl class="access-facts"><dt>Status</dt><dd>{{ access_request.get_state_display }}</dd><dt>Unit</dt><dd>{{ access_request.organization.name }}</dd><dt>Submitted</dt><dd>{{ access_request.created_at }}</dd><dt>Expires</dt><dd>{{ access_request.expires_at }}</dd></dl>
+  {% endif %}
+</section>
+{% endblock %}

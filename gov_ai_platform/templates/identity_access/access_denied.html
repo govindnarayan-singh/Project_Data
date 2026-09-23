@@ -1,0 +1,10 @@
+{% extends "identity_access/public_base.html" %}
+{% block title %}Access unavailable | Government Administrative AI Copilot{% endblock %}
+{% block content %}
+<section class="access-card access-card-narrow">
+  <span class="eyebrow">Authorization required</span>
+  <h1>Access unavailable</h1>
+  <p>Your identity has no current active grant. Pending, suspended, revoked, and expired access cannot enter the protected application.</p>
+  <form method="post" action="{% url 'identity_access:logout' %}">{% csrf_token %}<button class="primary-button" type="submit">Sign out</button></form>
+</section>
+{% endblock %}

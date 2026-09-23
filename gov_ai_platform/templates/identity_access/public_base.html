@@ -1,0 +1,27 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="same-origin">
+  <title>{% block title %}Access | Government Administrative AI Copilot{% endblock %}</title>
+  <link rel="stylesheet" href="{% static 'portal/app.css' %}?v=2.2.0">
+  <link rel="stylesheet" href="{% static 'portal/access.css' %}?v=1.0.0">
+</head>
+<body class="access-body">
+  <a class="skip-link" href="#main-content">Skip to content</a>
+  <header class="access-public-header">
+    <a class="access-brand" href="{% url 'identity_access:login' %}"><span class="brand-mark" aria-hidden="true">GA</span><span><strong>Government Administrative</strong><small>AI Copilot</small></span></a>
+    <nav aria-label="Access navigation">
+      <a href="{% url 'identity_access:login' %}">Sign in</a>
+      <a href="{% url 'identity_access:request_access' %}">Request access</a>
+      <a href="{% url 'identity_access:request_status' %}">Request status</a>
+    </nav>
+  </header>
+  <main id="main-content" class="access-main">
+    {% if messages %}<div class="access-messages" aria-live="polite">{% for message in messages %}<p class="notice {{ message.tags }}">{{ message }}</p>{% endfor %}</div>{% endif %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>

@@ -284,3 +284,31 @@ useful recovery and noise reduction due to relevance evidence, not ID truncation
 Do not tune on the completed V2 locked test, mutate the corpus/KG, resume
 acquisition/Recent-GR/UI work, or implement RAG. Keep production dense and V1
 reproducible. See `docs/GRAPH_RETRIEVAL_V2.md`.
+
+## Identity/access roadmap status (2026-09-22)
+
+Stage 0 — Runtime & Developer Infrastructure Hardening: **DONE**
+
+Stage 1 — Identity & Access Foundation: **DONE**
+
+Stage 2 — Approval Governance & Immutable Audit: **NEXT**
+
+Stage 3 — Secure Document Intake & IAS Corpus Approval: **WAITING**
+
+Stage 4 — Unresolved Reference Workbench: **WAITING**
+
+Stage 5 — Query-Time Graph Transparency & Missing-Document Assistance: **WAITING**
+
+Stage 6 — V3 Human Relevance Review Workbench: **WAITING**
+
+Stage 7 — Live Review Registry, IAS Confirmation & Dataset Versioning: **WAITING**
+
+Stage 8 — V3 Label Sufficiency, Dataset Freeze & Dev/Locked Split: **WAITING**
+
+Stage 9 — V3 Relation-Context Gate & Locked Evaluation: **WAITING**
+
+Stage 10 — RAG V1: **WAITING**
+
+Stage 2 must begin only under its own authorized work package. Stage 1 did not
+implement generalized audit governance, document approval, V3 review UI, RAG,
+acquisition, ingestion, or retrieval/KG changes.

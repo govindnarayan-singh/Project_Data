@@ -5,6 +5,8 @@ from unittest.mock import patch
 from django.test import SimpleTestCase
 from django.urls import reverse
 
+from tests.access_test_helpers import AuthorizedViewTestCase
+
 
 DOCUMENT = {
     "id": 7, "file_name": "source.pdf", "department": "Finance Department",
@@ -86,7 +88,7 @@ class FakePortalService:
                            "date_extraction_accuracy": 1.0}, "generated_at": "2026-08-13"}
 
 
-class PortalShellAndSearchTests(SimpleTestCase):
+class PortalShellAndSearchTests(AuthorizedViewTestCase):
     @patch("apps.search_ui.views.get_portal_repository", return_value=FakePortalRepository())
     @patch("apps.search_ui.views.get_retrieval_service")
     def test_get_is_chat_first_and_does_not_construct_retrieval_service(self, retrieval, _repository):
@@ -115,7 +117,7 @@ class PortalShellAndSearchTests(SimpleTestCase):
             "policy question", top_k=3, department="Finance Department")
 
 
-class DocumentWorkspaceTests(SimpleTestCase):
+class DocumentWorkspaceTests(AuthorizedViewTestCase):
     @patch("apps.documents.views.get_portal_repository", return_value=FakePortalRepository())
     def test_library_filters_and_bounded_listing(self, _repository):
         response = self.client.get(reverse("documents:list"), {"q": "policy", "department": "Finance Department",
@@ -143,7 +145,7 @@ class DocumentWorkspaceTests(SimpleTestCase):
         self.assertContains(response, "Candidate relationship")
 
 
-class GraphAndSystemWorkspaceTests(SimpleTestCase):
+class GraphAndSystemWorkspaceTests(AuthorizedViewTestCase):
     @patch("apps.knowledge_graph_ui.views.get_explorer_service", return_value=FakeExplorerService())
     def test_graph_overview(self, _service):
         response = self.client.get(reverse("knowledge_graph_ui:overview"))

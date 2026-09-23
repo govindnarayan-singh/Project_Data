@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Officer access | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Access administration / Officer access{% endblock %}
+{% block content %}
+<header class="page-heading"><div><span class="eyebrow">Live grants</span><h1>Officer access</h1><p>Suspension or revocation is enforced on the officer's next protected request.</p></div></header>
+{% if messages %}{% for message in messages %}<p class="notice {{ message.tags }}">{{ message }}</p>{% endfor %}{% endif %}
+<div class="access-table-wrap"><table class="access-table"><thead><tr><th>Officer</th><th>Unit</th><th>State</th><th>Version</th><th>Action</th></tr></thead><tbody>{% for grant in page_obj %}<tr><td>{{ grant.user.get_username }}<br><span class="muted">{{ grant.user.email }}</span></td><td>{{ grant.organization.name }}</td><td><span class="badge">{{ grant.get_state_display }}</span></td><td>{{ grant.version }}</td><td>{% if grant.state == 'ACTIVE' or grant.state == 'SUSPENDED' %}<form method="post" action="{% url 'identity_access:member_state_action' grant.id %}" class="inline-access-form">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ grant.version }}"><select name="new_state"><option value="SUSPENDED">Suspend</option><option value="REVOKED">Revoke</option></select><input name="reason" maxlength="1000" required placeholder="Reason"><button type="submit">Apply</button></form>{% else %}No further action{% endif %}</td></tr>{% empty %}<tr><td colspan="5">No officer grants in your scope.</td></tr>{% endfor %}</tbody></table></div>
+{% include "identity_access/pagination.html" %}
+{% endblock %}

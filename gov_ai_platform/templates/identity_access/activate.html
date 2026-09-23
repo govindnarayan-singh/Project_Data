@@ -1,0 +1,14 @@
+{% extends "identity_access/public_base.html" %}
+{% block title %}Activate account | Government Administrative AI Copilot{% endblock %}
+{% block content %}
+<section class="access-card access-card-narrow">
+  <span class="eyebrow">One-time setup</span>
+  <h1>Activate account</h1>
+  {% if invalid %}
+    <p class="notice error">This activation link is invalid, expired, already used, or its access grant is no longer active.</p>
+  {% else %}
+    <p>Choose a password. The link expires and cannot be reused after successful activation.</p>
+    <form method="post" class="access-form" novalidate>{% csrf_token %}{{ form.as_p }}<button class="primary-button" type="submit">Set password and sign in</button></form>
+  {% endif %}
+</section>
+{% endblock %}

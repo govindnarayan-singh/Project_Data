@@ -606,3 +606,43 @@ validation. `cli.dev_preflight` provides the cheap reusable workspace/runtime
 check. No installation, service registration, migration, backup, corpus or KG
 mutation was performed. Graph Retrieval V3 remains stopped and was not resumed.
 See `docs/DEVELOPER_RUNTIME.md` and `outputs/runtime_hardening_v1/final_report.md`.
+
+## Stage 1 — Identity & Access Foundation (2026-09-22)
+
+Stage 1 is complete. Django's built-in user model is retained and backed by
+native PostgreSQL; additive organization, scoped IAS authority, access request,
+access grant, transition, activation-token, and bounded-throttle tables now
+enforce deny-by-default access across the existing application. Public officer
+requests create no account or grant. Scoped IAS approval is transactional,
+POST/CSRF protected, version checked, and followed by a hashed, expiring,
+single-use password activation handoff. Suspension, revocation, and expiry deny
+the next protected request.
+
+The 27-case Stage 1 security suite and 35 existing protected UI/API integration
+tests pass. Pre/post full-row hashes are identical for all 87 documents, 1,588
+pages, 1,666 chunks/vectors, 2,631 candidates, 137 relations, and Graph
+Retrieval V1/V2/V3 artifact directories. No production IAS/officer test account
+was created. See `docs/STAGE_01_IDENTITY_ACCESS.md` and
+`outputs/stage_01_identity_access/final_report.md`.
+
+Stage 0 — Runtime & Developer Infrastructure Hardening: **DONE**
+
+Stage 1 — Identity & Access Foundation: **DONE**
+
+Stage 2 — Approval Governance & Immutable Audit: **NEXT**
+
+Stage 3 — Secure Document Intake & IAS Corpus Approval: **WAITING**
+
+Stage 4 — Unresolved Reference Workbench: **WAITING**
+
+Stage 5 — Query-Time Graph Transparency & Missing-Document Assistance: **WAITING**
+
+Stage 6 — V3 Human Relevance Review Workbench: **WAITING**
+
+Stage 7 — Live Review Registry, IAS Confirmation & Dataset Versioning: **WAITING**
+
+Stage 8 — V3 Label Sufficiency, Dataset Freeze & Dev/Locked Split: **WAITING**
+
+Stage 9 — V3 Relation-Context Gate & Locked Evaluation: **WAITING**
+
+Stage 10 — RAG V1: **WAITING**

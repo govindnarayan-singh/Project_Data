@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Review access request | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Access administration / Request / {{ access_request.id }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'identity_access:ias_queue' %}">&larr; Back to queue</a></p>
+<header class="page-heading"><div><span class="eyebrow">Version {{ access_request.version }}</span><h1>{{ access_request.full_name }}</h1><p>{{ access_request.get_state_display }} &middot; {{ access_request.organization.name }}</p></div></header>
+{% if messages %}{% for message in messages %}<p class="notice {{ message.tags }}">{{ message }}</p>{% endfor %}{% endif %}
+<div class="access-detail-grid">
+  <section class="panel"><h2>Request details</h2><dl class="access-facts"><dt>Official email</dt><dd>{{ access_request.official_email }}</dd><dt>Employee identifier</dt><dd>{{ access_request.employee_identifier }}</dd><dt>Designation</dt><dd>{{ access_request.designation|default:"Not supplied" }}</dd><dt>Reason</dt><dd>{{ access_request.reason }}</dd><dt>Validation</dt><dd>{{ access_request.get_validation_outcome_display }}</dd><dt>Risk indicators</dt><dd>{% if access_request.risk_flags %}{{ access_request.risk_flags|join:", " }}{% else %}None{% endif %}</dd><dt>Expires</dt><dd>{{ access_request.expires_at }}</dd></dl></section>
+  <section class="panel"><h2>Decision</h2>{% if access_request.state == 'PENDING_IAS_APPROVAL' %}
+    <form method="post" action="{% url 'identity_access:ias_approve_request' access_request.id %}" class="access-form">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ access_request.version }}"><label for="approve-reason">Approval reason / comment</label><textarea id="approve-reason" name="decision_reason" maxlength="1000" required></textarea><button class="primary-button" type="submit">Approve officer access</button></form>
+    <hr>
+    <form method="post" action="{% url 'identity_access:ias_reject_request' access_request.id %}" class="access-form">{% csrf_token %}<input type="hidden" name="expected_version" value="{{ access_request.version }}"><label for="reject-reason">Rejection reason</label><textarea id="reject-reason" name="decision_reason" maxlength="1000" required></textarea><button class="danger-button" type="submit">Reject request</button></form>
+    {% else %}<p>This request is no longer pending. Its decision controls are closed.</p>{% endif %}</section>
+</div>
+<section class="panel"><h2>Access-specific history</h2><ol class="transition-list">{% for transition in access_request.transitions.all %}<li><strong>v{{ transition.version }}: {{ transition.old_state|default:"NEW" }} &rarr; {{ transition.new_state }}</strong><span>{{ transition.created_at }}{% if transition.actor %} by {{ transition.actor.get_username }}{% endif %}</span><p>{{ transition.reason }}</p></li>{% endfor %}</ol></section>
+{% endblock %}

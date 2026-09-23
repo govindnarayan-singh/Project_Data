@@ -7,6 +7,7 @@ from django.test import SimpleTestCase
 from django.urls import reverse
 
 from apps.documents.services import UnsafeDocumentPath, resolve_pdf_path
+from tests.access_test_helpers import AuthorizedViewTestCase
 
 
 class FakeSearchService:
@@ -18,7 +19,7 @@ class FakeSearchService:
         )]
 
 
-class SearchViewTests(SimpleTestCase):
+class SearchViewTests(AuthorizedViewTestCase):
     def test_get_and_marathi_post_render(self):
         self.assertContains(self.client.get(reverse("search_ui:search")), "Government Administrative Knowledge Search")
         with patch("apps.search_ui.views.get_retrieval_service", return_value=FakeSearchService()):
@@ -38,7 +39,7 @@ class FakeDocumentRepository:
     def get_document(self, document_id): return self.document
 
 
-class PdfEndpointTests(SimpleTestCase):
+class PdfEndpointTests(AuthorizedViewTestCase):
     def test_safe_pdf_path_and_inline_response(self):
         with TemporaryDirectory() as directory:
             root = Path(directory).resolve()
@@ -105,7 +106,7 @@ class FakeGraphService:
         }
 
 
-class DocumentDetailTests(SimpleTestCase):
+class DocumentDetailTests(AuthorizedViewTestCase):
     def test_detail_displays_graph_categories_provenance_pdf_and_escapes_evidence(self):
         with patch("apps.documents.views.get_graph_service", return_value=FakeGraphService()):
             response = self.client.get(reverse("documents:detail", args=[4]))

@@ -7,6 +7,7 @@
   <title>{% block title %}Government Administrative AI Copilot{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'portal/app.css' %}?v=2.2.0">
   <link rel="stylesheet" href="{% static 'portal/sidebar.css' %}?v=2.2.0">
+  <link rel="stylesheet" href="{% static 'portal/access.css' %}?v=1.0.0">
   {% block extra_head %}{% endblock %}
   <script src="{% static 'portal/app.js' %}?v=2.2.0" defer></script>
 </head>
@@ -29,6 +30,19 @@
         <a class="nav-link {% if active_section == 'corpus' %}active{% endif %}" href="{% url 'system_ui:corpus' %}"><span aria-hidden="true">◫</span><span>Corpus health</span></a>
         <a class="nav-link {% if active_section == 'evaluation' %}active{% endif %}" href="{% url 'system_ui:evaluation' %}"><span aria-hidden="true">✓</span><span>Evaluation</span></a>
       </nav>
+      {% if can_review_access %}
+      <p class="nav-label">Access administration</p>
+      <nav>
+        <a class="nav-link {% if active_section == 'access-queue' %}active{% endif %}" href="{% url 'identity_access:ias_queue' %}"><span aria-hidden="true">&#128274;</span><span>Access requests</span></a>
+        <a class="nav-link {% if active_section == 'access-members' %}active{% endif %}" href="{% url 'identity_access:member_list' %}"><span aria-hidden="true">&#128101;</span><span>Officer access</span></a>
+      </nav>
+      {% endif %}
+      <div class="sidebar-account">
+        <span class="muted">Signed in as</span>
+        <strong>{{ request.user.get_username }}</strong>
+        {% if access_role %}<span class="badge">{{ access_role }}</span>{% endif %}
+        <form method="post" action="{% url 'identity_access:logout' %}">{% csrf_token %}<button class="link-button" type="submit">Sign out</button></form>
+      </div>
       <div class="sidebar-foot"><span class="status-dot" aria-hidden="true"></span><span>Evidence-first workspace</span></div>
     </aside>
     <div class="workspace">
