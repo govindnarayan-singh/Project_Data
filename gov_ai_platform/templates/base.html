@@ -36,6 +36,11 @@
         <a class="nav-link {% if active_section == 'access-queue' %}active{% endif %}" href="{% url 'identity_access:ias_queue' %}"><span aria-hidden="true">&#128274;</span><span>Access requests</span></a>
         <a class="nav-link {% if active_section == 'access-members' %}active{% endif %}" href="{% url 'identity_access:member_list' %}"><span aria-hidden="true">&#128101;</span><span>Officer access</span></a>
       </nav>
+      <p class="nav-label">Governance</p>
+      <nav>
+        <a class="nav-link {% if active_section == 'governance-audit' %}active{% endif %}" href="{% url 'governance:audit_list' %}"><span aria-hidden="true">&#128221;</span><span>Audit log</span></a>
+        <a class="nav-link {% if active_section == 'governance-approvals' %}active{% endif %}" href="{% url 'governance:approval_case_list' %}"><span aria-hidden="true">&#9989;</span><span>Approval cases</span></a>
+      </nav>
       {% endif %}
       <div class="sidebar-account">
         <span class="muted">Signed in as</span>

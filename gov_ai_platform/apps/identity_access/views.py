@@ -79,7 +79,7 @@ def request_access(request: HttpRequest) -> HttpResponse:
         try:
             submitted = submit_access_request(form.cleaned_data, request)
         except AccessWorkflowError as exc:
-            status = 429 if exc.code == "RATE_LIMITED" else 400
+            status = 503 if exc.code == "AUDIT_FAILURE" else (429 if exc.code == "RATE_LIMITED" else 400)
             return render(
                 request,
                 "identity_access/request_access.html",
@@ -117,7 +117,12 @@ def activate_account_view(request: HttpRequest, user_id: int, token: str) -> Htt
     form = SetPasswordForm(token_record.user, request.POST or None)
     if request.method == "POST" and form.is_valid():
         try:
-            user = activate_account(user_id, token, form.cleaned_data["new_password1"])
+            user = activate_account(
+                user_id,
+                token,
+                form.cleaned_data["new_password1"],
+                correlation_id=request.correlation_id,
+            )
         except AccessWorkflowError:
             return render(request, "identity_access/activate.html", {"invalid": True}, status=400)
         login(request, user, backend="django.contrib.auth.backends.ModelBackend")
@@ -197,6 +202,7 @@ def ias_approve_request(request: HttpRequest, request_id) -> HttpResponse:
             request_id,
             expected_version=form.cleaned_data["expected_version"],
             reason=form.cleaned_data["decision_reason"],
+            correlation_id=request.correlation_id,
         )
     except (AccessDecisionError, AccessRequest.DoesNotExist) as exc:
         messages.error(request, str(exc) if isinstance(exc, AccessDecisionError) else "Request not found.")
@@ -223,6 +229,7 @@ def ias_reject_request(request: HttpRequest, request_id) -> HttpResponse:
             request_id,
             expected_version=form.cleaned_data["expected_version"],
             reason=form.cleaned_data["decision_reason"],
+            correlation_id=request.correlation_id,
         )
     except (AccessDecisionError, AccessRequest.DoesNotExist) as exc:
         messages.error(request, str(exc) if isinstance(exc, AccessDecisionError) else "Request not found.")
@@ -254,6 +261,7 @@ def member_state_action(request: HttpRequest, grant_id: int) -> HttpResponse:
             expected_version=form.cleaned_data["expected_version"],
             new_state=form.cleaned_data["new_state"],
             reason=form.cleaned_data["reason"],
+            correlation_id=request.correlation_id,
         )
     except (AccessDecisionError, AccessGrant.DoesNotExist) as exc:
         messages.error(request, str(exc) if isinstance(exc, AccessDecisionError) else "Access grant not found.")

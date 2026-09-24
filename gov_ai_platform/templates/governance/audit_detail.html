@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}Audit event {{ event.sequence }} | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Governance / Audit log / {{ event.sequence }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'governance:audit_list' %}">&larr; Back to audit log</a></p>
+<header class="page-heading"><div><span class="eyebrow">Sequence {{ event.sequence }}</span><h1>{{ event.action }}</h1><p>{{ event.category }} &middot; {{ event.outcome }} &middot; {{ event.occurred_at }}</p></div></header>
+<section class="panel"><h2>Governance event</h2><dl class="access-facts">
+<dt>Event ID</dt><dd>{{ event.event_id }}</dd><dt>Actor user ID</dt><dd>{{ event.actor_user_id|default:"System" }}</dd><dt>Actor role snapshot</dt><dd>{{ event.actor_role_snapshot|default:"None" }}</dd><dt>Organization ID</dt><dd>{{ event.organization_id_snapshot|default:"None" }}</dd><dt>Resource</dt><dd>{{ event.resource_type }} / {{ event.resource_id }}</dd><dt>Resource version</dt><dd>{{ event.resource_version|default:"None" }}</dd><dt>State</dt><dd>{{ event.previous_state|default:"—" }} &rarr; {{ event.new_state|default:"—" }}</dd><dt>Reason code</dt><dd>{{ event.reason_code|default:"None" }}</dd><dt>Reason</dt><dd>{{ event.reason|default:"None" }}</dd><dt>Correlation ID</dt><dd>{{ event.correlation_id }}</dd><dt>Origin</dt><dd>{{ event.origin }}</dd><dt>Previous hash</dt><dd><code>{{ event.previous_hash }}</code></dd><dt>Event hash</dt><dd><code>{{ event.event_hash }}</code></dd><dt>Sanitized metadata</dt><dd><pre>{{ event.metadata }}</pre></dd>
+</dl></section>
+{% endblock %}

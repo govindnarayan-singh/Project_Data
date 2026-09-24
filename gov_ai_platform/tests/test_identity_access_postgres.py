@@ -11,6 +11,8 @@ from django.test.utils import CaptureQueriesContext
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.governance.constants import GENESIS_HASH
+from apps.governance.models import GovernanceAuditChain
 from apps.identity_access.models import (
     AccessGrant,
     AccessGrantState,
@@ -53,6 +55,10 @@ class PostgreSQLAccessWorkflowTests(TransactionTestCase):
 
     def setUp(self):
         User = get_user_model()
+        GovernanceAuditChain.objects.get_or_create(
+            pk=1,
+            defaults={"last_sequence": 0, "head_hash": GENESIS_HASH},
+        )
         self.org = OrganizationUnit.objects.create(code="pg-environment", name="PG Environment")
         self.other_org = OrganizationUnit.objects.create(code="pg-finance", name="PG Finance")
         self.ias = User.objects.create_user("pg-ias", "pg-ias@example.gov", "TestOnlyPass-9321")

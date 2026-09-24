@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Governance audit log | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Governance / Audit log{% endblock %}
+{% block content %}
+<header class="page-heading"><div><span class="eyebrow">Scoped, append-only evidence</span><h1>Governance audit log</h1><p>Only governance events inside your current IAS organizational authority are shown.</p></div></header>
+<form method="get" class="queue-filters">
+  <label>Category<select name="category"><option value="">All</option>{% for value,label in categories %}<option value="{{ value }}" {% if filters.category == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Action<select name="action"><option value="">All</option>{% for value,label in actions %}<option value="{{ value }}" {% if filters.action == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Outcome<select name="outcome"><option value="">All</option>{% for value,label in outcomes %}<option value="{{ value }}" {% if filters.outcome == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Actor ID<input name="actor" inputmode="numeric" value="{{ filters.actor }}"></label>
+  <label>Resource type<input name="resource_type" maxlength="64" value="{{ filters.resource_type }}"></label>
+  <label>From<input type="date" name="date_from" value="{{ filters.date_from }}"></label>
+  <label>To<input type="date" name="date_to" value="{{ filters.date_to }}"></label>
+  <button class="primary-button" type="submit">Apply</button>
+</form>
+<div class="access-table-wrap"><table class="access-table"><thead><tr><th>Sequence</th><th>Time</th><th>Action</th><th>Outcome</th><th>Actor</th><th>Resource</th><th></th></tr></thead><tbody>
+{% for event in page_obj %}<tr><td>{{ event.sequence }}</td><td>{{ event.occurred_at }}</td><td><strong>{{ event.action }}</strong><br><span class="muted">{{ event.category }}</span></td><td><span class="badge">{{ event.outcome }}</span></td><td>{{ event.actor_user_id|default:"System" }}</td><td>{{ event.resource_type }}<br><span class="muted">{{ event.resource_id }}</span></td><td><a href="{% url 'governance:audit_detail' event.event_id %}">Inspect</a></td></tr>{% empty %}<tr><td colspan="7">No governance events match this authorized scope.</td></tr>{% endfor %}
+</tbody></table></div>
+{% include "identity_access/pagination.html" %}
+{% endblock %}
+{% block context_title %}Audit boundary{% endblock %}
+{% block context_panel %}<p>The ledger records governance actions, not ordinary page views, searches, or remote login noise.</p><p class="muted">Hash chaining is tamper-evident and trigger-protected, but does not defeat an unrestricted database superuser.</p>{% endblock %}

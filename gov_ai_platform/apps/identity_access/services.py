@@ -15,6 +15,10 @@ from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
+from apps.governance.audit import record_governance_event
+from apps.governance.constants import AuditAction, AuditCategory, AuditOutcome
+from apps.governance.exceptions import AuditError
+
 from .models import (
     AccessGrant,
     AccessGrantState,
@@ -27,7 +31,7 @@ from .models import (
     RateLimitBucket,
     ValidationOutcome,
 )
-from .permissions import can_manage_organization
+from .permissions import can_manage_organization, primary_access_role
 
 
 class AccessWorkflowError(Exception):
@@ -38,6 +42,14 @@ class AccessWorkflowError(Exception):
 
 class AccessDecisionError(AccessWorkflowError):
     pass
+
+
+def _record_audit_or_fail(*, decision: bool = False, **event) -> None:
+    try:
+        record_governance_event(**event)
+    except AuditError as exc:
+        error = AccessDecisionError if decision else AccessWorkflowError
+        raise error("AUDIT_FAILURE", "The action could not be completed safely.") from exc
 
 
 @dataclass(frozen=True)
@@ -280,6 +292,24 @@ def submit_access_request(cleaned_data: dict, request) -> SubmittedAccessRequest
             )
             _transition_request(access_request, AccessRequestState.PENDING_VALIDATION, reason="Server-side validation started")
             _transition_request(access_request, AccessRequestState.PENDING_IAS_APPROVAL, reason=outcome)
+            _record_audit_or_fail(
+                category=AuditCategory.IDENTITY_ACCESS,
+                action=AuditAction.ACCESS_REQUEST_SUBMITTED,
+                outcome=AuditOutcome.SUCCESS,
+                actor=requester_user,
+                actor_role=primary_access_role(requester_user) if requester_user is not None else "",
+                organization_id=organization.pk,
+                resource_type="identity_access.AccessRequest",
+                resource_id=str(access_request.pk),
+                resource_version=access_request.version,
+                correlation_id=getattr(request, "correlation_id", None),
+                reason_code="REQUEST_QUEUED",
+                previous_state="",
+                new_state=access_request.state,
+                metadata={"validation_outcome": outcome, "risk_flags": risk_flags},
+            )
+    except AuditError as exc:
+        raise AccessWorkflowError("AUDIT_FAILURE", "The request could not be recorded safely.") from exc
     except IntegrityError as exc:
         raise AccessWorkflowError(ValidationOutcome.REJECT_DUPLICATE) from exc
     return SubmittedAccessRequest(access_request, status_token)
@@ -354,7 +384,7 @@ def create_activation_token(user, *, actor=None, access_request=None) -> str:
         return _new_activation_token(user, actor=actor, access_request=access_request)
 
 
-def approve_access_request(actor, request_id, *, expected_version: int, reason: str) -> ApprovedAccessRequest:
+def approve_access_request(actor, request_id, *, expected_version: int, reason: str, correlation_id=None) -> ApprovedAccessRequest:
     User = get_user_model()
     if _expire_request_if_stale(request_id):
         raise AccessDecisionError("EXPIRED", "The request has expired.")
@@ -412,10 +442,44 @@ def approve_access_request(actor, request_id, *, expected_version: int, reason: 
         access_request.save(update_fields=("decision_reason", "decided_by", "decided_at", "updated_at"))
         _transition_request(access_request, AccessRequestState.APPROVED, actor=actor, reason=reason)
         raw_token = _new_activation_token(user, actor=actor, access_request=access_request)
+        _record_audit_or_fail(
+            decision=True,
+            category=AuditCategory.IDENTITY_ACCESS,
+            action=AuditAction.ACCESS_REQUEST_APPROVED,
+            outcome=AuditOutcome.SUCCESS,
+            actor=actor,
+            actor_role=AccessRole.IAS_OFFICER,
+            organization_id=access_request.organization_id,
+            resource_type="identity_access.AccessRequest",
+            resource_id=str(access_request.pk),
+            resource_version=access_request.version,
+            correlation_id=correlation_id,
+            reason_code="IAS_APPROVAL",
+            reason=reason,
+            previous_state=AccessRequestState.PENDING_IAS_APPROVAL,
+            new_state=AccessRequestState.APPROVED,
+        )
+        _record_audit_or_fail(
+            decision=True,
+            category=AuditCategory.IDENTITY_ACCESS,
+            action=AuditAction.ACCESS_GRANT_CREATED if created else AuditAction.ACCESS_GRANT_REACTIVATED,
+            outcome=AuditOutcome.SUCCESS,
+            actor=actor,
+            actor_role=AccessRole.IAS_OFFICER,
+            organization_id=grant.organization_id,
+            resource_type="identity_access.AccessGrant",
+            resource_id=str(grant.pk),
+            resource_version=grant.version,
+            correlation_id=correlation_id,
+            reason_code="ACCESS_APPROVAL",
+            previous_state="" if created else "EXISTING",
+            new_state=grant.state,
+            metadata={"grant_id": grant.pk, "grant_role": grant.role, "grant_state": grant.state},
+        )
         return ApprovedAccessRequest(access_request, raw_token, user.pk)
 
 
-def reject_access_request(actor, request_id, *, expected_version: int, reason: str) -> AccessRequest:
+def reject_access_request(actor, request_id, *, expected_version: int, reason: str, correlation_id=None) -> AccessRequest:
     if _expire_request_if_stale(request_id):
         raise AccessDecisionError("EXPIRED", "The request has expired.")
     with transaction.atomic():
@@ -433,6 +497,23 @@ def reject_access_request(actor, request_id, *, expected_version: int, reason: s
         access_request.decided_at = timezone.now()
         access_request.save(update_fields=("decision_reason", "decided_by", "decided_at", "updated_at"))
         _transition_request(access_request, AccessRequestState.REJECTED, actor=actor, reason=reason)
+        _record_audit_or_fail(
+            decision=True,
+            category=AuditCategory.IDENTITY_ACCESS,
+            action=AuditAction.ACCESS_REQUEST_REJECTED,
+            outcome=AuditOutcome.SUCCESS,
+            actor=actor,
+            actor_role=AccessRole.IAS_OFFICER,
+            organization_id=access_request.organization_id,
+            resource_type="identity_access.AccessRequest",
+            resource_id=str(access_request.pk),
+            resource_version=access_request.version,
+            correlation_id=correlation_id,
+            reason_code="IAS_REJECTION",
+            reason=reason,
+            previous_state=AccessRequestState.PENDING_IAS_APPROVAL,
+            new_state=AccessRequestState.REJECTED,
+        )
         return access_request
 
 
@@ -446,7 +527,7 @@ def valid_activation_token(user_id: int, raw_token: str) -> ActivationToken | No
     ).first()
 
 
-def activate_account(user_id: int, raw_token: str, password: str):
+def activate_account(user_id: int, raw_token: str, password: str, *, correlation_id=None):
     with transaction.atomic():
         token = ActivationToken.objects.select_for_update().select_related("user").filter(
             user_id=user_id,
@@ -457,16 +538,31 @@ def activate_account(user_id: int, raw_token: str, password: str):
         ).first()
         if token is None:
             raise AccessWorkflowError("INVALID_ACTIVATION", "This activation link is invalid or expired.")
-        if not AccessGrant.objects.filter(user=token.user, state=AccessGrantState.ACTIVE).exists():
+        grant = AccessGrant.objects.filter(user=token.user, state=AccessGrantState.ACTIVE).order_by("pk").first()
+        if grant is None:
             raise AccessWorkflowError("INACTIVE_GRANT", "Access is no longer active.")
         token.user.set_password(password)
         token.user.save(update_fields=("password",))
         token.used_at = timezone.now()
         token.save(update_fields=("used_at",))
+        _record_audit_or_fail(
+            category=AuditCategory.IDENTITY_ACCESS,
+            action=AuditAction.ACTIVATION_CONSUMED,
+            outcome=AuditOutcome.SUCCESS,
+            actor=token.user,
+            actor_role=grant.role,
+            organization_id=grant.organization_id,
+            resource_type="identity_access.ActivationToken",
+            resource_id=str(token.pk),
+            correlation_id=correlation_id,
+            reason_code="ACCOUNT_ACTIVATED",
+            new_state="CONSUMED",
+            metadata={"grant_id": grant.pk, "grant_role": grant.role, "grant_state": grant.state},
+        )
         return token.user
 
 
-def change_officer_grant_state(actor, grant_id: int, *, expected_version: int, new_state: str, reason: str) -> AccessGrant:
+def change_officer_grant_state(actor, grant_id: int, *, expected_version: int, new_state: str, reason: str, correlation_id=None) -> AccessGrant:
     if new_state not in {AccessGrantState.SUSPENDED, AccessGrantState.REVOKED}:
         raise AccessDecisionError("INVALID_GRANT_STATE", "Only suspension or revocation is permitted here.")
     with transaction.atomic():
@@ -485,10 +581,29 @@ def change_officer_grant_state(actor, grant_id: int, *, expected_version: int, n
         }
         if new_state not in allowed.get(grant.state, set()):
             raise AccessDecisionError("ILLEGAL_TRANSITION", "That grant transition is not permitted.")
+        old_state = grant.state
         grant.state = new_state
         grant.status_reason = reason.strip()[:1000]
         grant.status_changed_by = actor
         grant.status_changed_at = timezone.now()
         grant.version += 1
         grant.save(update_fields=("state", "status_reason", "status_changed_by", "status_changed_at", "version", "updated_at"))
+        _record_audit_or_fail(
+            decision=True,
+            category=AuditCategory.IDENTITY_ACCESS,
+            action=AuditAction.ACCESS_GRANT_SUSPENDED if new_state == AccessGrantState.SUSPENDED else AuditAction.ACCESS_GRANT_REVOKED,
+            outcome=AuditOutcome.SUCCESS,
+            actor=actor,
+            actor_role=AccessRole.IAS_OFFICER,
+            organization_id=grant.organization_id,
+            resource_type="identity_access.AccessGrant",
+            resource_id=str(grant.pk),
+            resource_version=grant.version,
+            correlation_id=correlation_id,
+            reason_code="GRANT_STATE_CHANGED",
+            reason=reason,
+            previous_state=old_state,
+            new_state=grant.state,
+            metadata={"grant_id": grant.pk, "grant_role": grant.role, "grant_state": grant.state},
+        )
         return grant

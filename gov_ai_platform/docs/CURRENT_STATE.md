@@ -644,21 +644,35 @@ blocked from the public request form, while authenticated unprivileged requests
 must match the signed-in email.
 
 Code, SQLite, native-PostgreSQL service, and PostgreSQL HTTP-stack validation
-pass. A real browser workflow could not run because this execution environment
-reported no available browser. Stage 1.1 is therefore **CONDITIONAL PASS** and
-Stage 2 remains blocked until the bounded browser approval/activation/login and
-rejection workflow is completed. Evidence is under
-`outputs/stage_01_1_access_workflow_fix/`.
+pass. The subsequent bounded browser closure also passed and removed the prior
+conditional gate. Evidence is under `outputs/stage_01_1_access_workflow_fix/`
+and `outputs/stage_01_1_browser_acceptance/`.
+
+## Stage 2 — approval governance and immutable audit (2026-09-23)
+
+Stage 2 is complete. The additive governance app provides fail-closed approval
+policies, maker-checker and scope/version enforcement, append-only decisions,
+and a centralized audit ledger. PostgreSQL triggers reject event and decision
+updates/deletes; a row-locked SHA-256 chain provides ordered tamper evidence.
+Stage 1 high-impact mutations and their required audit writes now share one
+transaction. Five provenance-backed historical transitions were imported and
+an unchanged replay imported zero.
+
+IAS users have server-scoped, paginated audit and approval-case pages; officers
+have no unrestricted audit access. The live five-event chain verifies, all 61
+targeted Stage 1/2 tests pass, and corpus/KG/retrieval/V3 fingerprints remain
+unchanged. See `docs/STAGE_02_APPROVAL_GOVERNANCE_AUDIT.md` and
+`outputs/stage_02_governance_audit/final_report.md`.
 
 Stage 0 — Runtime & Developer Infrastructure Hardening: **DONE**
 
 Stage 1 — Identity & Access Foundation: **DONE**
 
-Stage 1.1 — Live Approval / Rejection Hardening: **CONDITIONAL PASS — BROWSER VALIDATION PENDING**
+Stage 1.1 — Live Approval / Rejection Hardening: **DONE**
 
-Stage 2 — Approval Governance & Immutable Audit: **BLOCKED**
+Stage 2 — Approval Governance & Immutable Audit: **DONE**
 
-Stage 3 — Secure Document Intake & IAS Corpus Approval: **WAITING**
+Stage 3 — Secure Document Intake & IAS Corpus Approval: **NEXT**
 
 Stage 4 — Unresolved Reference Workbench: **WAITING**
 

@@ -285,15 +285,17 @@ Do not tune on the completed V2 locked test, mutate the corpus/KG, resume
 acquisition/Recent-GR/UI work, or implement RAG. Keep production dense and V1
 reproducible. See `docs/GRAPH_RETRIEVAL_V2.md`.
 
-## Identity/access roadmap status (2026-09-22)
+## Identity/access roadmap status (2026-09-23)
 
 Stage 0 — Runtime & Developer Infrastructure Hardening: **DONE**
 
 Stage 1 — Identity & Access Foundation: **DONE**
 
-Stage 2 — Approval Governance & Immutable Audit: **NEXT**
+Stage 1.1 — Approval/Rejection Hardening: **DONE**
 
-Stage 3 — Secure Document Intake & IAS Corpus Approval: **WAITING**
+Stage 2 — Approval Governance & Immutable Audit: **DONE**
+
+Stage 3 — Secure Document Intake & IAS Corpus Approval: **NEXT**
 
 Stage 4 — Unresolved Reference Workbench: **WAITING**
 
@@ -309,6 +311,8 @@ Stage 9 — V3 Relation-Context Gate & Locked Evaluation: **WAITING**
 
 Stage 10 — RAG V1: **WAITING**
 
-Stage 2 must begin only under its own authorized work package. Stage 1 did not
-implement generalized audit governance, document approval, V3 review UI, RAG,
-acquisition, ingestion, or retrieval/KG changes.
+Stage 2 added an explicit fail-closed approval-policy registry, versioned cases,
+append-only decisions, PostgreSQL-protected hash-chained audit events, scoped IAS
+audit pages, and same-transaction Stage 1 event integration. It did not add
+document or V3 workflows, RAG, acquisition, ingestion, or retrieval/KG changes.
+Stage 3 must begin only under its own authorized work package.
