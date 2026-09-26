@@ -224,3 +224,60 @@ test pass. The isolated pipeline rerun is SKIPPED_UNCHANGED.
 No test PDF entered the live corpus. Stage 3 production tables start empty.
 Production remains 87 documents, 1,588 pages, 1,666 chunks/embeddings, 2,631 KG
 candidates, 50 REFERENCES, and 87 ISSUED_BY.
+
+## Stage 3B.1 PDF validation and provenance hardening
+
+The validator is feature-aware and versioned as
+`stage3b1-pdf-classifier-v2`. A PDF annotation is no longer itself a blocker.
+Ordinary passive annotations and internal navigation are `SAFE_PASSIVE`;
+AcroForm `/Sig` fields and signature widgets are `SAFE_SIGNATURE`; and
+user-triggered HTTP(S) `/URI` actions are `SAFE_EXTERNAL_LINK`. External URLs
+are never fetched during validation, and only bounded normalized domains are
+stored. The final decision is deterministic: only controlled `BLOCK` findings
+stop progression, while `WARNING` and `INFO` findings remain visible evidence.
+
+JavaScript name trees and `/JavaScript` actions, `/Launch`, `/SubmitForm`,
+`/ImportData`, unsupported `/Rendition`, embedded-file name trees,
+`/FileAttachment`, embedded `/EF` streams, malformed structures, and unknown
+executable action dictionaries fail closed under explicit reason codes. Action
+chains, form trees, and feature counts have depth/count/time bounds. Size,
+page, encryption, MIME, signature-byte, path, quarantine, and malware-scanner
+controls remain unchanged. Bounded structural facts are retained on a later
+failure: a safely counted page total is shown, while an unperformed count is
+stored as null and displayed as “Not checked.” Preview states use explanatory
+language rather than exposing `NOT_EXTRACTED` as the primary label.
+
+Signature presence is not signature validity. The validator records bounded
+field name, claimed signer name, PDF signing timestamp, filter, and subfilter,
+but never stores or reports raw PKCS#7 bytes. This deployment has no supported
+PDF-signature verifier, so signed files are labeled
+`SIGNATURE_PRESENT_UNVERIFIED`. The UI must not say “verified” unless a future
+policy-controlled cryptographic verifier successfully validates the signature
+and trust chain.
+
+Uploader role is derived from the authenticated access grant and stored as an
+immutable snapshot. The shared provenance dropdown is removed. Officers may
+provide a claimed source URL, claimed document identifier, and bounded source
+context but cannot claim IAS verification. Scoped IAS users receive an explicit
+source-attestation checkbox. That produces `IAS_ATTESTED_OFFICIAL_COPY`, which
+is displayed separately from `AUTHORITATIVE_SOURCE_VERIFIED`; it is not an
+independent source verification. Uploader identity, source claim, source
+verification, digital-signature evidence, and corpus admission remain five
+separate facts.
+
+Every initial check and revalidation appends a protected
+`DocumentValidationAttempt` containing validator version, timestamp, result,
+bounded findings, page count, signature status, and external-link domains.
+Existing rows were backfilled as `stage3-legacy-pdf-validator-v1`; legacy
+failed zero-page snapshots became “Not checked” without changing their failed
+decision. Revalidation is POST/CSRF/version protected and available only to the
+authorized uploader or in-scope IAS user. It SHA-256 checks and reads the same
+quarantined bytes, records `DOCUMENT_REVALIDATION_REQUESTED` and a new pass or
+failure event, preserves earlier attempts/audit events, and can move a passing
+file only to pending IAS approval. It never performs corpus ingestion.
+
+Officer-facing cards lead with what happened, why it matters, and what to do.
+IAS technical disclosure retains machine reason code, validator version, and
+bounded structural evidence. Findings are grouped into blockers, review,
+warnings, and informational evidence. Audit records retain exact machine codes
+and hash-chain fields while audit presentation adds a human-readable reason.

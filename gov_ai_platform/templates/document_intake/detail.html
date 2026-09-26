@@ -5,35 +5,77 @@
 <p><a href="{% url 'document_intake:list' %}">&larr; My submissions</a></p>
 <header class="page-heading"><div><span class="eyebrow">Secure document submission</span><h1>{{ submission.detected_metadata.subject|default:submission.original_filename }}</h1><p><span class="badge">{{ submission.get_state_display }}</span> Version {{ submission.version }} &middot; {{ submission.organization.name }}</p></div></header>
 {% for message in messages %}<div class="notice {% if message.tags == 'error' %}error{% else %}success{% endif %}">{{ message }}</div>{% endfor %}
-{% if submission.safe_failure_reason %}<div class="notice error"><strong>{{ submission.safe_failure_code }}</strong><br>{{ submission.safe_failure_reason }}</div>{% endif %}
+
+{% if validation_view.failure %}
+<section class="panel validation-failure" aria-labelledby="validation-failure-title">
+  <span class="eyebrow">Security validation stopped</span>
+  <h2 id="validation-failure-title">{{ validation_view.failure.title }}</h2>
+  <p><strong>Reason:</strong> {{ validation_view.failure.explanation }}</p>
+  <p><strong>What to do:</strong> {{ validation_view.failure.recommended_action }}</p>
+  {% if validation_view.show_technical %}<details><summary>Show technical details</summary><dl class="access-facts"><dt>Machine reason code</dt><dd><code>{{ submission.safe_failure_code }}</code></dd><dt>Validator version</dt><dd>{{ submission.validator_version|default:"Earlier validator version" }}</dd><dt>Diagnostic</dt><dd>{{ submission.internal_failure_detail|default:"No additional diagnostic recorded" }}</dd></dl></details>{% endif %}
+  {% if revalidate_form %}<form method="post" action="{% url 'document_intake:revalidate' submission.id %}">{% csrf_token %}{{ revalidate_form }}<button class="primary-button" type="submit">Revalidate the same uploaded file</button></form>{% endif %}
+</section>
+{% else %}
+<section class="panel validation-success" aria-labelledby="validation-success-title">
+  <span class="eyebrow">Bounded structural validation</span>
+  <h2 id="validation-success-title">Security checks passed</h2>
+  <p>{{ validation_view.page_count }} detected &middot; {{ validation_view.signature_count }} digital signature{{ validation_view.signature_count|pluralize }} found &middot; {{ validation_view.external_link_count }} external website link{{ validation_view.external_link_count|pluralize }} found.</p>
+  <p>No blocked executable JavaScript or embedded attachment was detected.</p>
+  <div class="notice"><strong>Security validation is not official-source verification.</strong> This file may now proceed to provenance and IAS corpus-admission review.</div>
+</section>
+{% endif %}
+
 <ol class="status-timeline" aria-label="Submission progress">
   <li class="done">Uploaded</li><li class="{% if submission.validation_state == 'PASSED' %}done{% endif %}">Validated</li>
   <li class="{% if submission.state != 'VALIDATION_FAILED' %}done{% endif %}">IAS decision</li>
   <li class="{% if submission.state == 'QUEUED_FOR_INGESTION' or submission.state == 'INGESTING' or submission.state == 'INGESTED' or submission.state == 'INGESTION_FAILED' %}done{% endif %}">Approved / queued</li>
   <li class="{% if submission.state == 'INGESTED' %}done{% endif %}">Ingested</li>
 </ol>
+
 <div class="access-detail-grid">
-<section class="panel"><h2>Document evidence</h2><dl class="access-facts">
-<dt>Uploader</dt><dd>{{ submission.submitted_by.get_username }} ({{ submission.submitter_role_snapshot }})</dd>
+<section class="panel"><h2>File and uploader</h2><dl class="access-facts">
+<dt>Uploaded by</dt><dd>{{ submission.get_submitter_role_snapshot_display|default:submission.submitter_role_snapshot }} &mdash; {{ submission.submitted_by.get_username }}</dd>
 <dt>Original filename</dt><dd>{{ submission.original_filename }}</dd><dt>Submitted</dt><dd>{{ submission.uploaded_at|date:"d M Y, H:i:s T" }}</dd>
-<dt>Size</dt><dd>{{ submission.byte_size|filesizeformat }}</dd><dt>Pages</dt><dd>{{ submission.page_count }}</dd>
+<dt>Size</dt><dd>{{ submission.byte_size|filesizeformat }}</dd><dt>Pages</dt><dd>{{ validation_view.page_count }}</dd>
 <dt>SHA-256</dt><dd><code class="hash-value">{{ submission.sha256 }}</code></dd>
-<dt>Source provenance</dt><dd>{{ submission.get_source_provenance_display }}</dd>
-<dt>Claimed identifier</dt><dd>{{ submission.claimed_identifier|default:"Not provided" }}</dd>
-<dt>Claimed source</dt><dd>{% if submission.claimed_source_url %}<a href="{{ submission.claimed_source_url }}" rel="noreferrer noopener">{{ submission.claimed_source_url }}</a>{% else %}Not provided{% endif %}</dd>
 <dt>Duplicate result</dt><dd>{{ submission.get_duplicate_status_display }}{% if submission.matched_document_id %} (document {{ submission.matched_document_id }}){% endif %}</dd>
 <dt>Origin</dt><dd>{{ submission.get_origin_display }}{% if submission.origin_reference %} / {{ submission.origin_reference }}{% endif %}</dd>
 </dl></section>
-<section class="panel"><h2>Security and validation</h2><dl class="access-facts">
-<dt>Structural security</dt><dd>{{ submission.get_security_status_display }}</dd><dt>Malware scan</dt><dd>{{ submission.get_malware_status_display }}</dd>
-<dt>Validation</dt><dd>{{ submission.get_validation_state_display }}</dd><dt>Preview extraction</dt><dd>{{ submission.extraction_status }}</dd>
-<dt>Findings</dt><dd>{{ submission.validation_findings|join:", "|default:"None" }}</dd><dt>Risk flags</dt><dd>{{ submission.risk_flags|join:", "|default:"None" }}</dd>
+
+<section class="panel"><h2>Security and processing</h2><dl class="access-facts">
+<dt>Security check</dt><dd>{{ submission.get_security_status_display }}</dd>
+<dt>File structure</dt><dd>{{ validation_view.file_structure }}</dd>
+<dt>Digital signature</dt><dd>{{ validation_view.signature_label }}{% if validation_view.signature_count %} ({{ validation_view.signature_count }} field{{ validation_view.signature_count|pluralize }}){% endif %}</dd>
+<dt>External links</dt><dd>{{ validation_view.external_link_count }} website domain{{ validation_view.external_link_count|pluralize }} found{% if submission.external_uri_domains %}: {{ submission.external_uri_domains|join:", " }}{% endif %}</dd>
+<dt>Malware scan</dt><dd>{{ validation_view.malware_label }}</dd>
+<dt>Document extraction</dt><dd>{{ validation_view.extraction_label }}</dd>
 </dl>
 {% if submission.security_status == 'PASSED' %}<p class="card-actions"><a class="button" href="{% url 'document_intake:preview' submission.id %}" target="_blank" rel="noopener">Open protected preview</a><a class="button" href="{% url 'document_intake:download' submission.id %}">Download validated PDF</a></p>{% endif %}
 </section></div>
-<section class="panel"><h2>Bounded pre-approval preview</h2>{% if submission.preview_text %}<pre class="document-preview">{{ submission.preview_text }}</pre>{% else %}<p class="muted">No direct text preview was available. Full extraction/OCR occurs only after approval in the worker.</p>{% endif %}</section>
+
+<section class="panel"><h2>Provenance and governance</h2><dl class="access-facts">
+<dt>Uploader role</dt><dd>{{ submission.submitter_role_snapshot }} (derived from authenticated access)</dd>
+<dt>Claimed document identifier</dt><dd>{{ submission.claimed_identifier|default:"Not provided" }}</dd>
+<dt>Claimed official source</dt><dd>{% if submission.claimed_source_url %}<a href="{{ submission.claimed_source_url }}" rel="noreferrer noopener">{{ submission.claimed_source_url }}</a>{% else %}Not provided{% endif %}</dd>
+<dt>Source context</dt><dd>{{ submission.source_context|default:"Not provided" }}</dd>
+<dt>IAS source attestation</dt><dd>{% if submission.ias_source_attested %}Confirmed &mdash; IAS-attested copy{% else %}Not provided{% endif %}</dd>
+<dt>Independent source verification</dt><dd>{{ validation_view.source_verification }}</dd>
+<dt>Digital-signature evidence</dt><dd>{{ validation_view.signature_label }}</dd>
+<dt>Corpus admission</dt><dd>{{ validation_view.corpus_admission }}</dd>
+</dl></section>
+
+{% if submission.signature_summary %}<section class="panel"><h2>Digital-signature evidence</h2><p class="muted">Presence is recorded as evidence. The signatures have not been cryptographically verified by this deployment.</p>{% for signature in submission.signature_summary %}<dl class="access-facts"><dt>Field</dt><dd>{{ signature.field_name }}</dd><dt>Signer name in PDF</dt><dd>{{ signature.signer_name|default:"Not provided" }}</dd><dt>Signing timestamp in PDF</dt><dd>{{ signature.signing_time|default:"Not provided" }}</dd>{% if validation_view.show_technical %}<dt>Filter / subfilter</dt><dd><code>{{ signature.filter|default:"None" }} / {{ signature.subfilter|default:"None" }}</code></dd>{% endif %}</dl>{% endfor %}</section>{% endif %}
+
+<section class="panel"><h2>Validation findings</h2>
+{% for severity, findings in validation_view.findings.items %}
+  <h3>{% if severity == 'BLOCK' %}Security blockers{% elif severity == 'REVIEW' %}Needs review{% elif severity == 'WARNING' %}Warnings{% else %}Informational evidence{% endif %}</h3>
+  {% if findings %}<ul>{% for finding in findings %}<li><strong>{{ finding.user_title }}</strong>{% if finding.user_explanation %} &mdash; {{ finding.user_explanation }}{% endif %}{% if validation_view.show_technical %}<details><summary>Technical details</summary><code>{{ finding.code }}</code>{% if finding.technical_detail %}<p>{{ finding.technical_detail }}</p>{% endif %}</details>{% endif %}</li>{% endfor %}</ul>{% else %}<p class="muted">None</p>{% endif %}
+{% endfor %}
+</section>
+
+<section class="panel"><h2>Bounded pre-approval preview</h2>{% if submission.preview_text %}<pre class="document-preview">{{ submission.preview_text }}</pre>{% else %}<p class="muted">{{ validation_view.extraction_label }}. Full extraction/OCR occurs only after approval in the worker.</p>{% endif %}</section>
 {% if can_decide %}<section class="panel decision-panel"><h2>IAS corpus admission decision</h2><p>Approval admits the validated bytes for corpus processing; it does not assert independent source authority.</p><form method="post" action="{% url 'document_intake:decide' submission.id %}" class="access-form">{% csrf_token %}{{ decision_form.as_p }}<button class="primary-button" type="submit">Record decision</button></form></section>{% endif %}
 {% if retry_form %}<section class="panel"><h2>Retry ingestion</h2><p>The document remains approved, but the last ingestion attempt failed. Retry is limited and audited.</p><form method="post" action="{% url 'document_intake:retry' submission.id %}">{% csrf_token %}{{ retry_form }}<button class="primary-button" type="submit">Queue retry</button></form></section>{% endif %}
 {% endblock %}
 {% block context_title %}Trust and provenance{% endblock %}
-{% block context_panel %}<p>Quarantine, security validation, identity, provenance, IAS approval, and ingestion are intentionally separate controls.</p>{% if job %}<p><strong>Job:</strong> {{ job.get_state_display }}<br><span class="compact-id">{{ job.id }}</span><br>Attempts: {{ job.attempt_count }}/{{ job.max_attempts }}</p>{% endif %}{% endblock %}
+{% block context_panel %}<p>Quarantine, security validation, uploader identity, claimed source, IAS attestation, independent source verification, corpus admission, and ingestion are separate controls.</p><p><strong>Validator:</strong> {{ submission.validator_version|default:"Earlier version" }}<br><strong>Attempts:</strong> {{ submission.validation_attempts.count }}</p>{% if job %}<p><strong>Job:</strong> {{ job.get_state_display }}<br><span class="compact-id">{{ job.id }}</span><br>Attempts: {{ job.attempt_count }}/{{ job.max_attempts }}</p>{% endif %}{% endblock %}

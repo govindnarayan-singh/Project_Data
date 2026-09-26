@@ -11,14 +11,17 @@ from apps.governance.exceptions import GovernanceApprovalError
 from apps.governance.services import decide_approval_case
 from apps.identity_access.permissions import can_approve_document
 
-from .forms import DocumentDecisionForm, DocumentSubmissionForm, RetryIngestionForm
+from .forms import DocumentDecisionForm, DocumentSubmissionForm, RevalidateDocumentForm, RetryIngestionForm
 from .ingestion import retry_ingestion
 from .models import DocumentSubmission, JobState, SecurityStatus, SubmissionState
+from .presentation import validation_presentation
 from .services import (
     DocumentIntakeError,
     authorized_submission_organizations,
+    can_revalidate_submission,
     can_view_submission,
     quarantine_path,
+    revalidate_document,
     submit_document,
 )
 
@@ -41,7 +44,12 @@ def submit(request):
     organizations = authorized_submission_organizations(request.user)
     if not organizations.exists():
         return HttpResponseForbidden("Active document-submission scope is required.")
-    form = DocumentSubmissionForm(request.POST or None, request.FILES or None, organizations=organizations)
+    form = DocumentSubmissionForm(
+        request.POST or None,
+        request.FILES or None,
+        organizations=organizations,
+        user=request.user,
+    )
     if request.method == "POST" and form.is_valid():
         try:
             submission = submit_document(
@@ -50,7 +58,8 @@ def submit(request):
                 organization=form.cleaned_data["organization"],
                 claimed_identifier=form.cleaned_data["claimed_identifier"],
                 claimed_source_url=form.cleaned_data["claimed_source_url"],
-                source_provenance=form.cleaned_data["source_provenance"],
+                source_context=form.cleaned_data["source_context"],
+                ias_source_attested=form.cleaned_data.get("ias_source_attested", False),
                 submission_reason=form.cleaned_data["submission_reason"],
             )
         except DocumentIntakeError as exc:
@@ -91,12 +100,18 @@ def detail(request, submission_id):
     retry_form = None
     if job and job.state == JobState.RETRYABLE and can_approve_document(request.user, submission.organization_id):
         retry_form = RetryIngestionForm(initial={"expected_version": submission.version})
+    revalidate_form = None
+    if can_revalidate_submission(request.user, submission):
+        revalidate_form = RevalidateDocumentForm(initial={"expected_version": submission.version})
+    show_technical = can_approve_document(request.user, submission.organization_id)
     return render(request, "document_intake/detail.html", {
         "submission": submission,
         "job": job,
         "can_decide": can_decide,
         "decision_form": decision_form,
         "retry_form": retry_form,
+        "revalidate_form": revalidate_form,
+        "validation_view": validation_presentation(submission, show_technical=show_technical),
         "active_section": "governance-approvals" if can_approve_document(request.user, submission.organization_id) else "document-submissions",
     })
 
@@ -173,4 +188,28 @@ def retry(request, submission_id):
         messages.error(request, getattr(exc, "safe_message", "Submission not found."))
     else:
         messages.success(request, "The ingestion job was queued for another bounded attempt.")
+    return redirect("document_intake:detail", submission_id=submission.pk)
+
+
+@login_required
+@require_POST
+def revalidate(request, submission_id):
+    submission = _visible_submission(request, submission_id)
+    form = RevalidateDocumentForm(request.POST)
+    if not form.is_valid():
+        messages.error(request, "The revalidation request is stale or invalid; refresh and try again.")
+        return redirect("document_intake:detail", submission_id=submission.pk)
+    try:
+        result = revalidate_document(
+            actor=request.user,
+            submission_id=submission.pk,
+            expected_version=form.cleaned_data["expected_version"],
+        )
+    except DocumentIntakeError as exc:
+        messages.error(request, exc.safe_message)
+    else:
+        if result.state == SubmissionState.PENDING_IAS_APPROVAL:
+            messages.success(request, "The same quarantined bytes passed the current validator and are pending IAS approval.")
+        else:
+            messages.error(request, result.safe_failure_reason)
     return redirect("document_intake:detail", submission_id=submission.pk)

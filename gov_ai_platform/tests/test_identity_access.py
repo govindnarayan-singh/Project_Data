@@ -13,6 +13,8 @@ from django.test import Client, RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 
+from apps.governance.constants import GENESIS_HASH
+from apps.governance.models import GovernanceAuditChain
 from apps.identity_access.forms import AccessRequestForm
 from apps.identity_access.models import (
     AccessGrant,
@@ -52,6 +54,10 @@ from apps.identity_access.services import (
 )
 class IdentityAccessSecurityTests(TestCase):
     def setUp(self):
+        GovernanceAuditChain.objects.get_or_create(
+            pk=1,
+            defaults={"last_sequence": 0, "head_hash": GENESIS_HASH},
+        )
         self.User = get_user_model()
         self.factory = RequestFactory()
         self.org_a = OrganizationUnit.objects.create(code="environment", name="Environment")

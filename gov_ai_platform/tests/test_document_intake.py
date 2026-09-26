@@ -35,9 +35,9 @@ from apps.document_intake.models import (
 )
 from apps.document_intake.services import DocumentIntakeError, quarantine_path, submit_document
 from apps.governance.audit import verify_audit_chain
-from apps.governance.constants import ApprovalDecisionType, AuditAction
+from apps.governance.constants import GENESIS_HASH, ApprovalDecisionType, AuditAction
 from apps.governance.exceptions import AuditWriteError, GovernanceApprovalError
-from apps.governance.models import GovernanceApprovalDecision, GovernanceAuditEvent
+from apps.governance.models import GovernanceApprovalDecision, GovernanceAuditChain, GovernanceAuditEvent
 from apps.governance.services import decide_approval_case
 from apps.identity_access.models import (
     AccessGrant,
@@ -95,6 +95,10 @@ class DocumentIntakeBase(TestCase):
             DOCUMENT_PREVIEW_CHARACTERS=1200,
         )
         self.override.enable()
+        GovernanceAuditChain.objects.get_or_create(
+            pk=1,
+            defaults={"last_sequence": 0, "head_hash": GENESIS_HASH},
+        )
         self.org_a = OrganizationUnit.objects.create(code="stage3-a", name="Stage 3 A")
         self.org_b = OrganizationUnit.objects.create(code="stage3-b", name="Stage 3 B")
         users = get_user_model()
@@ -225,7 +229,7 @@ class DocumentUploadSecurityTests(DocumentIntakeBase):
             source_provenance=SourceProvenance.UNKNOWN,
             submission_reason="embedded file",
         )
-        self.assertEqual(embedded_submission.safe_failure_code, "ACTIVE_CONTENT_DETECTED")
+        self.assertEqual(embedded_submission.safe_failure_code, "EMBEDDED_FILE_DETECTED")
 
         two_page_writer = PdfWriter()
         two_page_writer.add_blank_page(width=200, height=200)
@@ -274,7 +278,7 @@ class DocumentUploadSecurityTests(DocumentIntakeBase):
             source_provenance=SourceProvenance.UNKNOWN,
             submission_reason="active content",
         )
-        self.assertEqual(rejected.safe_failure_code, "ACTIVE_CONTENT_DETECTED")
+        self.assertEqual(rejected.safe_failure_code, "JAVASCRIPT_DETECTED")
 
         duplicate_bytes = pdf_bytes("Government Resolution DUPLICATE/2026/7")
         first = submit_document(
@@ -320,7 +324,9 @@ class DocumentUploadSecurityTests(DocumentIntakeBase):
         self.assertEqual(response["Content-Type"], "application/pdf")
         self.assertEqual(response["Content-Security-Policy"], "sandbox")
         self.assertEqual(response["X-Content-Type-Options"], "nosniff")
-        response.close()
+        for closer in response._resource_closers:
+            closer()
+        response._resource_closers.clear()
 
     def test_submission_is_audited_without_preview_content(self):
         marker = "PRIVATE-PREVIEW-CONTENT-STAGE3"
@@ -546,5 +552,5 @@ class DocumentIntakeUiTests(DocumentIntakeBase):
         response = self.client.get(reverse("document_intake:detail", args=[submission.pk]))
         self.assertContains(response, "IAS corpus admission decision")
         self.assertContains(response, "Bounded pre-approval preview")
-        self.assertContains(response, "Malware scanner not configured")
+        self.assertContains(response, "Malware scan unavailable in this local deployment")
         self.assertContains(response, "Approval")

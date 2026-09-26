@@ -10,8 +10,9 @@ from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET
 
-from apps.identity_access.permissions import authorized_organization_ids, ias_required
 from apps.document_intake.models import DocumentSubmission
+from apps.document_intake.presentation import failure_message_for_code
+from apps.identity_access.permissions import authorized_organization_ids, ias_required
 
 from .constants import ApprovalCaseState, AuditAction, AuditCategory, AuditOutcome
 from .models import GovernanceApprovalCase, GovernanceAuditEvent
@@ -34,6 +35,11 @@ def _decorate_audit_events(events):
         event.display_action = event.get_action_display()
         event.display_category = event.get_category_display()
         event.display_outcome = event.get_outcome_display()
+        event.display_reason_summary = (
+            failure_message_for_code(event.reason_code, event.reason).explanation
+            if event.action == AuditAction.DOCUMENT_VALIDATION_FAILED
+            else event.reason
+        )
         event.display_resource = RESOURCE_LABELS.get(
             event.resource_type,
             event.resource_type.rsplit(".", 1)[-1].replace("_", " ").title(),

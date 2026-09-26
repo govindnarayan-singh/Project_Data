@@ -52,6 +52,8 @@ class AuditAction(models.TextChoices):
     APPROVAL_CASE_REJECTED = "APPROVAL_CASE_REJECTED", "Approval case rejected"
     ACCESS_REQUEST_STATE_IMPORTED = "ACCESS_REQUEST_STATE_IMPORTED", "Access request history imported"
     DOCUMENT_SUBMITTED = "DOCUMENT_SUBMITTED", "Document submitted"
+    DOCUMENT_REVALIDATION_REQUESTED = "DOCUMENT_REVALIDATION_REQUESTED", "Document revalidation requested"
+    DOCUMENT_VALIDATION_PASSED = "DOCUMENT_VALIDATION_PASSED", "Document validation passed"
     DOCUMENT_VALIDATION_FAILED = "DOCUMENT_VALIDATION_FAILED", "Document validation failed"
     DOCUMENT_READY_FOR_APPROVAL = "DOCUMENT_READY_FOR_APPROVAL", "Document ready for approval"
     DOCUMENT_APPROVED = "DOCUMENT_APPROVED", "Document approved"
@@ -78,4 +80,7 @@ ALLOWED_AUDIT_METADATA_KEYS = frozenset({
     "self_confirmation",
     "failure_code",
     "ingestion_attempt",
+    "validation_attempt",
+    "validator_version",
+    "signature_status",
 })

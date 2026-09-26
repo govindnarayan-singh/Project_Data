@@ -722,3 +722,28 @@ responsive hooks, accessibility behavior, and IAS/OFFICER navigation policy; a
 manual viewport checklist is retained in the Stage 3A.1 output report. No
 authentication, authorization, governance, database, corpus, KG, retrieval, or
 V3 behavior changed.
+
+### Stage 3B.1 — PDF validation and provenance UX hardening (2026-09-26)
+
+The Stage 3 PDF validator now classifies actual capabilities instead of
+rejecting every annotation action. Passive annotations, signature widgets, and
+ordinary user-triggered HTTP(S) links are safe informational evidence;
+JavaScript, launch/form/import/rendition actions, embedded files, and unknown
+executable actions remain fail-closed. The supplied six-page Maharashtra GR
+now passes structural validation with two signatures recorded as present but
+unverified and one `www.maharashtra.gov.in` link domain. Its historical failed
+decision and audit event remain unchanged until an authorized POST revalidation.
+
+Validation attempts are append-only and validator-versioned. Revalidation
+checks the original SHA-256 bytes, authorization, CSRF, and optimistic version,
+then records new audit evidence and progresses only to pending IAS approval;
+it never ingests. Page counts are accurate or “Not checked,” findings are
+severity grouped, and officer messages are plain-language/actionable while IAS
+technical details retain machine codes.
+
+Uploader role is server-derived. Officers cannot select IAS provenance. IAS
+users may explicitly attest an official-source copy, but that attestation,
+claimed URL, digital-signature presence, independent source verification, and
+corpus admission are displayed as separate facts. No corpus, KG, dense
+retrieval, Graph V1/V2/V3, embedding, or ingestion behavior changed. Evidence
+is under `outputs/stage_03b1_pdf_validation/`.

@@ -1,8 +1,8 @@
 from django import forms
 
+from apps.identity_access.models import AccessRole
+from apps.identity_access.permissions import primary_access_role
 from apps.identity_access.models import OrganizationUnit
-
-from .models import SourceProvenance
 
 
 class DocumentSubmissionForm(forms.Form):
@@ -13,19 +13,26 @@ class DocumentSubmissionForm(forms.Form):
     organization = forms.ModelChoiceField(queryset=OrganizationUnit.objects.none(), label="Organization")
     claimed_identifier = forms.CharField(max_length=255, required=False, label="Claimed GR/document identifier")
     claimed_source_url = forms.URLField(max_length=1000, required=False, label="Claimed official source URL")
-    source_provenance = forms.ChoiceField(
-        choices=(
-            (SourceProvenance.OFFICER_PROVIDED_UNVERIFIED, "Officer-provided, not independently verified"),
-            (SourceProvenance.IAS_VERIFIED_COPY, "IAS-verified copy (not independent source verification)"),
-            (SourceProvenance.UNKNOWN, "Unknown provenance"),
-        )
+    source_context = forms.CharField(
+        max_length=1000,
+        required=False,
+        label="How did you obtain this document?",
+        help_text="Optional. Describe the claimed source; this does not verify it.",
+        widget=forms.Textarea(attrs={"rows": 3}),
     )
     submission_reason = forms.CharField(max_length=1000, widget=forms.Textarea(attrs={"rows": 4}))
 
-    def __init__(self, *args, organizations=None, **kwargs):
+    def __init__(self, *args, organizations=None, user=None, **kwargs):
         super().__init__(*args, **kwargs)
         if organizations is not None:
             self.fields["organization"].queryset = organizations
+        self.uploader_role = primary_access_role(user) if user is not None else ""
+        if self.uploader_role == AccessRole.IAS_OFFICER:
+            self.fields["ias_source_attested"] = forms.BooleanField(
+                required=False,
+                label="I attest that this copy was obtained from an official government source.",
+                help_text="IAS attestation is recorded separately and is not independent source verification.",
+            )
 
 
 class DocumentDecisionForm(forms.Form):
@@ -36,4 +43,8 @@ class DocumentDecisionForm(forms.Form):
 
 
 class RetryIngestionForm(forms.Form):
+    expected_version = forms.IntegerField(min_value=1, widget=forms.HiddenInput)
+
+
+class RevalidateDocumentForm(forms.Form):
     expected_version = forms.IntegerField(min_value=1, widget=forms.HiddenInput)

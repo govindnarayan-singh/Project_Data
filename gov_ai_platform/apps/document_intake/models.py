@@ -28,6 +28,7 @@ class SecurityStatus(models.TextChoices):
 
 
 class MalwareStatus(models.TextChoices):
+    NOT_PERFORMED = "NOT_PERFORMED", "Not performed"
     CLEAN = "CLEAN", "Scanner reported clean"
     MALWARE_SCAN_NOT_CONFIGURED = "MALWARE_SCAN_NOT_CONFIGURED", "Malware scanner not configured"
     MALICIOUS = "MALICIOUS", "Malicious content detected"
@@ -36,9 +37,19 @@ class MalwareStatus(models.TextChoices):
 
 class SourceProvenance(models.TextChoices):
     AUTHORITATIVE_SOURCE_VERIFIED = "AUTHORITATIVE_SOURCE_VERIFIED", "Authoritative source independently verified"
-    IAS_VERIFIED_COPY = "IAS_VERIFIED_COPY", "IAS verified copy"
+    IAS_ATTESTED_OFFICIAL_COPY = "IAS_ATTESTED_OFFICIAL_COPY", "IAS-attested official-source copy"
+    IAS_VERIFIED_COPY = "IAS_VERIFIED_COPY", "Legacy IAS-verified copy"
     OFFICER_PROVIDED_UNVERIFIED = "OFFICER_PROVIDED_UNVERIFIED", "Officer-provided, unverified"
     UNKNOWN = "UNKNOWN", "Unknown"
+
+
+class SignatureStatus(models.TextChoices):
+    NOT_CHECKED = "NOT_CHECKED", "Not checked"
+    NOT_PRESENT = "NOT_PRESENT", "Not present"
+    PRESENT_UNVERIFIED = "SIGNATURE_PRESENT_UNVERIFIED", "Present — cryptographic verification not performed"
+    VERIFIED_VALID = "SIGNATURE_VERIFIED_VALID", "Cryptographically verified"
+    VERIFICATION_FAILED = "SIGNATURE_VERIFICATION_FAILED", "Cryptographic verification failed"
+    VERIFICATION_UNAVAILABLE = "SIGNATURE_VERIFICATION_UNAVAILABLE", "Verification unavailable"
 
 
 class DuplicateStatus(models.TextChoices):
@@ -96,11 +107,21 @@ class DocumentSubmission(models.Model):
     approval_case = models.OneToOneField("governance.GovernanceApprovalCase", null=True, blank=True, on_delete=models.SET_NULL, related_name="document_submission")
     archive_key = models.CharField(max_length=255, blank=True)
     ingested_document_id = models.PositiveBigIntegerField(null=True, blank=True)
-    page_count = models.PositiveIntegerField(default=0)
+    page_count = models.PositiveIntegerField(null=True, blank=True)
     extraction_status = models.CharField(max_length=40, blank=True)
     preview_text = models.TextField(blank=True)
     validation_findings = models.JSONField(default=list, blank=True)
     risk_flags = models.JSONField(default=list, blank=True)
+    validator_version = models.CharField(max_length=64, blank=True)
+    signature_status = models.CharField(
+        max_length=48,
+        choices=SignatureStatus.choices,
+        default=SignatureStatus.NOT_CHECKED,
+    )
+    signature_summary = models.JSONField(default=list, blank=True)
+    external_uri_domains = models.JSONField(default=list, blank=True)
+    source_context = models.CharField(max_length=1000, blank=True)
+    ias_source_attested = models.BooleanField(default=False)
     origin = models.CharField(max_length=32, choices=SubmissionOrigin.choices, default=SubmissionOrigin.DIRECT_UPLOAD)
     origin_reference = models.CharField(max_length=128, blank=True)
     correlation_id = models.UUIDField(default=uuid.uuid4, db_index=True)
@@ -125,6 +146,68 @@ class DocumentSubmission(models.Model):
             models.Index(fields=("organization", "state", "created_at"), name="doc_scope_state_idx"),
             models.Index(fields=("submitted_by", "created_at"), name="doc_submitter_time_idx"),
         ]
+
+
+class AppendOnlyValidationAttemptQuerySet(models.QuerySet):
+    def update(self, **kwargs):
+        raise ValueError("Validation attempts are append-only.")
+
+    def delete(self):
+        raise ValueError("Validation attempts are append-only.")
+
+
+class DocumentValidationAttempt(models.Model):
+    submission = models.ForeignKey(
+        DocumentSubmission,
+        on_delete=models.PROTECT,
+        related_name="validation_attempts",
+    )
+    attempt_number = models.PositiveIntegerField()
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.PROTECT,
+        related_name="document_validation_attempts",
+    )
+    validator_version = models.CharField(max_length=64)
+    result_code = models.CharField(max_length=64)
+    validation_state = models.CharField(max_length=16, choices=ValidationState.choices)
+    security_status = models.CharField(max_length=16, choices=SecurityStatus.choices)
+    malware_status = models.CharField(max_length=40, choices=MalwareStatus.choices)
+    page_count = models.PositiveIntegerField(null=True, blank=True)
+    extraction_status = models.CharField(max_length=40, blank=True)
+    findings = models.JSONField(default=list, blank=True)
+    risk_flags = models.JSONField(default=list, blank=True)
+    signature_status = models.CharField(max_length=48, choices=SignatureStatus.choices)
+    signature_summary = models.JSONField(default=list, blank=True)
+    external_uri_domains = models.JSONField(default=list, blank=True)
+    safe_failure_code = models.CharField(max_length=64, blank=True)
+    safe_failure_reason = models.CharField(max_length=500, blank=True)
+    internal_failure_detail = models.TextField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = AppendOnlyValidationAttemptQuerySet.as_manager()
+
+    class Meta:
+        ordering = ("submission_id", "attempt_number")
+        constraints = [
+            models.UniqueConstraint(
+                fields=("submission", "attempt_number"),
+                name="doc_validation_attempt_unique",
+            ),
+        ]
+        indexes = [
+            models.Index(fields=("submission", "created_at"), name="doc_validation_time_idx"),
+        ]
+
+    def save(self, *args, **kwargs):
+        if not self._state.adding:
+            raise ValueError("Validation attempts are append-only.")
+        return super().save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        raise ValueError("Validation attempts are append-only.")
 
 
 class DocumentIngestionJob(models.Model):
