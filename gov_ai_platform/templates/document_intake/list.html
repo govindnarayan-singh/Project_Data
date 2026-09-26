@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}My submissions | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Documents / My submissions{% endblock %}
+{% block content %}
+<header class="page-heading"><div><span class="eyebrow">Secure intake</span><h1>My document submissions</h1><p>Validation, approval, and ingestion are shown as separate states.</p></div><a class="primary-button" href="{% url 'document_intake:submit' %}">Submit PDF</a></header>
+{% if page_obj %}
+<div class="access-table-wrap"><table class="access-table"><thead><tr><th>Document</th><th>Organization</th><th>State</th><th>Validation</th><th>Submitted</th><th></th></tr></thead><tbody>
+{% for submission in page_obj %}<tr><td><strong>{{ submission.original_filename }}</strong><br><span class="compact-id">{{ submission.id }}</span></td><td>{{ submission.organization.name }}</td><td><span class="badge">{{ submission.get_state_display }}</span></td><td>{{ submission.get_validation_state_display }}</td><td>{{ submission.created_at|date:"d M Y, H:i" }}</td><td><a href="{% url 'document_intake:detail' submission.id %}">View status</a></td></tr>{% empty %}<tr><td colspan="6"><div class="empty-state"><h2>No document submissions</h2><p>Your quarantined submissions and their governance status will appear here.</p></div></td></tr>{% endfor %}
+</tbody></table></div>
+{% include "identity_access/pagination.html" %}
+{% endif %}
+{% endblock %}

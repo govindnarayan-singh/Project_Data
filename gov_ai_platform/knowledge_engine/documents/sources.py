@@ -8,9 +8,11 @@ from knowledge_engine.settings import settings
 
 LOCAL_ORIGINAL = "LOCAL_ORIGINAL"
 EXTERNAL_OFFICIAL = "EXTERNAL_OFFICIAL"
-APPROVED_ORIGINS = frozenset({LOCAL_ORIGINAL, EXTERNAL_OFFICIAL})
+APPROVED_SUBMISSION = "APPROVED_SUBMISSION"
+APPROVED_ORIGINS = frozenset({LOCAL_ORIGINAL, EXTERNAL_OFFICIAL, APPROVED_SUBMISSION})
 LOCAL_GR_ROOT = "LOCAL_GR"
 EXTERNAL_OFFICIAL_ROOT = "EXTERNAL_OFFICIAL"
+APPROVED_SUBMISSION_ROOT = "APPROVED_SUBMISSION"
 
 
 class UnsafeDocumentPath(ValueError):
@@ -31,6 +33,8 @@ def source_root(origin: str) -> Path:
         return settings.gr_root
     if origin == EXTERNAL_OFFICIAL:
         return settings.external_document_root
+    if origin == APPROVED_SUBMISSION:
+        return settings.approved_submission_root
     raise UnsafeDocumentPath(f"Unsupported document source origin: {origin}")
 
 
@@ -39,6 +43,8 @@ def source_root_identity(origin: str) -> str:
         return LOCAL_GR_ROOT
     if origin == EXTERNAL_OFFICIAL:
         return EXTERNAL_OFFICIAL_ROOT
+    if origin == APPROVED_SUBMISSION:
+        return APPROVED_SUBMISSION_ROOT
     raise UnsafeDocumentPath(f"Unsupported document source origin: {origin}")
 
 

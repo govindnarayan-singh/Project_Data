@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS documents (
     ocr_pages INTEGER NOT NULL DEFAULT 0,
     extraction_method TEXT NOT NULL,
     source_origin TEXT NOT NULL DEFAULT 'LOCAL_ORIGINAL'
-        CHECK (source_origin IN ('LOCAL_ORIGINAL','EXTERNAL_OFFICIAL')),
+        CHECK (source_origin IN ('LOCAL_ORIGINAL','EXTERNAL_OFFICIAL','APPROVED_SUBMISSION')),
     document_kind TEXT NOT NULL DEFAULT 'UNKNOWN',
     canonical_identity TEXT NOT NULL DEFAULT '',
     document_year INTEGER CHECK (document_year IS NULL OR document_year BETWEEN 1800 AND 2200),

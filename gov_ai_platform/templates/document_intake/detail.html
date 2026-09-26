@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Submission {{ submission.id }} | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Documents / Submission / {{ submission.id|stringformat:"s"|slice:":8" }}{% endblock %}
+{% block content %}
+<p><a href="{% url 'document_intake:list' %}">&larr; My submissions</a></p>
+<header class="page-heading"><div><span class="eyebrow">Secure document submission</span><h1>{{ submission.detected_metadata.subject|default:submission.original_filename }}</h1><p><span class="badge">{{ submission.get_state_display }}</span> Version {{ submission.version }} &middot; {{ submission.organization.name }}</p></div></header>
+{% for message in messages %}<div class="notice {% if message.tags == 'error' %}error{% else %}success{% endif %}">{{ message }}</div>{% endfor %}
+{% if submission.safe_failure_reason %}<div class="notice error"><strong>{{ submission.safe_failure_code }}</strong><br>{{ submission.safe_failure_reason }}</div>{% endif %}
+<ol class="status-timeline" aria-label="Submission progress">
+  <li class="done">Uploaded</li><li class="{% if submission.validation_state == 'PASSED' %}done{% endif %}">Validated</li>
+  <li class="{% if submission.state != 'VALIDATION_FAILED' %}done{% endif %}">IAS decision</li>
+  <li class="{% if submission.state == 'QUEUED_FOR_INGESTION' or submission.state == 'INGESTING' or submission.state == 'INGESTED' or submission.state == 'INGESTION_FAILED' %}done{% endif %}">Approved / queued</li>
+  <li class="{% if submission.state == 'INGESTED' %}done{% endif %}">Ingested</li>
+</ol>
+<div class="access-detail-grid">
+<section class="panel"><h2>Document evidence</h2><dl class="access-facts">
+<dt>Uploader</dt><dd>{{ submission.submitted_by.get_username }} ({{ submission.submitter_role_snapshot }})</dd>
+<dt>Original filename</dt><dd>{{ submission.original_filename }}</dd><dt>Submitted</dt><dd>{{ submission.uploaded_at|date:"d M Y, H:i:s T" }}</dd>
+<dt>Size</dt><dd>{{ submission.byte_size|filesizeformat }}</dd><dt>Pages</dt><dd>{{ submission.page_count }}</dd>
+<dt>SHA-256</dt><dd><code class="hash-value">{{ submission.sha256 }}</code></dd>
+<dt>Source provenance</dt><dd>{{ submission.get_source_provenance_display }}</dd>
+<dt>Claimed identifier</dt><dd>{{ submission.claimed_identifier|default:"Not provided" }}</dd>
+<dt>Claimed source</dt><dd>{% if submission.claimed_source_url %}<a href="{{ submission.claimed_source_url }}" rel="noreferrer noopener">{{ submission.claimed_source_url }}</a>{% else %}Not provided{% endif %}</dd>
+<dt>Duplicate result</dt><dd>{{ submission.get_duplicate_status_display }}{% if submission.matched_document_id %} (document {{ submission.matched_document_id }}){% endif %}</dd>
+<dt>Origin</dt><dd>{{ submission.get_origin_display }}{% if submission.origin_reference %} / {{ submission.origin_reference }}{% endif %}</dd>
+</dl></section>
+<section class="panel"><h2>Security and validation</h2><dl class="access-facts">
+<dt>Structural security</dt><dd>{{ submission.get_security_status_display }}</dd><dt>Malware scan</dt><dd>{{ submission.get_malware_status_display }}</dd>
+<dt>Validation</dt><dd>{{ submission.get_validation_state_display }}</dd><dt>Preview extraction</dt><dd>{{ submission.extraction_status }}</dd>
+<dt>Findings</dt><dd>{{ submission.validation_findings|join:", "|default:"None" }}</dd><dt>Risk flags</dt><dd>{{ submission.risk_flags|join:", "|default:"None" }}</dd>
+</dl>
+{% if submission.security_status == 'PASSED' %}<p class="card-actions"><a class="button" href="{% url 'document_intake:preview' submission.id %}" target="_blank" rel="noopener">Open protected preview</a><a class="button" href="{% url 'document_intake:download' submission.id %}">Download validated PDF</a></p>{% endif %}
+</section></div>
+<section class="panel"><h2>Bounded pre-approval preview</h2>{% if submission.preview_text %}<pre class="document-preview">{{ submission.preview_text }}</pre>{% else %}<p class="muted">No direct text preview was available. Full extraction/OCR occurs only after approval in the worker.</p>{% endif %}</section>
+{% if can_decide %}<section class="panel decision-panel"><h2>IAS corpus admission decision</h2><p>Approval admits the validated bytes for corpus processing; it does not assert independent source authority.</p><form method="post" action="{% url 'document_intake:decide' submission.id %}" class="access-form">{% csrf_token %}{{ decision_form.as_p }}<button class="primary-button" type="submit">Record decision</button></form></section>{% endif %}
+{% if retry_form %}<section class="panel"><h2>Retry ingestion</h2><p>The document remains approved, but the last ingestion attempt failed. Retry is limited and audited.</p><form method="post" action="{% url 'document_intake:retry' submission.id %}">{% csrf_token %}{{ retry_form }}<button class="primary-button" type="submit">Queue retry</button></form></section>{% endif %}
+{% endblock %}
+{% block context_title %}Trust and provenance{% endblock %}
+{% block context_panel %}<p>Quarantine, security validation, identity, provenance, IAS approval, and ingestion are intentionally separate controls.</p>{% if job %}<p><strong>Job:</strong> {{ job.get_state_display }}<br><span class="compact-id">{{ job.id }}</span><br>Attempts: {{ job.attempt_count }}/{{ job.max_attempts }}</p>{% endif %}{% endblock %}

@@ -13,8 +13,8 @@
   <label>To<input type="date" name="date_to" value="{{ filters.date_to }}"></label>
   <button class="primary-button" type="submit">Apply</button>
 </form>
-<div class="access-table-wrap"><table class="access-table"><thead><tr><th>Sequence</th><th>Time</th><th>Action</th><th>Outcome</th><th>Actor</th><th>Resource</th><th></th></tr></thead><tbody>
-{% for event in page_obj %}<tr><td>{{ event.sequence }}</td><td>{{ event.occurred_at }}</td><td><strong>{{ event.action }}</strong><br><span class="muted">{{ event.category }}</span></td><td><span class="badge">{{ event.outcome }}</span></td><td>{{ event.actor_user_id|default:"System" }}</td><td>{{ event.resource_type }}<br><span class="muted">{{ event.resource_id }}</span></td><td><a href="{% url 'governance:audit_detail' event.event_id %}">Inspect</a></td></tr>{% empty %}<tr><td colspan="7">No governance events match this authorized scope.</td></tr>{% endfor %}
+<div class="access-table-wrap"><table class="access-table audit-table"><thead><tr><th>Sequence</th><th>Time</th><th>Action</th><th>Outcome</th><th>Actor</th><th>Resource</th><th></th></tr></thead><tbody>
+{% for event in page_obj %}<tr><td>{{ event.sequence }}</td><td>{{ event.occurred_at|date:"d M Y, H:i:s" }}</td><td class="audit-action"><strong>{{ event.display_action }}</strong><br><span class="muted">{{ event.display_category }}</span></td><td><span class="badge">{{ event.display_outcome }}</span></td><td>{{ event.display_actor }}</td><td class="audit-resource">{{ event.display_resource }}<br><span class="compact-id" title="{{ event.resource_id }}">{{ event.short_resource_id }}</span></td><td><a href="{% url 'governance:audit_detail' event.event_id %}">Inspect</a></td></tr>{% empty %}<tr><td colspan="7">No governance events match this authorized scope.</td></tr>{% endfor %}
 </tbody></table></div>
 {% include "identity_access/pagination.html" %}
 {% endblock %}

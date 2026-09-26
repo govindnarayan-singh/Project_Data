@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Submit document | Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Documents / Secure intake / Submit{% endblock %}
+{% block content %}
+<header class="page-heading"><div><span class="eyebrow">Secure document intake</span><h1>Submit a government PDF</h1><p>The upload is quarantined and validated. It is not added to the corpus until an IAS governance decision and durable worker ingestion succeed.</p></div></header>
+<section class="panel intake-panel">
+  <div class="notice"><strong>Upload does not imply trust.</strong> IAS corpus approval is also distinct from independent authoritative-source verification.</div>
+  <form method="post" enctype="multipart/form-data" class="access-form access-form-grid">
+    {% csrf_token %}{{ form.non_field_errors }}
+    {% for field in form %}<label class="{% if field.name == 'submission_reason' %}span-two{% endif %}">{{ field.label }}{{ field }}{{ field.errors }}{% if field.help_text %}<small>{{ field.help_text }}</small>{% endif %}</label>{% endfor %}
+    <button class="primary-button span-two" type="submit">Quarantine and validate PDF</button>
+  </form>
+</section>
+{% endblock %}
+{% block context_title %}Intake boundary{% endblock %}
+{% block context_panel %}<p>Only PDF is accepted. Original bytes and SHA-256 are preserved. Bounded preview extraction creates no production chunks, embeddings, or graph edges.</p>{% endblock %}

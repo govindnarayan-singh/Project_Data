@@ -72,11 +72,18 @@ def can_view_unresolved_reference(user, reference) -> bool:
 
 
 def can_submit_document(user, scope) -> bool:
-    return False
+    organization_id = int(getattr(scope, "pk", scope))
+    if effective_grants(user, role=AccessRole.OFFICER).filter(organization_id=organization_id).exists():
+        return True
+    return (
+        effective_grants(user, role=AccessRole.IAS_OFFICER).exists()
+        and can_manage_organization(user, organization_id)
+    )
 
 
 def can_approve_document(user, scope) -> bool:
-    return False
+    organization_id = int(getattr(scope, "pk", scope))
+    return can_manage_organization(user, organization_id)
 
 
 def can_review_candidate(user, scope) -> bool:

@@ -30,6 +30,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "apps.identity_access",
     "apps.governance",
+    "apps.document_intake",
     "apps.search_ui",
     "apps.documents",
     "apps.knowledge_graph_ui",
@@ -126,3 +127,34 @@ ACCESS_LOGIN_WINDOW_SECONDS = int(os.getenv("ACCESS_LOGIN_WINDOW_SECONDS", "900"
 ACCESS_THROTTLE_BLOCK_SECONDS = int(os.getenv("ACCESS_THROTTLE_BLOCK_SECONDS", "900"))
 
 EMAIL_BACKEND = os.getenv("DJANGO_EMAIL_BACKEND", "django.core.mail.backends.console.EmailBackend")
+
+# Stage 3 secure document intake. Paths are generated internally; user supplied
+# names are metadata only and never participate in filesystem resolution.
+DOCUMENT_QUARANTINE_ROOT = Path(
+    os.getenv("DOCUMENT_QUARANTINE_ROOT", str(BASE_DIR.parent / "Government_Documents" / "Incoming" / "Officer_Uploads"))
+).resolve()
+DOCUMENT_APPROVED_ROOT = Path(
+    os.getenv(
+        "APPROVED_SUBMISSION_ROOT",
+        os.getenv("DOCUMENT_APPROVED_ROOT", str(BASE_DIR.parent / "Government_Documents" / "Approved_Submissions")),
+    )
+).resolve()
+DOCUMENT_MAX_UPLOAD_BYTES = int(os.getenv("DOCUMENT_MAX_UPLOAD_BYTES", str(25 * 1024 * 1024)))
+DOCUMENT_MAX_PAGES = int(os.getenv("DOCUMENT_MAX_PAGES", "500"))
+DOCUMENT_PREVIEW_PAGES = int(os.getenv("DOCUMENT_PREVIEW_PAGES", "3"))
+DOCUMENT_PREVIEW_CHARACTERS = int(os.getenv("DOCUMENT_PREVIEW_CHARACTERS", "6000"))
+DOCUMENT_VALIDATION_TIMEOUT_SECONDS = int(os.getenv("DOCUMENT_VALIDATION_TIMEOUT_SECONDS", "30"))
+DOCUMENT_INGESTION_MAX_ATTEMPTS = int(os.getenv("DOCUMENT_INGESTION_MAX_ATTEMPTS", "3"))
+DOCUMENT_INGESTION_LEASE_SECONDS = int(os.getenv("DOCUMENT_INGESTION_LEASE_SECONDS", "900"))
+DOCUMENT_IAS_SELF_CONFIRM_ALLOWED = _env_bool("DOCUMENT_IAS_SELF_CONFIRM_ALLOWED", True)
+_document_scanner_setting = os.getenv("DOCUMENT_MALWARE_SCANNER", "AUTO").strip().upper()
+_windows_defender_cli = Path(r"C:\Program Files\Windows Defender\MpCmdRun.exe")
+if _document_scanner_setting == "AUTO" and _windows_defender_cli.is_file():
+    DOCUMENT_MALWARE_SCANNER = "WINDOWS_DEFENDER"
+    DOCUMENT_MALWARE_SCANNER_EXECUTABLE = str(_windows_defender_cli)
+elif _document_scanner_setting in {"", "NONE", "AUTO"}:
+    DOCUMENT_MALWARE_SCANNER = ""
+    DOCUMENT_MALWARE_SCANNER_EXECUTABLE = ""
+else:
+    DOCUMENT_MALWARE_SCANNER = _document_scanner_setting
+    DOCUMENT_MALWARE_SCANNER_EXECUTABLE = os.getenv("DOCUMENT_MALWARE_SCANNER_EXECUTABLE", "").strip()

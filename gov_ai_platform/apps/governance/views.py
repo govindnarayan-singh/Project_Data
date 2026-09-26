@@ -2,16 +2,43 @@ from __future__ import annotations
 
 from datetime import datetime, time
 
+from django.contrib.auth import get_user_model
 from django.core.paginator import Paginator
 from django.shortcuts import get_object_or_404, render
+from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_date
 from django.views.decorators.http import require_GET
 
 from apps.identity_access.permissions import authorized_organization_ids, ias_required
+from apps.document_intake.models import DocumentSubmission
 
 from .constants import ApprovalCaseState, AuditAction, AuditCategory, AuditOutcome
 from .models import GovernanceApprovalCase, GovernanceAuditEvent
+
+
+RESOURCE_LABELS = {
+    "identity_access.AccessRequest": "Access request",
+    "identity_access.AccessGrant": "Access grant",
+    "governance.GovernanceApprovalCase": "Approval case",
+    "document_intake.DocumentSubmission": "Document submission",
+    "document_intake.DocumentIngestionJob": "Document ingestion job",
+}
+
+
+def _decorate_audit_events(events):
+    actor_ids = {event.actor_user_id for event in events if event.actor_user_id}
+    usernames = dict(get_user_model().objects.filter(pk__in=actor_ids).values_list("pk", "username"))
+    for event in events:
+        event.display_actor = usernames.get(event.actor_user_id, "System")
+        event.display_action = event.get_action_display()
+        event.display_category = event.get_category_display()
+        event.display_outcome = event.get_outcome_display()
+        event.display_resource = RESOURCE_LABELS.get(
+            event.resource_type,
+            event.resource_type.rsplit(".", 1)[-1].replace("_", " ").title(),
+        )
+        event.short_resource_id = str(event.resource_id)[:12] + ("…" if len(str(event.resource_id)) > 12 else "")
 
 
 def _bounded_choice(value: str, allowed: set[str]) -> str:
@@ -45,6 +72,7 @@ def audit_list(request):
     if date_to:
         queryset = queryset.filter(occurred_at__lte=timezone.make_aware(datetime.combine(date_to, time.max)))
     page = Paginator(queryset.order_by("-sequence"), 50).get_page(request.GET.get("page"))
+    _decorate_audit_events(page.object_list)
     return render(request, "governance/audit_list.html", {
         "page_obj": page,
         "categories": AuditCategory.choices,
@@ -71,6 +99,7 @@ def audit_detail(request, event_id):
         event_id=event_id,
         organization_id_snapshot__in=authorized_organization_ids(request.user),
     )
+    _decorate_audit_events([event])
     return render(request, "governance/audit_detail.html", {"event": event, "active_section": "governance-audit"})
 
 
@@ -83,6 +112,25 @@ def approval_case_list(request):
     if state:
         queryset = queryset.filter(state=state)
     page = Paginator(queryset.order_by("-created_at"), 50).get_page(request.GET.get("page"))
+    document_subjects = {
+        str(submission.approval_case_id): submission
+        for submission in DocumentSubmission.objects.filter(
+            approval_case_id__in=[case.pk for case in page.object_list]
+        )
+    }
+    for case in page.object_list:
+        submission = document_subjects.get(str(case.pk))
+        case.display_workflow = (
+            "Document corpus admission"
+            if case.workflow_type == "DOCUMENT_CORPUS_ADMISSION"
+            else case.workflow_type.replace("_", " ").title()
+        )
+        case.display_subject = (
+            str(submission.detected_metadata.get("subject") or submission.original_filename)
+            if submission
+            else f"{case.subject_type.rsplit('.', 1)[-1]} {str(case.subject_id)[:12]}"
+        )
+        case.detail_url = reverse("document_intake:detail", args=[submission.pk]) if submission else ""
     return render(request, "governance/approval_case_list.html", {
         "page_obj": page,
         "states": ApprovalCaseState.choices,

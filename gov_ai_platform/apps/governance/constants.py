@@ -23,6 +23,7 @@ class AuditCategory(models.TextChoices):
     AUTHORIZATION = "AUTHORIZATION", "Authorization"
     SECURITY = "SECURITY", "Security"
     SYSTEM = "SYSTEM", "System"
+    DOCUMENT = "DOCUMENT", "Document governance"
 
 
 class AuditOutcome(models.TextChoices):
@@ -50,6 +51,15 @@ class AuditAction(models.TextChoices):
     APPROVAL_CASE_APPROVED = "APPROVAL_CASE_APPROVED", "Approval case approved"
     APPROVAL_CASE_REJECTED = "APPROVAL_CASE_REJECTED", "Approval case rejected"
     ACCESS_REQUEST_STATE_IMPORTED = "ACCESS_REQUEST_STATE_IMPORTED", "Access request history imported"
+    DOCUMENT_SUBMITTED = "DOCUMENT_SUBMITTED", "Document submitted"
+    DOCUMENT_VALIDATION_FAILED = "DOCUMENT_VALIDATION_FAILED", "Document validation failed"
+    DOCUMENT_READY_FOR_APPROVAL = "DOCUMENT_READY_FOR_APPROVAL", "Document ready for approval"
+    DOCUMENT_APPROVED = "DOCUMENT_APPROVED", "Document approved"
+    DOCUMENT_REJECTED = "DOCUMENT_REJECTED", "Document rejected"
+    DOCUMENT_INGESTION_QUEUED = "DOCUMENT_INGESTION_QUEUED", "Document ingestion queued"
+    DOCUMENT_INGESTION_RETRIED = "DOCUMENT_INGESTION_RETRIED", "Document ingestion retried"
+    DOCUMENT_INGESTION_SUCCEEDED = "DOCUMENT_INGESTION_SUCCEEDED", "Document ingestion succeeded"
+    DOCUMENT_INGESTION_FAILED = "DOCUMENT_INGESTION_FAILED", "Document ingestion failed"
 
 
 ALLOWED_AUDIT_METADATA_KEYS = frozenset({
@@ -61,4 +71,11 @@ ALLOWED_AUDIT_METADATA_KEYS = frozenset({
     "risk_flags",
     "subject_digest_present",
     "validation_outcome",
+    "duplicate_status",
+    "source_provenance",
+    "page_count",
+    "byte_size",
+    "self_confirmation",
+    "failure_code",
+    "ingestion_attempt",
 })

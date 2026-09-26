@@ -1,10 +1,14 @@
 from datetime import date
+from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import patch
 
+from django.conf import settings
+from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase
 from django.urls import reverse
 
+from apps.identity_access.models import AccessGrant, AccessRole, IASAuthorityScope, OrganizationUnit
 from tests.access_test_helpers import AuthorizedViewTestCase
 
 
@@ -101,6 +105,73 @@ class PortalShellAndSearchTests(AuthorizedViewTestCase):
         self.assertContains(response, "data-sidebar-toggle")
         self.assertContains(response, "Collapse application navigation")
         self.assertContains(response, "portal/sidebar.css")
+
+    @patch("apps.search_ui.views.get_portal_repository", return_value=FakePortalRepository())
+    @patch("apps.search_ui.views.get_retrieval_service")
+    def test_shared_shell_separates_header_navigation_and_account(self, retrieval, _repository):
+        response = self.client.get(reverse("search_ui:search"))
+        self.assertEqual(response.status_code, 200)
+        retrieval.assert_not_called()
+        shell = response.content.decode()
+        header = shell.split('<header class="topbar">', 1)[1].split("</header>", 1)[0]
+        sidebar = shell.split('<aside class="sidebar"', 1)[1].split("</aside>", 1)[0]
+        account_panel = header.split('id="account-menu-panel"', 1)[1]
+
+        self.assertIn('data-shell-layout', shell)
+        self.assertIn('data-sidebar-scroll', sidebar)
+        self.assertNotIn('account-menu', sidebar)
+        self.assertNotIn('authorized-view-tester', sidebar)
+        self.assertIn('data-account-menu-toggle', header)
+        self.assertIn('authorized-view-tester', header)
+        self.assertIn('Government Officer', header)
+        self.assertIn('method="post"', account_panel)
+        self.assertIn(reverse("identity_access:logout"), account_panel)
+        self.assertIn('role="menuitem"', account_panel)
+        self.assertIn('aria-current="page"', sidebar)
+        self.assertNotIn('Access requests', sidebar)
+        self.assertNotIn('Approval cases', sidebar)
+
+    @patch("apps.search_ui.views.get_portal_repository", return_value=FakePortalRepository())
+    @patch("apps.search_ui.views.get_retrieval_service")
+    def test_ias_navigation_remains_scope_authorized(self, retrieval, _repository):
+        user = get_user_model().objects.get(username="authorized-view-tester")
+        organization = OrganizationUnit.objects.get(code="test-unit")
+        AccessGrant.objects.create(user=user, organization=organization, role=AccessRole.IAS_OFFICER)
+        IASAuthorityScope.objects.create(user=user, organization=organization)
+
+        response = self.client.get(reverse("search_ui:search"))
+        self.assertEqual(response.status_code, 200)
+        retrieval.assert_not_called()
+        shell = response.content.decode()
+        sidebar = shell.split('<aside class="sidebar"', 1)[1].split("</aside>", 1)[0]
+        for label in ("Access requests", "Officer access", "Audit log", "Approval cases"):
+            self.assertIn(label, sidebar)
+        self.assertContains(response, "IAS Officer")
+
+    def test_shell_css_and_behavior_contract(self):
+        css = (Path(settings.BASE_DIR) / "static" / "portal" / "sidebar.css").read_text(encoding="utf-8")
+        javascript = (Path(settings.BASE_DIR) / "static" / "portal" / "app.js").read_text(encoding="utf-8")
+        for token in (
+            "--app-header-height: 64px",
+            "--sidebar-expanded-width: 240px",
+            "--sidebar-collapsed-width: 76px",
+            "grid-template-rows: var(--app-header-height) minmax(0, 1fr)",
+            ".sidebar-navigation",
+            "overflow-y: auto",
+            ".workspace > .main-content",
+            "@media (max-width: 900px)",
+            "@media (prefers-reduced-motion: reduce)",
+        ):
+            self.assertIn(token, css)
+        self.assertNotIn(".sidebar-account", css)
+        for token in (
+            "data-account-menu-toggle",
+            "event.key !== 'Escape'",
+            "event.key === 'ArrowDown'",
+            "data-nav-dismiss",
+            "app-sidebar-collapsed",
+        ):
+            self.assertIn(token, javascript)
 
     @patch("apps.search_ui.views.get_portal_repository", return_value=FakePortalRepository())
     @patch("apps.search_ui.views.get_retrieval_service")

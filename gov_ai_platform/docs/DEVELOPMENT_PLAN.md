@@ -295,9 +295,9 @@ Stage 1.1 — Approval/Rejection Hardening: **DONE**
 
 Stage 2 — Approval Governance & Immutable Audit: **DONE**
 
-Stage 3 — Secure Document Intake & IAS Corpus Approval: **NEXT**
+Stage 3 — Secure Document Intake & IAS Corpus Approval: **DONE**
 
-Stage 4 — Unresolved Reference Workbench: **WAITING**
+Stage 4 — Unresolved Reference Workbench: **NEXT**
 
 Stage 5 — Query-Time Graph Transparency & Missing-Document Assistance: **WAITING**
 
@@ -315,4 +315,6 @@ Stage 2 added an explicit fail-closed approval-policy registry, versioned cases,
 append-only decisions, PostgreSQL-protected hash-chained audit events, scoped IAS
 audit pages, and same-transaction Stage 1 event integration. It did not add
 document or V3 workflows, RAG, acquisition, ingestion, or retrieval/KG changes.
-Stage 3 must begin only under its own authorized work package.
+Stage 3 is complete under its authorized work package. Stage 4 must begin only
+under its own authorization and may reuse the bounded submission origin hook;
+Stage 5 and later work remain waiting.

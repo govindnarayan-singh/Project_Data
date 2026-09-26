@@ -347,6 +347,23 @@ class GraphRepository:
             ).fetchall()
         return [dict(row) for row in rows]
 
+    def targeted_unresolved_candidates(self, normalized_identifier: str) -> list[dict[str, Any]]:
+        """Load only unresolved evidence that can match one newly admitted identity."""
+        if not normalized_identifier:
+            return []
+        with self.connect() as connection:
+            rows = connection.execute(
+                """SELECT c.*,s.file_name AS source_file,s.department AS source_department
+                     FROM kg_reference_candidates c
+                     JOIN documents s ON s.id=c.source_document_id
+                    WHERE c.normalized_document_number=%s
+                      AND c.resolution_status IN ('AMBIGUOUS','NOT_IN_CORPUS','UNPARSEABLE','NEEDS_REVIEW')
+                      AND c.validation_status NOT IN ('HUMAN_CONFIRMED','REJECTED')
+                    ORDER BY c.id""",
+                (normalized_identifier,),
+            ).fetchall()
+        return [dict(row) for row in rows]
+
     def all_edges(self) -> list[dict[str, Any]]:
         with self.connect() as connection:
             rows = connection.execute(

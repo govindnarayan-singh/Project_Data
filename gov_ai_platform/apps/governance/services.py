@@ -109,7 +109,12 @@ def decide_approval_case(
                 raise GovernanceApprovalError("WRONG_ROLE", "The reviewer role is not authorized for this workflow.")
             if not policy.can_review_organization(actor, case.organization_id):
                 raise GovernanceApprovalError("OUT_OF_SCOPE", "The approval case is outside reviewer scope.")
-            if policy.prohibit_self_approval and case.submitted_by_id == actor.pk:
+            self_approval_prohibited = (
+                policy.prohibit_self_approval(actor, case)
+                if callable(policy.prohibit_self_approval)
+                else policy.prohibit_self_approval
+            )
+            if self_approval_prohibited and case.submitted_by_id == actor.pk:
                 raise GovernanceApprovalError("SELF_APPROVAL", "Maker-checker policy prohibits self-approval.")
             if case.state != ApprovalCaseState.PENDING:
                 raise GovernanceApprovalError("NOT_PENDING", "This approval case already has a final state.")
@@ -142,6 +147,15 @@ def decide_approval_case(
             )
             decision_record._governance_insert_allowed = True
             decision_record.save(force_insert=True)
+            if policy.apply_decision is not None:
+                policy.apply_decision(
+                    actor=actor,
+                    case=case,
+                    decision=decision,
+                    reason=clean_reason,
+                    snapshot=snapshot,
+                    correlation_id=correlation_id,
+                )
             record_governance_event(
                 category=AuditCategory.APPROVAL,
                 action=(AuditAction.APPROVAL_CASE_APPROVED if decision == ApprovalDecisionType.APPROVE else AuditAction.APPROVAL_CASE_REJECTED),

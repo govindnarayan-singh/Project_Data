@@ -11,7 +11,7 @@ DO $$
 BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_documents_source_origin') THEN
         ALTER TABLE documents ADD CONSTRAINT ck_documents_source_origin
-            CHECK (source_origin IN ('LOCAL_ORIGINAL','EXTERNAL_OFFICIAL'));
+            CHECK (source_origin IN ('LOCAL_ORIGINAL','EXTERNAL_OFFICIAL','APPROVED_SUBMISSION'));
     END IF;
     IF NOT EXISTS (SELECT 1 FROM pg_constraint WHERE conname = 'ck_documents_document_year') THEN
         ALTER TABLE documents ADD CONSTRAINT ck_documents_document_year

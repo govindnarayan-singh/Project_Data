@@ -672,9 +672,9 @@ Stage 1.1 — Live Approval / Rejection Hardening: **DONE**
 
 Stage 2 — Approval Governance & Immutable Audit: **DONE**
 
-Stage 3 — Secure Document Intake & IAS Corpus Approval: **NEXT**
+Stage 3 — Secure Document Intake & IAS Corpus Approval: **DONE**
 
-Stage 4 — Unresolved Reference Workbench: **WAITING**
+Stage 4 — Unresolved Reference Workbench: **NEXT**
 
 Stage 5 — Query-Time Graph Transparency & Missing-Document Assistance: **WAITING**
 
@@ -687,3 +687,38 @@ Stage 8 — V3 Label Sufficiency, Dataset Freeze & Dev/Locked Split: **WAITING**
 Stage 9 — V3 Relation-Context Gate & Locked Evaluation: **WAITING**
 
 Stage 10 — RAG V1: **WAITING**
+
+## Stage 3 — secure document intake and IAS corpus approval (2026-09-24)
+
+Stage 3 is complete. Active officers and scoped IAS users can submit PDFs into
+an internally named quarantine, while security validation, document identity,
+source provenance, governance approval, and ingestion remain separate states.
+Valid submissions register the Stage 2 DOCUMENT_CORPUS_ADMISSION workflow;
+approval and audit are transactionally coupled to exactly one durable database
+job, and all heavy extraction/OCR/embedding/KG work remains outside HTTP.
+
+The worker hash-verifies original bytes, safely promotes them to
+Government_Documents/Approved_Submissions, reuses the production extraction,
+chunking, BGE-M3/PostgreSQL persistence path, and runs candidate extraction plus
+bounded matching-reference re-resolution. It never creates vector-derived
+administrative relations. The live Stage 3 tables are empty and the production
+corpus remains 87 documents, 1,588 pages, 1,666 chunks/vectors, 2,631
+candidates, and 137 relations. See docs/STAGE_03_SECURE_DOCUMENT_INTAKE.md.
+
+### Stage 3A.1 — professional application shell hardening (2026-09-25)
+
+The shared application shell now uses a fixed 64-pixel top header and a bounded
+viewport grid below it. The sidebar contains navigation only, its navigation
+region scrolls independently, and the main workspace has its own scroll
+boundary. Account identity, human-readable role, and secure POST sign-out moved
+to a keyboard-accessible header menu. Desktop collapse is a true 76-pixel icon
+rail; at narrow widths the sidebar becomes an off-canvas drawer with an overlay
+and Escape dismissal. CSS variables own shell dimensions, and the shared rules
+preserve the Context panel and the Knowledge Graph's no-context layout.
+
+Browser tooling was unavailable for this bounded hardening pass. HTTP/template
+and DOM-contract tests cover account placement, scroll structure, active state,
+responsive hooks, accessibility behavior, and IAS/OFFICER navigation policy; a
+manual viewport checklist is retained in the Stage 3A.1 output report. No
+authentication, authorization, governance, database, corpus, KG, retrieval, or
+V3 behavior changed.

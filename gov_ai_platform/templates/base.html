@@ -6,56 +6,74 @@
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>{% block title %}Government Administrative AI Copilot{% endblock %}</title>
   <link rel="stylesheet" href="{% static 'portal/app.css' %}?v=2.2.0">
-  <link rel="stylesheet" href="{% static 'portal/sidebar.css' %}?v=2.2.0">
   <link rel="stylesheet" href="{% static 'portal/access.css' %}?v=1.0.0">
+  <link rel="stylesheet" href="{% static 'portal/stage3.css' %}?v=3.0.0">
   {% block extra_head %}{% endblock %}
-  <script src="{% static 'portal/app.js' %}?v=2.2.0" defer></script>
+  <link rel="stylesheet" href="{% static 'portal/sidebar.css' %}?v=3.1.0">
+  <script src="{% static 'portal/app.js' %}?v=3.1.0" defer></script>
 </head>
 <body>
   <a class="skip-link" href="#main-content">Skip to content</a>
-  <div class="app-shell">
+  <div class="app-shell" data-shell-layout>
+    <header class="topbar">
+      <button class="icon-button nav-toggle" type="button" aria-controls="primary-navigation" aria-expanded="false" aria-label="Open application navigation" title="Open application navigation"><span aria-hidden="true">&#9776;</span></button>
+      <div class="breadcrumb" aria-label="Current page">{% block breadcrumb %}Administrative intelligence{% endblock %}</div>
+      <div class="topbar-actions">
+        <button class="context-toggle" type="button" aria-controls="context-panel" aria-expanded="true"><span class="context-toggle-label">Context</span> <span aria-hidden="true">&#9703;</span></button>
+        <div class="account-menu" data-account-menu>
+          <button class="account-menu-trigger" type="button" data-account-menu-toggle aria-haspopup="menu" aria-controls="account-menu-panel" aria-expanded="false">
+            <span class="account-avatar" aria-hidden="true">{{ request.user.get_username|slice:":2"|upper }}</span>
+            <span class="header-account-copy">
+              <strong>{{ request.user.get_username }}</strong>
+              {% if access_role == 'IAS_OFFICER' %}<span>IAS Officer</span>{% elif access_role == 'OFFICER' %}<span>Government Officer</span>{% else %}<span>Authorized user</span>{% endif %}
+            </span>
+            <span class="account-menu-chevron" aria-hidden="true">&#9662;</span>
+          </button>
+          <div class="account-menu-panel" id="account-menu-panel" role="menu" aria-label="Account" hidden>
+            <div class="account-menu-identity" role="none">
+              <strong>{{ request.user.get_username }}</strong>
+              {% if access_role == 'IAS_OFFICER' %}<span>IAS Officer</span>{% elif access_role == 'OFFICER' %}<span>Government Officer</span>{% else %}<span>Authorized user</span>{% endif %}
+            </div>
+            <form method="post" action="{% url 'identity_access:logout' %}">{% csrf_token %}<button class="account-menu-signout" type="submit" role="menuitem">Sign out</button></form>
+          </div>
+        </div>
+      </div>
+    </header>
     <aside class="sidebar" id="primary-navigation" aria-label="Primary navigation">
       <div class="sidebar-brand-row">
         <div class="brand"><span class="brand-mark" aria-hidden="true">GA</span><div class="brand-copy"><strong>Government Administrative</strong><span>AI Copilot</span></div></div>
         <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="primary-navigation" aria-expanded="true" aria-label="Collapse application navigation" title="Collapse application navigation"><span aria-hidden="true" data-sidebar-toggle-icon>‹</span></button>
       </div>
-      <nav>
-        <a class="nav-link {% if active_section == 'copilot' %}active{% endif %}" href="{% url 'search_ui:search' %}"><span aria-hidden="true">⌕</span><span>Copilot</span></a>
-        <a class="nav-link {% if active_section == 'documents' %}active{% endif %}" href="{% url 'documents:list' %}"><span aria-hidden="true">▤</span><span>Documents</span></a>
-        <a class="nav-link {% if active_section == 'graph' %}active{% endif %}" href="{% url 'knowledge_graph_ui:overview' %}"><span aria-hidden="true">◎</span><span>Knowledge graph</span></a>
-        <a class="nav-link {% if active_section == 'unresolved' %}active{% endif %}" href="{% url 'knowledge_graph_ui:unresolved' %}"><span aria-hidden="true">◇</span><span>Unresolved</span></a>
+      <div class="sidebar-navigation" data-sidebar-scroll>
+      <nav aria-label="Workspace">
+        <a aria-label="Copilot" {% if active_section == 'copilot' %}aria-current="page"{% endif %} title="Copilot" class="nav-link {% if active_section == 'copilot' %}active{% endif %}" href="{% url 'search_ui:search' %}"><span aria-hidden="true">⌕</span><span>Copilot</span></a>
+        <a aria-label="Corpus documents" {% if active_section == 'documents' %}aria-current="page"{% endif %} title="Corpus documents" class="nav-link {% if active_section == 'documents' %}active{% endif %}" href="{% url 'documents:list' %}"><span aria-hidden="true">▤</span><span>Documents</span></a>
+        <a aria-label="Submit document" {% if active_section == 'document-submit' %}aria-current="page"{% endif %} title="Submit document" class="nav-link {% if active_section == 'document-submit' %}active{% endif %}" href="{% url 'document_intake:submit' %}"><span aria-hidden="true">+</span><span>Submit document</span></a>
+        <a aria-label="My submissions" {% if active_section == 'document-submissions' %}aria-current="page"{% endif %} title="My submissions" class="nav-link {% if active_section == 'document-submissions' %}active{% endif %}" href="{% url 'document_intake:list' %}"><span aria-hidden="true">&#128196;</span><span>My submissions</span></a>
+        <a aria-label="Knowledge graph" {% if active_section == 'graph' %}aria-current="page"{% endif %} title="Knowledge graph" class="nav-link {% if active_section == 'graph' %}active{% endif %}" href="{% url 'knowledge_graph_ui:overview' %}"><span aria-hidden="true">◎</span><span>Knowledge graph</span></a>
+        <a aria-label="Unresolved references" {% if active_section == 'unresolved' %}aria-current="page"{% endif %} title="Unresolved references" class="nav-link {% if active_section == 'unresolved' %}active{% endif %}" href="{% url 'knowledge_graph_ui:unresolved' %}"><span aria-hidden="true">◇</span><span>Unresolved</span></a>
       </nav>
-      <p class="nav-label">System</p>
-      <nav>
-        <a class="nav-link {% if active_section == 'corpus' %}active{% endif %}" href="{% url 'system_ui:corpus' %}"><span aria-hidden="true">◫</span><span>Corpus health</span></a>
-        <a class="nav-link {% if active_section == 'evaluation' %}active{% endif %}" href="{% url 'system_ui:evaluation' %}"><span aria-hidden="true">✓</span><span>Evaluation</span></a>
+      <p class="nav-label" id="system-navigation-label">System</p>
+      <nav aria-labelledby="system-navigation-label">
+        <a aria-label="Corpus health" {% if active_section == 'corpus' %}aria-current="page"{% endif %} title="Corpus health" class="nav-link {% if active_section == 'corpus' %}active{% endif %}" href="{% url 'system_ui:corpus' %}"><span aria-hidden="true">◫</span><span>Corpus health</span></a>
+        <a aria-label="Evaluation" {% if active_section == 'evaluation' %}aria-current="page"{% endif %} title="Evaluation" class="nav-link {% if active_section == 'evaluation' %}active{% endif %}" href="{% url 'system_ui:evaluation' %}"><span aria-hidden="true">✓</span><span>Evaluation</span></a>
       </nav>
       {% if can_review_access %}
-      <p class="nav-label">Access administration</p>
-      <nav>
-        <a class="nav-link {% if active_section == 'access-queue' %}active{% endif %}" href="{% url 'identity_access:ias_queue' %}"><span aria-hidden="true">&#128274;</span><span>Access requests</span></a>
-        <a class="nav-link {% if active_section == 'access-members' %}active{% endif %}" href="{% url 'identity_access:member_list' %}"><span aria-hidden="true">&#128101;</span><span>Officer access</span></a>
+      <p class="nav-label" id="access-navigation-label">Access administration</p>
+      <nav aria-labelledby="access-navigation-label">
+        <a aria-label="Access requests" {% if active_section == 'access-queue' %}aria-current="page"{% endif %} title="Access requests" class="nav-link {% if active_section == 'access-queue' %}active{% endif %}" href="{% url 'identity_access:ias_queue' %}"><span aria-hidden="true">&#128274;</span><span>Access requests</span></a>
+        <a aria-label="Officer access" {% if active_section == 'access-members' %}aria-current="page"{% endif %} title="Officer access" class="nav-link {% if active_section == 'access-members' %}active{% endif %}" href="{% url 'identity_access:member_list' %}"><span aria-hidden="true">&#128101;</span><span>Officer access</span></a>
       </nav>
-      <p class="nav-label">Governance</p>
-      <nav>
-        <a class="nav-link {% if active_section == 'governance-audit' %}active{% endif %}" href="{% url 'governance:audit_list' %}"><span aria-hidden="true">&#128221;</span><span>Audit log</span></a>
-        <a class="nav-link {% if active_section == 'governance-approvals' %}active{% endif %}" href="{% url 'governance:approval_case_list' %}"><span aria-hidden="true">&#9989;</span><span>Approval cases</span></a>
+      <p class="nav-label" id="governance-navigation-label">Governance</p>
+      <nav aria-labelledby="governance-navigation-label">
+        <a aria-label="Audit log" {% if active_section == 'governance-audit' %}aria-current="page"{% endif %} title="Audit log" class="nav-link {% if active_section == 'governance-audit' %}active{% endif %}" href="{% url 'governance:audit_list' %}"><span aria-hidden="true">&#128221;</span><span>Audit log</span></a>
+        <a aria-label="Approval cases" {% if active_section == 'governance-approvals' %}aria-current="page"{% endif %} title="Approval cases" class="nav-link {% if active_section == 'governance-approvals' %}active{% endif %}" href="{% url 'governance:approval_case_list' %}"><span aria-hidden="true">&#9989;</span><span>Approval cases</span></a>
       </nav>
       {% endif %}
-      <div class="sidebar-account">
-        <span class="muted">Signed in as</span>
-        <strong>{{ request.user.get_username }}</strong>
-        {% if access_role %}<span class="badge">{{ access_role }}</span>{% endif %}
-        <form method="post" action="{% url 'identity_access:logout' %}">{% csrf_token %}<button class="link-button" type="submit">Sign out</button></form>
       </div>
-      <div class="sidebar-foot"><span class="status-dot" aria-hidden="true"></span><span>Evidence-first workspace</span></div>
     </aside>
+    <button class="sidebar-scrim" type="button" data-nav-dismiss aria-label="Close application navigation" tabindex="-1"></button>
     <div class="workspace">
-      <header class="topbar">
-        <button class="icon-button nav-toggle" type="button" aria-controls="primary-navigation" aria-expanded="false"><span aria-hidden="true">☰</span><span class="sr-only">Toggle navigation</span></button>
-        <div class="breadcrumb">{% block breadcrumb %}Administrative intelligence{% endblock %}</div>
-        <button class="context-toggle" type="button" aria-controls="context-panel" aria-expanded="true">Context <span aria-hidden="true">◧</span></button>
-      </header>
       <main id="main-content" class="main-content">{% block content %}{% endblock %}</main>
     </div>
     <aside class="context-panel" id="context-panel" aria-label="Context panel">

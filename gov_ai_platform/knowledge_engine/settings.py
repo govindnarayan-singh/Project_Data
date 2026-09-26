@@ -45,6 +45,9 @@ class Settings:
     external_document_root: Path = _resolve_path(
         os.getenv("EXTERNAL_DOCUMENT_ROOT", "../Government_Documents/External_Official")
     )
+    approved_submission_root: Path = _resolve_path(
+        os.getenv("APPROVED_SUBMISSION_ROOT", "../Government_Documents/Approved_Submissions")
+    )
     backup_root: Path = _resolve_path(
         os.getenv("BACKUP_ROOT", "../Backups/gov_ai_platform")
     )

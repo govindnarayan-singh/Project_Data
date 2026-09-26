@@ -19,10 +19,11 @@ class SubjectSnapshot:
 class ApprovalPolicy:
     workflow_type: str
     required_reviewer_role: str
-    prohibit_self_approval: bool
+    prohibit_self_approval: bool | Callable[[object, object], bool]
     read_subject: Callable[[str], SubjectSnapshot]
     can_review_organization: Callable[[object, int], bool]
     allowed_decisions: frozenset[str]
+    apply_decision: Callable[..., None] | None = None
 
 
 _POLICIES: dict[str, ApprovalPolicy] = {}
