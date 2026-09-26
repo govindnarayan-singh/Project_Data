@@ -5,7 +5,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 from django.contrib.auth import get_user_model
-from django.db import close_old_connections, connection
+from django.db import close_old_connections, connection, connections
 from django.test import TransactionTestCase
 from django.utils import timezone
 
@@ -21,8 +21,13 @@ from apps.document_intake.models import (
     SubmissionState,
     ValidationState,
 )
-from apps.governance.constants import GENESIS_HASH, AuditAction
-from apps.governance.models import GovernanceAuditChain, GovernanceAuditEvent
+from apps.governance.constants import GENESIS_HASH, ApprovalCaseState, ApprovalDecisionType, AuditAction
+from apps.governance.models import (
+    GovernanceApprovalCase,
+    GovernanceApprovalDecision,
+    GovernanceAuditChain,
+    GovernanceAuditEvent,
+)
 from apps.identity_access.models import AccessGrant, AccessRole, IASAuthorityScope, OrganizationUnit
 
 
@@ -65,6 +70,31 @@ class DocumentIngestionPostgreSQLTests(TransactionTestCase):
             submission_reason="PostgreSQL job test",
             duplicate_status=DuplicateStatus.NEW,
         )
+        case = GovernanceApprovalCase.objects.create(
+            workflow_type="DOCUMENT_CORPUS_ADMISSION",
+            organization=self.organization,
+            submitted_by=self.officer,
+            subject_type="document_intake.DocumentSubmission",
+            subject_id=str(submission.pk),
+            subject_version=1,
+            subject_digest=submission.sha256,
+            state=ApprovalCaseState.APPROVED,
+            version=2,
+        )
+        decision = GovernanceApprovalDecision(
+            case=case,
+            actor=self.ias,
+            actor_role_snapshot=AccessRole.IAS_OFFICER,
+            organization_id_snapshot=self.organization.pk,
+            decision=ApprovalDecisionType.APPROVE,
+            reason="PostgreSQL worker fixture approval.",
+            subject_version_seen=1,
+            case_version_seen=1,
+        )
+        decision._governance_insert_allowed = True
+        decision.save(force_insert=True)
+        submission.approval_case = case
+        submission.save(update_fields=("approval_case", "updated_at"))
         job = DocumentIngestionJob.objects.create(
             submission=submission,
             state=state,
@@ -84,7 +114,7 @@ class DocumentIngestionPostgreSQLTests(TransactionTestCase):
                 result = claim_ingestion_job(job_id=job.pk, worker_id=worker)
                 return str(result.pk) if result else None
             finally:
-                close_old_connections()
+                connections.close_all()
 
         with ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(claim, ("worker-a", "worker-b")))
@@ -103,19 +133,17 @@ class DocumentIngestionPostgreSQLTests(TransactionTestCase):
             attempts=1,
             lease_expires_at=timezone.now() - timedelta(minutes=5),
         )
-        self.assertIsNone(claim_ingestion_job(job_id=job.pk, worker_id="recovery-worker"))
+        claimed = claim_ingestion_job(job_id=job.pk, worker_id="recovery-worker")
         job.refresh_from_db()
         submission.refresh_from_db()
-        self.assertEqual(job.state, JobState.RETRYABLE)
-        self.assertEqual(submission.state, SubmissionState.INGESTION_FAILED)
+        self.assertEqual(claimed.pk, job.pk)
+        self.assertEqual(job.state, JobState.RUNNING)
+        self.assertEqual(job.attempt_count, 2)
+        self.assertEqual(submission.state, SubmissionState.INGESTING)
         self.assertTrue(GovernanceAuditEvent.objects.filter(
             action=AuditAction.DOCUMENT_INGESTION_FAILED,
             resource_id=str(job.pk),
         ).exists())
-        retried = retry_ingestion(actor=self.ias, submission_id=submission.pk, expected_version=submission.version)
-        self.assertEqual(retried.state, JobState.PENDING)
-        claimed = claim_ingestion_job(job_id=job.pk, worker_id="retry-worker")
-        self.assertEqual(claimed.attempt_count, 2)
 
         exhausted_submission, exhausted = self.make_job(
             state=JobState.RUNNING,
@@ -129,3 +157,28 @@ class DocumentIngestionPostgreSQLTests(TransactionTestCase):
         exhausted_submission.refresh_from_db()
         self.assertEqual(exhausted.state, JobState.FAILED)
         self.assertEqual(exhausted_submission.state, SubmissionState.INGESTION_FAILED)
+
+    def test_workers_claim_distinct_jobs_without_starvation(self):
+        first_submission, first = self.make_job()
+        second_submission, second = self.make_job()
+        claimed_first = claim_ingestion_job(worker_id="worker-a")
+        claimed_second = claim_ingestion_job(worker_id="worker-b")
+        self.assertEqual({claimed_first.pk, claimed_second.pk}, {first.pk, second.pk})
+        first_submission.refresh_from_db()
+        second_submission.refresh_from_db()
+        self.assertEqual(first_submission.state, SubmissionState.INGESTING)
+        self.assertEqual(second_submission.state, SubmissionState.INGESTING)
+
+    def test_claim_filters_invalid_approval_rejection_and_validation(self):
+        pending_submission, pending = self.make_job(submission_state=SubmissionState.PENDING_IAS_APPROVAL)
+        pending_submission.approval_case.state = ApprovalCaseState.PENDING
+        pending_submission.approval_case.save(update_fields=("state", "updated_at"))
+        self.assertIsNone(claim_ingestion_job(job_id=pending.pk, worker_id="gate-worker"))
+
+        rejected_submission, rejected = self.make_job(submission_state=SubmissionState.REJECTED)
+        self.assertIsNone(claim_ingestion_job(job_id=rejected.pk, worker_id="gate-worker"))
+
+        invalid_submission, invalid = self.make_job()
+        invalid_submission.validation_state = ValidationState.FAILED
+        invalid_submission.save(update_fields=("validation_state", "updated_at"))
+        self.assertIsNone(claim_ingestion_job(job_id=invalid.pk, worker_id="gate-worker"))

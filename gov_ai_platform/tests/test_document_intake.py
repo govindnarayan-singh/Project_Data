@@ -14,6 +14,7 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from django.db import DatabaseError
 from django.test import TestCase, override_settings
 from django.urls import reverse
+from django.utils import timezone
 from pypdf import PdfReader, PdfWriter
 from reportlab.pdfgen import canvas
 
@@ -25,6 +26,7 @@ from apps.document_intake.ingestion import (
 from apps.document_intake.models import (
     DocumentIngestionJob,
     DocumentSubmission,
+    DocumentValidationAttempt,
     DuplicateStatus,
     JobState,
     MalwareStatus,
@@ -466,6 +468,10 @@ class DocumentIngestionUnitTests(DocumentIntakeBase):
         self.assertEqual(repeated.state, JobState.SUCCEEDED)
         self.assertEqual(ingestor.process_entry.call_count, 1)
         self.assertTrue(GovernanceAuditEvent.objects.filter(
+            action=AuditAction.DOCUMENT_INGESTION_STARTED,
+            correlation_id=submission.correlation_id,
+        ).exists())
+        self.assertTrue(GovernanceAuditEvent.objects.filter(
             action=AuditAction.DOCUMENT_INGESTION_SUCCEEDED,
             correlation_id=submission.correlation_id,
         ).exists())
@@ -475,7 +481,7 @@ class DocumentIngestionUnitTests(DocumentIntakeBase):
         quarantine_path(mismatch).write_bytes(b"%PDF-tampered")
         failed = process_ingestion_job(claim_ingestion_job(job_id=mismatch_job.pk), ingestor=Mock(), graph_pipeline=Mock())
         self.assertEqual(failed.state, JobState.FAILED)
-        self.assertEqual(failed.last_error_code, "HASH_MISMATCH")
+        self.assertEqual(failed.last_error_code, "BYTE_INTEGRITY_MISMATCH")
 
         missing, missing_job = self.queued_job("Missing quarantine TEST/2026/33")
         quarantine_path(missing).unlink()
@@ -492,10 +498,57 @@ class DocumentIngestionUnitTests(DocumentIntakeBase):
         retryable.refresh_from_db()
         retried = retry_ingestion(actor=self.ias, submission_id=retryable.pk, expected_version=retryable.version)
         self.assertEqual(retried.state, JobState.PENDING)
+        self.assertTrue(GovernanceAuditEvent.objects.filter(
+            action=AuditAction.DOCUMENT_INGESTION_RETRY_REQUESTED,
+            correlation_id=retryable.correlation_id,
+        ).exists())
         retryable.refresh_from_db()
         self.assertEqual(retryable.state, SubmissionState.QUEUED_FOR_INGESTION)
         with self.assertRaises(Exception):
             retry_ingestion(actor=self.officer, submission_id=retryable.pk, expected_version=retryable.version)
+
+        reclaimed = claim_ingestion_job(job_id=retry_job.pk, worker_id="retry-worker")
+        good_ingestor = Mock()
+        good_ingestor.process_entry.return_value = SimpleNamespace(
+            status="SUCCESS", document_id=45, error_stage="", error_message=""
+        )
+        good_graph = Mock()
+        good_graph.run_targeted.return_value = {"new_candidates": 0, "existing_newly_resolved": 0}
+        succeeded = process_ingestion_job(reclaimed, ingestor=good_ingestor, graph_pipeline=good_graph)
+        self.assertEqual(succeeded.state, JobState.SUCCEEDED)
+        self.assertEqual(succeeded.attempt_count, 2)
+
+    def test_worker_rechecks_latest_validation_and_final_approval(self):
+        validation_submission, validation_job = self.queued_job("Validation gate TEST/2026/36")
+        claimed = claim_ingestion_job(job_id=validation_job.pk, worker_id="gate-worker")
+        validation_submission.refresh_from_db()
+        latest = validation_submission.validation_attempts.order_by("-attempt_number").first()
+        DocumentValidationAttempt.objects.create(
+            submission=validation_submission,
+            attempt_number=latest.attempt_number + 1,
+            requested_by=self.ias,
+            validator_version="stage3d-test",
+            result_code="TEST_FAILURE",
+            validation_state=ValidationState.FAILED,
+            security_status=SecurityStatus.FAILED,
+            malware_status=validation_submission.malware_status,
+            page_count=validation_submission.page_count,
+            signature_status=validation_submission.signature_status,
+        )
+        validation_submission.validation_state = ValidationState.FAILED
+        validation_submission.security_status = SecurityStatus.FAILED
+        validation_submission.save(update_fields=("validation_state", "security_status", "updated_at"))
+        failed = process_ingestion_job(claimed, ingestor=Mock(), graph_pipeline=Mock())
+        self.assertEqual(failed.state, JobState.FAILED)
+        self.assertEqual(failed.last_error_code, "VALIDATION_GATE_FAILED")
+
+        approval_submission, approval_job = self.queued_job("Approval gate TEST/2026/37")
+        claimed = claim_ingestion_job(job_id=approval_job.pk, worker_id="gate-worker")
+        approval_submission.approval_case.state = "REJECTED"
+        approval_submission.approval_case.save(update_fields=("state", "updated_at"))
+        failed = process_ingestion_job(claimed, ingestor=Mock(), graph_pipeline=Mock())
+        self.assertEqual(failed.state, JobState.FAILED)
+        self.assertEqual(failed.last_error_code, "APPROVAL_GATE_FAILED")
 
     def test_approval_does_not_execute_heavy_pipeline(self):
         submission = self.upload("No request ingestion TEST/2026/35")
@@ -518,6 +571,20 @@ class DocumentIngestionUnitTests(DocumentIntakeBase):
 
 
 class DocumentIntakeUiTests(DocumentIntakeBase):
+    def approved_submission(self, text="UI ingestion TEST/2026/60"):
+        submission = self.upload(text)
+        decide_approval_case(
+            self.ias,
+            submission.approval_case_id,
+            decision=ApprovalDecisionType.APPROVE,
+            reason="Approved for UI state test.",
+            expected_case_version=1,
+            expected_subject_version=1,
+            correlation_id=submission.correlation_id,
+        )
+        submission.refresh_from_db()
+        return submission
+
     def test_shared_shell_empty_state_and_human_audit_labels(self):
         self.client.force_login(self.ias)
         empty = self.client.get(reverse("governance:approval_case_list"))
@@ -554,3 +621,50 @@ class DocumentIntakeUiTests(DocumentIntakeBase):
         self.assertContains(response, "Bounded pre-approval preview")
         self.assertContains(response, "Malware scan unavailable in this local deployment")
         self.assertContains(response, "Approval")
+
+    def test_ingestion_states_are_plain_language_and_retry_is_ias_only(self):
+        submission = self.approved_submission()
+        self.client.force_login(self.officer)
+        pending = self.client.get(reverse("document_intake:detail", args=[submission.pk]))
+        self.assertContains(pending, "Waiting to be processed")
+        self.assertContains(pending, "0 of 3")
+        self.assertNotContains(pending, "Worker:")
+        self.assertNotContains(pending, "Queue retry")
+
+        job = submission.ingestion_job
+        job.state = JobState.RUNNING
+        job.current_stage = "PROCESSING_DOCUMENT"
+        job.attempt_count = 1
+        job.save(update_fields=("state", "current_stage", "attempt_count", "updated_at"))
+        submission.state = SubmissionState.INGESTING
+        submission.save(update_fields=("state", "updated_at"))
+        running = self.client.get(reverse("document_intake:detail", args=[submission.pk]))
+        self.assertContains(running, "Processing document")
+        self.assertContains(running, "Extracting pages and generating embeddings")
+
+        job.state = JobState.RETRYABLE
+        job.current_stage = "FAILED"
+        job.safe_error_reason = "A temporary model problem interrupted processing."
+        job.save(update_fields=("state", "current_stage", "safe_error_reason", "updated_at"))
+        submission.state = SubmissionState.INGESTION_FAILED
+        submission.save(update_fields=("state", "updated_at"))
+        officer_retryable = self.client.get(reverse("document_intake:detail", args=[submission.pk]))
+        self.assertContains(officer_retryable, "Waiting for another attempt")
+        self.assertNotContains(officer_retryable, "Queue retry")
+
+        self.client.force_login(self.ias)
+        ias_retryable = self.client.get(reverse("document_intake:detail", args=[submission.pk]))
+        self.assertContains(ias_retryable, "Queue retry")
+        self.assertContains(ias_retryable, "Job ID")
+
+        job.state = JobState.SUCCEEDED
+        job.current_stage = "COMPLETED"
+        job.finished_at = timezone.now()
+        job.kg_result = {"new_candidates": 2, "existing_newly_resolved": 1, "pipeline": {"pages": 6, "chunks": 8, "embeddings": 8}}
+        job.save(update_fields=("state", "current_stage", "finished_at", "kg_result", "updated_at"))
+        submission.state = SubmissionState.INGESTED
+        submission.ingested_document_id = 88
+        submission.save(update_fields=("state", "ingested_document_id", "updated_at"))
+        succeeded = self.client.get(reverse("document_intake:detail", args=[submission.pk]))
+        self.assertContains(succeeded, "Document admitted to corpus")
+        self.assertContains(succeeded, "KG candidates generated")

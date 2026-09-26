@@ -128,15 +128,36 @@ Any audit or job insert failure rolls back the decision and submission state.
 
 ## Durable ingestion
 
-python manage.py process_document_ingestion_jobs --once claims at most one
-pending job. --job <UUID> permits a controlled target. There is deliberately no
-implicit loop and no runserver/autoreload coupling.
+The web process only approves and enqueues. The worker is a separate process;
+it supports a bounded one-shot mode, a production-style polling loop, and exact
+single-job troubleshooting:
 
-PostgreSQL select_for_update(skip_locked=True) prevents double claims. A
-bounded lease detects worker crashes. Expired jobs become RETRYABLE, or FAILED
-after DOCUMENT_INGESTION_MAX_ATTEMPTS. Only scoped IAS may POST a
-version-checked retry. Security/format, hash, rejection, and exhausted failures
-are not automatically retried.
+```powershell
+# Terminal 1 — web
+python manage.py runserver
+
+# Terminal 2 — worker
+python manage.py process_document_ingestion_jobs --loop
+
+# One controlled job
+python manage.py process_document_ingestion_jobs --job-id <UUID>
+```
+
+`--poll-seconds` is bounded to 0.25–60 seconds and `--max-jobs` can bound a
+loop. `--once` processes at most one eligible job. The worker is never started
+inside a request handler or Django autoreloader. Production likewise runs one
+web process class plus one or more separate worker processes.
+
+PostgreSQL `transaction.atomic()` plus `select_for_update(skip_locked=True)`
+prevents double claims. PENDING and transient RETRYABLE jobs are eligible while
+the attempt count remains below the configured maximum. Attempts increment only
+when claimed. A worker heartbeat records process start, latest heartbeat, and
+current job while renewing the owned lease. Expired RUNNING jobs become
+RETRYABLE and can be reclaimed, or FAILED after
+DOCUMENT_INGESTION_MAX_ATTEMPTS. Scoped IAS users may also POST a
+CSRF/version-checked bounded retry. Security/format, byte-integrity, rejection,
+validation, and exhausted failures are permanent and never automatically
+retried.
 
 Immediately before processing, the worker recomputes the quarantine SHA-256.
 It then reuses BatchIngestor, which retains current pypdf/pypdfium2/Tesseract
@@ -169,7 +190,9 @@ The Stage 2 ledger records:
 - DOCUMENT_APPROVED
 - DOCUMENT_REJECTED
 - DOCUMENT_INGESTION_QUEUED
-- DOCUMENT_INGESTION_RETRIED
+- DOCUMENT_INGESTION_STARTED
+- DOCUMENT_INGESTION_RETRY_REQUESTED
+- DOCUMENT_INGESTION_RETRIED (historical compatibility)
 - DOCUMENT_INGESTION_SUCCEEDED
 - DOCUMENT_INGESTION_FAILED
 
@@ -221,9 +244,34 @@ claim/recovery tests, and an isolated actual PDF → extraction → chunking →
 mocked 1,024-dimensional model boundary → pgvector persistence → targeted KG
 test pass. The isolated pipeline rerun is SKIPPED_UNCHANGED.
 
-No test PDF entered the live corpus. Stage 3 production tables start empty.
-Production remains 87 documents, 1,588 pages, 1,666 chunks/embeddings, 2,631 KG
-candidates, 50 REFERENCES, and 87 ISSUED_BY.
+The Stage 3D integration PDF was confined to an isolated test database. The one
+existing IAS-approved live submission was then processed through the same
+durable worker command. Production is now 88 documents, 1,594 pages, 1,671
+chunks/embeddings, 2,645 KG candidates, 50 REFERENCES, and 88 ISSUED_BY. The
+new document contributes six OCR pages, five BGE-M3 vectors, fourteen
+candidates, and one deterministic ISSUED_BY edge. Historical dense and Graph
+V1/V2/V3 benchmark artifacts remain unchanged; their 87-document results are a
+versioned historical baseline.
+
+## Stage 3D durable worker closure
+
+The worker independently rechecks the final `DOCUMENT_CORPUS_ADMISSION`
+decision, subject/SHA/organization identity, the latest validation attempt, and
+the exact quarantine SHA before archive promotion. Exact bytes are copied via a
+temporary file, re-hashed, fsynced, and atomically renamed under
+`Approved_Submissions`; IAS attestation is not relabelled as independent
+official-source verification. The existing BatchIngestor performs pypdf/
+pypdfium2/Tesseract `mar+eng` extraction, current chunking, BAAI/bge-m3
+1,024-dimensional embedding, and atomic PostgreSQL persistence. Targeted KG
+processing parses only the admitted document and identity-matching unresolved
+evidence. Corpus admission never creates HUMAN_CONFIRMED or vector-derived
+relations.
+
+User-facing status is Waiting, Processing, Ingested, Retryable, or Failed.
+Officers see plain-language progress and cannot retry; in-scope IAS users can
+see bounded job/worker diagnostics and request an eligible retry. Job success
+and submission INGESTED are committed only after stored page/chunk/vector
+integrity and targeted KG completion.
 
 ## Stage 3B.1 PDF validation and provenance hardening
 

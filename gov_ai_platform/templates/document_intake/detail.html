@@ -32,6 +32,31 @@
   <li class="{% if submission.state == 'INGESTED' %}done{% endif %}">Ingested</li>
 </ol>
 
+{% if ingestion_view %}
+<section class="panel ingestion-status" aria-labelledby="ingestion-status-title">
+  <span class="eyebrow">Ingestion status</span>
+  <h2 id="ingestion-status-title">{{ ingestion_view.title }}</h2>
+  <p>{{ ingestion_view.explanation }}</p>
+  {% if ingestion_view.stage %}<p><strong>Current stage:</strong> {{ ingestion_view.stage }}</p>{% endif %}
+  <p><strong>Attempts:</strong> {{ ingestion_view.attempts }}</p>
+  {% if job.state == 'SUCCEEDED' %}
+  <dl class="access-facts">
+    <dt>Pages</dt><dd>{{ ingestion_view.pipeline.pages }}</dd>
+    <dt>Chunks</dt><dd>{{ ingestion_view.pipeline.chunks }}</dd>
+    <dt>Embeddings</dt><dd>{{ ingestion_view.pipeline.embeddings }}</dd>
+    <dt>KG candidates generated</dt><dd>{{ ingestion_view.kg.new_candidates|default:0 }}</dd>
+    <dt>Existing references newly resolved</dt><dd>{{ ingestion_view.kg.existing_newly_resolved|default:0 }}</dd>
+    <dt>Completed</dt><dd>{{ job.finished_at|date:"d M Y, H:i:s T" }}</dd>
+    <dt>Corpus document</dt><dd><a href="{% url 'documents:detail' submission.ingested_document_id %}">Open document {{ submission.ingested_document_id }}</a></dd>
+  </dl>
+  {% endif %}
+  {% if job.state == 'FAILED' or job.state == 'RETRYABLE' %}
+    <p><strong>Reason:</strong> {{ job.safe_error_reason|default:"The worker stopped safely before corpus admission completed." }}</p>
+    {% if show_technical %}<details><summary>Technical details</summary><dl class="access-facts"><dt>Error code</dt><dd><code>{{ job.last_error_code }}</code></dd><dt>Job ID</dt><dd><code>{{ job.id }}</code></dd></dl></details>{% endif %}
+  {% endif %}
+</section>
+{% endif %}
+
 <div class="access-detail-grid">
 <section class="panel"><h2>File and uploader</h2><dl class="access-facts">
 <dt>Uploaded by</dt><dd>{{ submission.get_submitter_role_snapshot_display|default:submission.submitter_role_snapshot }} &mdash; {{ submission.submitted_by.get_username }}</dd>
@@ -78,4 +103,4 @@
 {% if retry_form %}<section class="panel"><h2>Retry ingestion</h2><p>The document remains approved, but the last ingestion attempt failed. Retry is limited and audited.</p><form method="post" action="{% url 'document_intake:retry' submission.id %}">{% csrf_token %}{{ retry_form }}<button class="primary-button" type="submit">Queue retry</button></form></section>{% endif %}
 {% endblock %}
 {% block context_title %}Trust and provenance{% endblock %}
-{% block context_panel %}<p>Quarantine, security validation, uploader identity, claimed source, IAS attestation, independent source verification, corpus admission, and ingestion are separate controls.</p><p><strong>Validator:</strong> {{ submission.validator_version|default:"Earlier version" }}<br><strong>Attempts:</strong> {{ submission.validation_attempts.count }}</p>{% if job %}<p><strong>Job:</strong> {{ job.get_state_display }}<br><span class="compact-id">{{ job.id }}</span><br>Attempts: {{ job.attempt_count }}/{{ job.max_attempts }}</p>{% endif %}{% endblock %}
+{% block context_panel %}<p>Quarantine, security validation, uploader identity, claimed source, IAS attestation, independent source verification, corpus admission, and ingestion are separate controls.</p><p><strong>Validator:</strong> {{ submission.validator_version|default:"Earlier version" }}<br><strong>Validation attempts:</strong> {{ submission.validation_attempts.count }}</p>{% if job %}<p><strong>Ingestion status:</strong> {{ ingestion_view.title }}<br><strong>Attempts:</strong> {{ ingestion_view.attempts }}</p>{% if show_technical %}<p><strong>Job ID:</strong><br><span class="compact-id">{{ job.id }}</span><br><strong>Worker:</strong> {{ worker_health.label }}{% if worker_health.last_heartbeat %}<br><strong>Last heartbeat:</strong> {{ worker_health.last_heartbeat|date:"d M Y, H:i:s T" }}{% endif %}</p>{% endif %}{% endif %}{% endblock %}

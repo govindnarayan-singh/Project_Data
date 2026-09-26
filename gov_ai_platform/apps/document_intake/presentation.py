@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from .models import MalwareStatus, SignatureStatus, SourceProvenance, SubmissionState
+from .models import JobState, MalwareStatus, SignatureStatus, SourceProvenance, SubmissionState
 
 
 @dataclass(frozen=True)
@@ -190,4 +190,37 @@ def validation_presentation(submission, *, show_technical: bool) -> dict:
         "extraction_label": extraction_labels.get(submission.extraction_status, "Not checked"),
         "source_verification": source_verification,
         "corpus_admission": submission.get_state_display(),
+    }
+
+
+def ingestion_presentation(job) -> dict | None:
+    if job is None:
+        return None
+    labels = {
+        JobState.PENDING: ("Waiting to be processed", "Your document has been approved and is waiting for the ingestion worker."),
+        JobState.RUNNING: ("Processing document", "The approved document is being added to the corpus."),
+        JobState.SUCCEEDED: ("Document admitted to corpus", "The document and its searchable evidence are ready."),
+        JobState.RETRYABLE: ("Waiting for another attempt", "A temporary problem interrupted ingestion; a bounded retry is available."),
+        JobState.FAILED: ("Document ingestion could not be completed", job.safe_error_reason or "The ingestion worker stopped safely."),
+    }
+    stage_labels = {
+        "CLAIMED": "Starting",
+        "VERIFYING_APPROVAL": "Verifying approval",
+        "VERIFYING_BYTES": "Verifying original bytes",
+        "ARCHIVED": "Archiving complete",
+        "PROCESSING_DOCUMENT": "Extracting pages and generating embeddings",
+        "UPDATING_KNOWLEDGE_GRAPH": "Updating knowledge graph",
+        "COMPLETED": "Complete",
+        "FAILED": "Stopped safely",
+        "WAITING": "Waiting",
+    }
+    title, explanation = labels.get(job.state, (job.get_state_display(), ""))
+    pipeline = (job.kg_result or {}).get("pipeline", {})
+    return {
+        "title": title,
+        "explanation": explanation,
+        "stage": stage_labels.get(job.current_stage, "Processing" if job.state == JobState.RUNNING else ""),
+        "attempts": f"{job.attempt_count} of {job.max_attempts}",
+        "pipeline": pipeline,
+        "kg": job.kg_result or {},
     }

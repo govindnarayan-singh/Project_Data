@@ -12,9 +12,9 @@ from apps.governance.services import decide_approval_case
 from apps.identity_access.permissions import can_approve_document
 
 from .forms import DocumentDecisionForm, DocumentSubmissionForm, RevalidateDocumentForm, RetryIngestionForm
-from .ingestion import retry_ingestion
+from .ingestion import retry_ingestion, worker_health
 from .models import DocumentSubmission, JobState, SecurityStatus, SubmissionState
-from .presentation import validation_presentation
+from .presentation import ingestion_presentation, validation_presentation
 from .services import (
     DocumentIntakeError,
     authorized_submission_organizations,
@@ -112,6 +112,9 @@ def detail(request, submission_id):
         "retry_form": retry_form,
         "revalidate_form": revalidate_form,
         "validation_view": validation_presentation(submission, show_technical=show_technical),
+        "ingestion_view": ingestion_presentation(job),
+        "show_technical": show_technical,
+        "worker_health": worker_health(job=job) if show_technical and job else None,
         "active_section": "governance-approvals" if can_approve_document(request.user, submission.organization_id) else "document-submissions",
     })
 

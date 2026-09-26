@@ -705,6 +705,32 @@ administrative relations. The live Stage 3 tables are empty and the production
 corpus remains 87 documents, 1,588 pages, 1,666 chunks/vectors, 2,631
 candidates, and 137 relations. See docs/STAGE_03_SECURE_DOCUMENT_INTAKE.md.
 
+### Stage 3D — durable ingestion and targeted KG closure (2026-09-26)
+
+Stage 3D is complete. The observed `PENDING 0/3` state was caused by the
+existing one-shot worker not running; approval, validation, queue creation, and
+job identity were valid. The same database-backed worker now has `--once`,
+`--loop`, `--job-id`, bounded polling/max-job options, a renewable lease and
+heartbeat, PostgreSQL skip-locked claims, STARTED/SUCCEEDED/FAILED/retry audit
+events, independent approval/latest-validation/SHA gates, and plain-language
+UI status. Web approval still performs no extraction, OCR, embedding, or KG
+work.
+
+The one existing IAS-approved job was processed through the normal worker path
+on attempt 1. Its exact SHA-256 bytes were atomically promoted to the
+Approved_Submissions archive, then the existing OCR/chunk/BGE-M3/PostgreSQL
+pipeline stored document 112 with six OCR pages, five chunks and five
+1,024-dimensional vectors. Targeted KG processing inserted fourteen candidates
+and one ISSUED_BY edge; it resolved no existing unresolved candidate and added
+no REFERENCES or strong/vector-derived edge.
+
+Live production is now 88 documents, 1,594 pages, 1,671 chunks/vectors, 2,645
+candidates, 50 REFERENCES, and 88 ISSUED_BY. The audit chain verifies through
+sequence 27. The historical 87-document dense and Graph V1/V2/V3 experiments
+and V3 review data remain unchanged. Operational commands and evidence are in
+`docs/STAGE_03_SECURE_DOCUMENT_INTAKE.md` and
+`outputs/stage_03d_document_ingestion/`. Stage 4 is next.
+
 ### Stage 3A.1 — professional application shell hardening (2026-09-25)
 
 The shared application shell now uses a fixed 64-pixel top header and a bounded

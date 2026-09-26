@@ -59,7 +59,9 @@ class AuditAction(models.TextChoices):
     DOCUMENT_APPROVED = "DOCUMENT_APPROVED", "Document approved"
     DOCUMENT_REJECTED = "DOCUMENT_REJECTED", "Document rejected"
     DOCUMENT_INGESTION_QUEUED = "DOCUMENT_INGESTION_QUEUED", "Document ingestion queued"
+    DOCUMENT_INGESTION_STARTED = "DOCUMENT_INGESTION_STARTED", "Document ingestion started"
     DOCUMENT_INGESTION_RETRIED = "DOCUMENT_INGESTION_RETRIED", "Document ingestion retried"
+    DOCUMENT_INGESTION_RETRY_REQUESTED = "DOCUMENT_INGESTION_RETRY_REQUESTED", "Document ingestion retry requested"
     DOCUMENT_INGESTION_SUCCEEDED = "DOCUMENT_INGESTION_SUCCEEDED", "Document ingestion succeeded"
     DOCUMENT_INGESTION_FAILED = "DOCUMENT_INGESTION_FAILED", "Document ingestion failed"
 

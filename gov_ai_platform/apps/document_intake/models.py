@@ -218,6 +218,7 @@ class DocumentIngestionJob(models.Model):
     max_attempts = models.PositiveIntegerField(default=3)
     idempotency_key = models.CharField(max_length=128, unique=True)
     worker_id = models.CharField(max_length=128, blank=True)
+    current_stage = models.CharField(max_length=64, blank=True)
     lease_expires_at = models.DateTimeField(null=True, blank=True)
     started_at = models.DateTimeField(null=True, blank=True)
     finished_at = models.DateTimeField(null=True, blank=True)
@@ -234,3 +235,20 @@ class DocumentIngestionJob(models.Model):
         ordering = ("created_at",)
         constraints = [models.CheckConstraint(condition=Q(state__in=JobState.values), name="doc_job_state_valid")]
         indexes = [models.Index(fields=("state", "created_at"), name="doc_job_claim_idx")]
+
+
+class DocumentIngestionWorkerHeartbeat(models.Model):
+    worker_id = models.CharField(max_length=128, primary_key=True)
+    started_at = models.DateTimeField()
+    last_heartbeat = models.DateTimeField()
+    current_job = models.ForeignKey(
+        DocumentIngestionJob,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="worker_heartbeats",
+    )
+
+    class Meta:
+        ordering = ("-last_heartbeat",)
+        indexes = [models.Index(fields=("last_heartbeat",), name="doc_worker_heartbeat_idx")]
