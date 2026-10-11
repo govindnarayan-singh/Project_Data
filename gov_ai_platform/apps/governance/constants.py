@@ -64,6 +64,15 @@ class AuditAction(models.TextChoices):
     DOCUMENT_INGESTION_RETRY_REQUESTED = "DOCUMENT_INGESTION_RETRY_REQUESTED", "Document ingestion retry requested"
     DOCUMENT_INGESTION_SUCCEEDED = "DOCUMENT_INGESTION_SUCCEEDED", "Document ingestion succeeded"
     DOCUMENT_INGESTION_FAILED = "DOCUMENT_INGESTION_FAILED", "Document ingestion failed"
+    UNRESOLVED_WORK_ITEM_CLAIMED = "UNRESOLVED_WORK_ITEM_CLAIMED", "Unresolved work item claimed"
+    UNRESOLVED_WORK_ITEM_RELEASED = "UNRESOLVED_WORK_ITEM_RELEASED", "Unresolved work item released"
+    UNRESOLVED_WORK_ITEM_ASSIGNED = "UNRESOLVED_WORK_ITEM_ASSIGNED", "Unresolved work item assigned"
+    UNRESOLVED_DOCUMENT_SUBMITTED = "UNRESOLVED_DOCUMENT_SUBMITTED", "Unresolved document submitted"
+    REFERENCE_RESOLUTION_PROPOSED = "REFERENCE_RESOLUTION_PROPOSED", "Reference resolution proposed"
+    REFERENCE_RESOLUTION_APPROVED = "REFERENCE_RESOLUTION_APPROVED", "Reference resolution approved"
+    REFERENCE_RESOLUTION_REJECTED = "REFERENCE_RESOLUTION_REJECTED", "Reference resolution rejected"
+    REFERENCE_RESOLVED_AUTO = "REFERENCE_RESOLVED_AUTO", "Reference resolved automatically"
+    WORK_ITEM_CLOSED_INVALID = "WORK_ITEM_CLOSED_INVALID", "Work item closed as invalid"
 
 
 ALLOWED_AUDIT_METADATA_KEYS = frozenset({
@@ -85,4 +94,13 @@ ALLOWED_AUDIT_METADATA_KEYS = frozenset({
     "validation_attempt",
     "validator_version",
     "signature_status",
+    "candidate_count",
+    "target_document_id",
+    "relation_ids",
+    "submission_id",
+    "assignee_id",
+    "claim_expires_at",
+    "resolution_method",
+    "proposal_id",
+    "local_catalog_id",
 })

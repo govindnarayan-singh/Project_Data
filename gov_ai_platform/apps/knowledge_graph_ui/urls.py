@@ -11,6 +11,16 @@ from .views import (
     overview,
     unresolved_detail,
     unresolved_list,
+    work_item_assign,
+    work_item_auto_resolve,
+    work_item_claim,
+    work_item_close_invalid,
+    work_item_decide,
+    work_item_detail,
+    work_item_propose,
+    work_item_release,
+    work_item_submit_local,
+    work_item_upload,
 )
 
 app_name = "knowledge_graph_ui"
@@ -24,5 +34,15 @@ urlpatterns = [
     path("api/edges/<int:relation_id>/", api_edge_detail, name="api_edge_detail"),
     path("api/components/", api_components, name="api_components"),
     path("unresolved/", unresolved_list, name="unresolved"),
+    path("unresolved/work/<uuid:item_id>/", work_item_detail, name="work_item_detail"),
+    path("unresolved/work/<uuid:item_id>/claim/", work_item_claim, name="work_item_claim"),
+    path("unresolved/work/<uuid:item_id>/release/", work_item_release, name="work_item_release"),
+    path("unresolved/work/<uuid:item_id>/assign/", work_item_assign, name="work_item_assign"),
+    path("unresolved/work/<uuid:item_id>/auto-resolve/", work_item_auto_resolve, name="work_item_auto_resolve"),
+    path("unresolved/work/<uuid:item_id>/upload/", work_item_upload, name="work_item_upload"),
+    path("unresolved/work/<uuid:item_id>/submit-local/", work_item_submit_local, name="work_item_submit_local"),
+    path("unresolved/work/<uuid:item_id>/propose/", work_item_propose, name="work_item_propose"),
+    path("unresolved/work/<uuid:item_id>/proposals/<uuid:proposal_id>/decide/", work_item_decide, name="work_item_decide"),
+    path("unresolved/work/<uuid:item_id>/close-invalid/", work_item_close_invalid, name="work_item_close_invalid"),
     path("unresolved/<int:candidate_id>/", unresolved_detail, name="unresolved_detail"),
 ]

@@ -297,7 +297,7 @@ Stage 2 — Approval Governance & Immutable Audit: **DONE**
 
 Stage 3 — Secure Document Intake & IAS Corpus Approval: **DONE**
 
-Stage 4 — Unresolved Reference Workbench: **NEXT**
+Stage 4 — Unresolved Reference Workbench: **IN PROGRESS - 4F RECOVERY GATE**
 
 Stage 5 — Query-Time Graph Transparency & Missing-Document Assistance: **WAITING**
 
@@ -315,6 +315,12 @@ Stage 2 added an explicit fail-closed approval-policy registry, versioned cases,
 append-only decisions, PostgreSQL-protected hash-chained audit events, scoped IAS
 audit pages, and same-transaction Stage 1 event integration. It did not add
 document or V3 workflows, RAG, acquisition, ingestion, or retrieval/KG changes.
-Stage 3 is complete under its authorized work package. Stage 4 must begin only
-under its own authorization and may reuse the bounded submission origin hook;
-Stage 5 and later work remain waiting.
+Stage 3 is complete under its authorized work package. Stage 4 application work
+now implements the target registry, evidence/assignment workflow, deterministic
+corpus/local matching, Stage 3 handoff, and governed automatic/human resolution.
+Its production acceptance remains blocked in 4F because pre-existing
+Django-managed identity, audit/governance, and Stage 3 operational rows were
+lost during an unsafe test-database invocation. Restore verified post-Stage-3
+operational tables, or obtain explicit authorization for re-bootstrap with a
+documented audit discontinuity, then rerun Stage 4 acceptance. Stage 5 and later
+work remain waiting. See `docs/STAGE_04_UNRESOLVED_REFERENCE_WORKBENCH.md`.

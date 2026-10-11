@@ -13,6 +13,7 @@ from django.views.decorators.http import require_GET
 from apps.document_intake.models import DocumentSubmission
 from apps.document_intake.presentation import failure_message_for_code
 from apps.identity_access.permissions import authorized_organization_ids, ias_required
+from apps.knowledge_graph_ui.models import ReferenceResolutionProposal
 
 from .constants import ApprovalCaseState, AuditAction, AuditCategory, AuditOutcome
 from .models import GovernanceApprovalCase, GovernanceAuditEvent
@@ -24,6 +25,8 @@ RESOURCE_LABELS = {
     "governance.GovernanceApprovalCase": "Approval case",
     "document_intake.DocumentSubmission": "Document submission",
     "document_intake.DocumentIngestionJob": "Document ingestion job",
+    "knowledge_graph_ui.UnresolvedReferenceWorkItem": "Unresolved reference work item",
+    "knowledge_graph_ui.ReferenceResolutionProposal": "Reference resolution proposal",
 }
 
 
@@ -124,19 +127,36 @@ def approval_case_list(request):
             approval_case_id__in=[case.pk for case in page.object_list]
         )
     }
+    resolution_subjects = {
+        str(proposal.approval_case_id): proposal
+        for proposal in ReferenceResolutionProposal.objects.filter(
+            approval_case_id__in=[case.pk for case in page.object_list]
+        ).select_related("work_item")
+    }
     for case in page.object_list:
         submission = document_subjects.get(str(case.pk))
+        proposal = resolution_subjects.get(str(case.pk))
         case.display_workflow = (
             "Document corpus admission"
             if case.workflow_type == "DOCUMENT_CORPUS_ADMISSION"
+            else "Knowledge-graph reference resolution"
+            if case.workflow_type == "KG_REFERENCE_RESOLUTION"
             else case.workflow_type.replace("_", " ").title()
         )
         case.display_subject = (
             str(submission.detected_metadata.get("subject") or submission.original_filename)
             if submission
+            else f"{proposal.work_item.display_identifier} → corpus document {proposal.target_document_id}"
+            if proposal
             else f"{case.subject_type.rsplit('.', 1)[-1]} {str(case.subject_id)[:12]}"
         )
-        case.detail_url = reverse("document_intake:detail", args=[submission.pk]) if submission else ""
+        case.detail_url = (
+            reverse("document_intake:detail", args=[submission.pk])
+            if submission
+            else reverse("knowledge_graph_ui:work_item_detail", args=[proposal.work_item_id])
+            if proposal
+            else ""
+        )
     return render(request, "governance/approval_case_list.html", {
         "page_obj": page,
         "states": ApprovalCaseState.choices,

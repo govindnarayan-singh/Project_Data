@@ -674,7 +674,7 @@ Stage 2 — Approval Governance & Immutable Audit: **DONE**
 
 Stage 3 — Secure Document Intake & IAS Corpus Approval: **DONE**
 
-Stage 4 — Unresolved Reference Workbench: **NEXT**
+Stage 4 — Unresolved Reference Workbench: **CONDITIONAL - OWNER AUDIT ACCEPTANCE PENDING**
 
 Stage 5 — Query-Time Graph Transparency & Missing-Document Assistance: **WAITING**
 
@@ -730,6 +730,59 @@ sequence 27. The historical 87-document dense and Graph V1/V2/V3 experiments
 and V3 review data remain unchanged. Operational commands and evidence are in
 `docs/STAGE_03_SECURE_DOCUMENT_INTAKE.md` and
 `outputs/stage_03d_document_ingestion/`. Stage 4 is next.
+
+## Stage 4 - unresolved reference workbench (2026-09-26)
+
+Stage 4 application implementation is complete through 4F. The persistent,
+organization-scoped registry currently contains 62 target-oriented work items
+linked to 79 authoritative KG candidates. It includes deterministic corpus and
+local-catalog matching, row-locked claim/assignment, bounded evidence, Stage 3
+`UNRESOLVED_REFERENCE` handoff, targeted automatic resolution, and a Stage 2
+governed human-confirmation workflow. The final sync dry run made zero changes,
+and 73 relevant Stage 2/3/4 tests plus 15 subtests pass in isolated `test_grdb`.
+
+Production corpus/KG integrity remains at the pre-Stage-4 observed baseline:
+89 documents, 1,598 pages, 1,676 chunks/vectors, 2,654 candidates, 50
+REFERENCES, and 89 ISSUED_BY. Stage 4 added no production document or relation.
+
+Production acceptance is blocked in 4F. An unsafe direct pytest run before the
+new isolated test-database harness flushed pre-existing Django-managed identity,
+governance/audit, and Stage 3 operational rows from `grdb`. Corpus/KG data was
+not affected. The known organization and Stage 4 registry were rematerialized,
+but missing users/grants/scopes, the prior audit chain through sequence 27,
+approval cases, submissions, and jobs were not fabricated. A verified
+post-Stage-3 operational-table restore, or explicit authorization to re-bootstrap
+identity while accepting audit discontinuity, is required before Stage 4 can
+PASS and Stage 5 can start. See
+`docs/STAGE_04_UNRESOLVED_REFERENCE_WORKBENCH.md` and
+`outputs/stage_04_unresolved_workbench/final_report.md`.
+
+### Stage 4F - production acceptance validation (2026-10-04)
+
+The recreated live IAS and Officer identities are operational and correctly
+scoped to organization `d001`. Both roles receive HTTP 200 for the 79-item
+workbench and detail pages; IAS-only controls remain hidden from the Officer.
+Search, filters, pagination, bounded evidence, and exact local-catalog metadata
+passed live HTTP validation, while read-only requests produced zero audit
+growth. A reversible Officer claim/release returned the selected item to OPEN
+and unassigned and created valid audit sequences 49-50.
+
+The production corpus had already advanced to 91 documents before acceptance.
+Seventeen genuine new target groups were materialized, yielding 79 work items
+and 96 candidate links with zero duplicate fingerprints. Final corpus/KG state
+is unchanged across acceptance: 91 documents, 1,607 pages, 1,687
+chunks/vectors, 2,673 candidates, 50 REFERENCES, and 91 ISSUED_BY.
+
+The test bootstrap now explicitly names `test_grdb` and a shared fail-fast
+guard prevents pytest or the Django test runner from resolving automated tests
+to `grdb`. The focused suite passed 76 tests and 15 subtests; production
+identity/workbench counts remained unchanged.
+
+The current 50-event audit epoch verifies, but it begins after identity
+re-bootstrap and does not restore the former events 1-27. Stage 4F is therefore
+CONDITIONAL PASS with exactly one blocker: project-owner acceptance of the
+documented audit-history discontinuity. Stage 5 remains waiting. Evidence is in
+`outputs/stage_04f_production_acceptance/`.
 
 ### Stage 3A.1 — professional application shell hardening (2026-09-25)
 

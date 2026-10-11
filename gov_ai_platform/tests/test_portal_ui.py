@@ -223,12 +223,52 @@ class GraphAndSystemWorkspaceTests(AuthorizedViewTestCase):
         self.assertContains(response, "Knowledge graph explorer")
         self.assertContains(response, "Candidate edges are excluded")
 
-    @patch("apps.knowledge_graph_ui.views.get_portal_repository", return_value=FakePortalRepository())
-    def test_unresolved_list_and_detail(self, _repository):
+    @patch("apps.knowledge_graph_ui.views.document_summaries", return_value=[])
+    @patch("apps.knowledge_graph_ui.views.evidence_for_work_item")
+    def test_unresolved_list_and_detail(self, evidence_mock, _documents):
+        from apps.identity_access.models import OrganizationUnit
+        from apps.knowledge_graph_ui.models import (
+            UnresolvedReferenceCandidateLink,
+            UnresolvedReferenceWorkItem,
+            WorkItemType,
+        )
+
+        organization = OrganizationUnit.objects.get(code="test-unit")
+        item = UnresolvedReferenceWorkItem.objects.create(
+            target_fingerprint="d" * 64,
+            organization=organization,
+            display_identifier="abc-1",
+            normalized_target_identity="abc-1",
+            reference_kind="GOVERNMENT_RESOLUTION",
+            work_type=WorkItemType.MISSING_DOCUMENT,
+            mention_count=1,
+            distinct_source_document_count=1,
+        )
+        UnresolvedReferenceCandidateLink.objects.create(
+            work_item=item,
+            candidate_id=11,
+            source_document_id=7,
+            source_page=1,
+            candidate_fingerprint="e" * 64,
+        )
+        evidence_mock.return_value = {
+            "items": [{
+                "source_department": "Finance Department",
+                "resolution_status": "NOT_IN_CORPUS",
+                "source_document_id": 7,
+                "source_file": "source.pdf",
+                "raw_evidence_text": "cited evidence",
+                "source_page": 1,
+                "validation_status": "UNRESOLVED",
+            }],
+            "page": 1,
+            "pages": 1,
+            "total": 1,
+        }
         self.assertContains(self.client.get(reverse("knowledge_graph_ui:unresolved")), "abc-1")
-        detail = self.client.get(reverse("knowledge_graph_ui:unresolved_detail", args=[11]))
+        detail = self.client.get(reverse("knowledge_graph_ui:unresolved_detail", args=[11]), follow=True)
         self.assertContains(detail, "cited evidence")
-        self.assertContains(detail, "Not in controlled corpus")
+        self.assertContains(detail, "Original evidence remains")
 
     @patch("apps.system_ui.views.get_portal_service", return_value=FakePortalService())
     def test_corpus_dashboard_uses_observability_language(self, _service):

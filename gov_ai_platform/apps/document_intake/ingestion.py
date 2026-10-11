@@ -35,6 +35,7 @@ from .models import (
     DuplicateStatus,
     JobState,
     SecurityStatus,
+    SubmissionOrigin,
     SubmissionState,
     ValidationState,
 )
@@ -436,6 +437,10 @@ def process_ingestion_job(job: DocumentIngestionJob, *, ingestor=None, graph_pip
             submission.safe_failure_reason = ""
             submission.version += 1
             submission.save(update_fields=("state", "archive_key", "ingested_document_id", "page_count", "extraction_status", "safe_failure_code", "safe_failure_reason", "version", "updated_at"))
+            if submission.origin == SubmissionOrigin.UNRESOLVED_REFERENCE:
+                from apps.knowledge_graph_ui.workbench_services import refresh_linked_work_item_for_submission
+
+                refresh_linked_work_item_for_submission(submission)
             record_governance_event(
                 category=AuditCategory.DOCUMENT,
                 action=AuditAction.DOCUMENT_INGESTION_SUCCEEDED,

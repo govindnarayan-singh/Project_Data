@@ -78,8 +78,12 @@ else:
             "HOST": _database.get("host", "127.0.0.1"),
             "PORT": _database.get("port", "5434"),
             "CONN_MAX_AGE": int(os.getenv("DJANGO_DB_CONN_MAX_AGE", "60")),
+            "TEST": {
+                "NAME": os.getenv("DJANGO_TEST_DATABASE_NAME", "test_grdb"),
+            },
         }
     }
+TEST_RUNNER = "config.test_runner.ProductionSafeDiscoverRunner"
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},
     {"NAME": "django.contrib.auth.password_validation.MinimumLengthValidator"},
@@ -148,6 +152,8 @@ DOCUMENT_INGESTION_MAX_ATTEMPTS = int(os.getenv("DOCUMENT_INGESTION_MAX_ATTEMPTS
 DOCUMENT_INGESTION_LEASE_SECONDS = int(os.getenv("DOCUMENT_INGESTION_LEASE_SECONDS", "900"))
 DOCUMENT_INGESTION_HEARTBEAT_SECONDS = int(os.getenv("DOCUMENT_INGESTION_HEARTBEAT_SECONDS", "30"))
 DOCUMENT_IAS_SELF_CONFIRM_ALLOWED = _env_bool("DOCUMENT_IAS_SELF_CONFIRM_ALLOWED", True)
+KG_REFERENCE_IAS_SELF_CONFIRM_ALLOWED = _env_bool("KG_REFERENCE_IAS_SELF_CONFIRM_ALLOWED", False)
+UNRESOLVED_CLAIM_MINUTES = int(os.getenv("UNRESOLVED_CLAIM_MINUTES", "30"))
 _document_scanner_setting = os.getenv("DOCUMENT_MALWARE_SCANNER", "AUTO").strip().upper()
 _windows_defender_cli = Path(r"C:\Program Files\Windows Defender\MpCmdRun.exe")
 if _document_scanner_setting == "AUTO" and _windows_defender_cli.is_file():

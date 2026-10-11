@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Unresolved reference workbench · Government Administrative AI Copilot{% endblock %}
+{% block breadcrumb %}Knowledge graph / Unresolved reference workbench{% endblock %}
+{% block extra_head %}<link rel="stylesheet" href="{% static 'knowledge_graph/workbench.css' %}?v=4.0.0">{% endblock %}
+{% block content %}
+<section class="page-intro compact">
+  <span class="eyebrow">Evidence-backed corpus completion</span>
+  <h1>Unresolved reference workbench</h1>
+  <p>Persistent, organization-scoped work items derived from authoritative knowledge-graph candidates. No item shown here is a verified graph edge.</p>
+</section>
+{% if messages %}<div class="message-stack" role="status">{% for message in messages %}<p class="context-note">{{ message }}</p>{% endfor %}</div>{% endif %}
+<section class="metric-grid workbench-metrics" aria-label="Work queue summary">
+  <article class="metric-card"><span>Visible work items</span><strong>{{ summary.total }}</strong></article>
+  <article class="metric-card"><span>Open</span><strong>{{ summary.open }}</strong></article>
+  <article class="metric-card"><span>Claimed</span><strong>{{ summary.claimed }}</strong></article>
+  <article class="metric-card"><span>Submitted / resolving</span><strong>{{ summary.submitted }}</strong></article>
+  <article class="metric-card"><span>Resolved</span><strong>{{ summary.resolved }}</strong></article>
+</section>
+<form method="get" class="filter-panel workbench-filters" aria-label="Filter unresolved work items">
+  <label>Search<input type="search" name="q" value="{{ filters.q }}" placeholder="Identifier or department"></label>
+  <label>Status<select name="status"><option value="">All statuses</option>{% for value,label in statuses %}<option value="{{ value }}" {% if filters.status == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Work type<select name="type"><option value="">All types</option>{% for value,label in work_types %}<option value="{{ value }}" {% if filters.type == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Priority<select name="priority"><option value="">All priorities</option>{% for value,label in priorities %}<option value="{{ value }}" {% if filters.priority == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Local availability<select name="local"><option value="">All matches</option>{% for value,label in match_statuses %}<option value="{{ value }}" {% if filters.local == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Ownership<select name="assignment"><option value="">Everyone in scope</option><option value="mine" {% if filters.assignment == 'mine' %}selected{% endif %}>Assigned or claimed by me</option><option value="unassigned" {% if filters.assignment == 'unassigned' %}selected{% endif %}>Unassigned</option></select></label>
+  <label>Sort<select name="sort"><option value="priority" {% if filters.sort == 'priority' %}selected{% endif %}>Priority</option><option value="updated" {% if filters.sort == 'updated' %}selected{% endif %}>Recently updated</option><option value="mentions" {% if filters.sort == 'mentions' %}selected{% endif %}>Most mentions</option><option value="oldest" {% if filters.sort == 'oldest' %}selected{% endif %}>Oldest first</option></select></label>
+  <div class="filter-actions"><button class="button primary" type="submit">Apply filters</button><a class="button" href="{% url 'knowledge_graph_ui:unresolved' %}">Clear</a></div>
+</form>
+<div class="work-item-list">
+  {% for item in page_obj %}
+  <article class="work-item-card">
+    <div class="work-item-card-main">
+      <div class="badge-row"><span class="badge unresolved">{{ item.get_status_display }}</span><span class="tag">{{ item.get_priority_display }} priority</span><span class="tag">{{ item.get_work_type_display }}</span></div>
+      <h2><a href="{% url 'knowledge_graph_ui:work_item_detail' item.id %}">{{ item.display_identifier|default:"Identifier unavailable" }}</a></h2>
+      <p>{{ item.reference_kind|title }}{% if item.target_date %} · {{ item.target_date }}{% endif %}{% if item.target_department %} · {{ item.target_department }}{% endif %}</p>
+      <p class="meta">{{ item.mention_count }} mention{{ item.mention_count|pluralize }} across {{ item.distinct_source_document_count }} source document{{ item.distinct_source_document_count|pluralize }} · {{ item.organization.name }}</p>
+    </div>
+    <dl class="work-item-card-facts"><div><dt>Local</dt><dd>{{ item.get_local_match_status_display }}</dd></div><div><dt>Corpus</dt><dd>{{ item.get_corpus_match_status_display }}</dd></div><div><dt>Owner</dt><dd>{% if item.claimed_by %}Claimed by {{ item.claimed_by.get_username }}{% elif item.assigned_to %}Assigned to {{ item.assigned_to.get_username }}{% else %}Unassigned{% endif %}</dd></div></dl>
+    <a class="button" href="{% url 'knowledge_graph_ui:work_item_detail' item.id %}">Open work item</a>
+  </article>
+  {% empty %}<div class="empty-state">No work items match these filters.</div>{% endfor %}
+</div>
+{% if page_obj.paginator.num_pages > 1 %}<nav class="pagination" aria-label="Work item pages">{% if page_obj.has_previous %}<a class="button" href="?page={{ page_obj.previous_page_number }}&q={{ filters.q|urlencode }}&status={{ filters.status }}&type={{ filters.type }}&priority={{ filters.priority }}&local={{ filters.local }}&assignment={{ filters.assignment }}&sort={{ filters.sort }}">Previous</a>{% else %}<span></span>{% endif %}<span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>{% if page_obj.has_next %}<a class="button" href="?page={{ page_obj.next_page_number }}&q={{ filters.q|urlencode }}&status={{ filters.status }}&type={{ filters.type }}&priority={{ filters.priority }}&local={{ filters.local }}&assignment={{ filters.assignment }}&sort={{ filters.sort }}">Next</a>{% endif %}</nav>{% endif %}
+{% endblock %}
+{% block context_title %}Queue rules{% endblock %}
+{% block context_panel %}<p class="muted">Work items aggregate identical target identities within your authorized organization. The original candidate rows remain authoritative.</p><div class="context-note"><strong>Controlled resolution</strong><p>Uploads use the existing Stage 3 quarantine and IAS admission flow. Human graph links require a separate Stage 2 IAS approval.</p></div>{% endblock %}
